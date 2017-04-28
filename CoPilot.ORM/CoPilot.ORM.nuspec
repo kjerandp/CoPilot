@@ -9,7 +9,15 @@
     <licenseUrl>https://raw.githubusercontent.com/kjerandp/CoPilot/master/LICENSE</licenseUrl>
     <projectUrl>https://github.com/kjerandp/CoPilot</projectUrl>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
-    <description>To come...</description>
+    <description>
+      A feature rich object relational mapper that aims to:
+      -write clean sql
+      -offer great performance
+      -be easy use and configure
+      -not leak into your domain model or any other layers.
+
+      Note: This is still an early version and only works with MSSQL - use at your own risk!
+    </description>
     <releaseNotes>Alpha test release.</releaseNotes>
     <copyright>Copyright 2017</copyright>
     <tags>CoPilot ORM mapper sql .Net asp</tags>
