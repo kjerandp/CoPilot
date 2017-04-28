@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>Kjerand Pedersen</authors>
+    <owners>Kjerand Pedersen</owners>
+    <licenseUrl>https://raw.githubusercontent.com/kjerandp/CoPilot/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/kjerandp/CoPilot</projectUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <description>To come...</description>
+    <releaseNotes>Alpha test release.</releaseNotes>
+    <copyright>Copyright 2017</copyright>
+    <tags>CoPilot ORM mapper sql .Net asp</tags>
+  </metadata>
+</package>
