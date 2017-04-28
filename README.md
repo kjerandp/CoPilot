@@ -5,5 +5,5 @@ A feature rich object relational mapper that aims to:
 * be easy use and configure
 * not leak into your domain model or any other layers.
 
-# Note
+## Note
 This is still an early version and only works with MSSQL - use at your own risk!
