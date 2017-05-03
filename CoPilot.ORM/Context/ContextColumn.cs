@@ -22,7 +22,9 @@ namespace CoPilot.ORM.Context
 
         public override string ToString()
         {
-            var str = $"T{Node.Index}.{Column.ColumnName}";
+            var colName = Column.ColumnName;
+            if (Column.ColumnName.Contains(" ")) colName = "[" + colName + "]";
+            var str = $"T{Node.Index}.{colName}";
             if (!string.IsNullOrEmpty(ColumnAlias))
             {
                 str += $" as [{ColumnAlias}]";

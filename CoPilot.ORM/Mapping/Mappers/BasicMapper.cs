@@ -11,7 +11,7 @@ namespace CoPilot.ORM.Mapping.Mappers
     public static class BasicMapper
     {
       
-        public static ObjectMapper Create(Type type, Dictionary<string, string> columnMapping = null)
+        public static ObjectMapper Create(Type type, Dictionary<string, string> columnMapping = null, bool ignoreCase = true)
         {
             columnMapping = columnMapping?.ToDictionary(k => k.Key.ToUpperInvariant(), v => v.Value);
             ObjectMapper mapper = dataset =>
@@ -38,7 +38,7 @@ namespace CoPilot.ORM.Mapping.Mappers
                             {
                                 key = columnMapping[key.ToUpperInvariant()];
                             }
-                            var member = PathHelper.GetMemberFromPath(type, key);
+                            var member = PathHelper.GetMemberFromPath(type, key, true, false);
                             if (member != null)
                             {
                                 var classMember = ClassMemberInfo.Create(member);

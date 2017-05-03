@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoPilot.ORM", "CoPilot.ORM\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoPilot.ORM.Tests", "CoPilot.ORM.Tests\CoPilot.ORM.Tests.csproj", "{5B2117F2-DB73-4F14-8559-6088795194BC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoPilot.ORM.IntegrationTests", "CoPilot.ORM.IntegrationTests\CoPilot.ORM.IntegrationTests.csproj", "{EA40BB3F-362E-4705-A85C-909B48FA3FC9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{5B2117F2-DB73-4F14-8559-6088795194BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5B2117F2-DB73-4F14-8559-6088795194BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5B2117F2-DB73-4F14-8559-6088795194BC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA40BB3F-362E-4705-A85C-909B48FA3FC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA40BB3F-362E-4705-A85C-909B48FA3FC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA40BB3F-362E-4705-A85C-909B48FA3FC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA40BB3F-362E-4705-A85C-909B48FA3FC9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

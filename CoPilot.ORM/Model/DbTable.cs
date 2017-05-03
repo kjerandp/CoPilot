@@ -30,6 +30,7 @@ namespace CoPilot.ORM.Model
             {
                 throw new ArgumentException($"'{tableName}' is an invalid table name.");
             }
+            //if (tableName.Contains(" ")) tableName = "[" + tableName + "]";
             return new Tuple<string, string>(schema, tableName);
         } 
 

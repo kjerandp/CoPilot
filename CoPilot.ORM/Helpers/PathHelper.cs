@@ -177,15 +177,24 @@ namespace CoPilot.ORM.Helpers
             throw new ArgumentException($"Unable to get a reference from path '{path}' on type '{baseInstance.GetType().Name}'");
         }
 
-        public static MemberInfo GetMemberFromPath(Type baseType, string path)
+        public static MemberInfo GetMemberFromPath(Type baseType, string path, bool ignoreCase = false, bool throwOnError = true)
         {
             var paths = path.Split('.');
             var memberName = paths.Last();
             var currentType = baseType;
             foreach (var part in paths)
             {
-                var member = currentType.GetMember(part, MemberTypes.Property | MemberTypes.Field, BindingFlags.Public | BindingFlags.Instance).SingleOrDefault();
-                if (member == null) throw new ArgumentException($"The path '{path}' is not valid for type '{baseType}'!");
+                var bindingFlags = (BindingFlags.Public | BindingFlags.Instance);
+                if (ignoreCase)
+                {
+                    bindingFlags |= BindingFlags.IgnoreCase;
+                }
+                var member = currentType.GetMember(part, MemberTypes.Property | MemberTypes.Field, bindingFlags).SingleOrDefault();
+                if (member == null)
+                {
+                    if(throwOnError) throw new ArgumentException($"The path '{path}' is not valid for type '{baseType}'!");
+                    return null;
+                }
                 if (part.Equals(memberName, StringComparison.Ordinal))
                 {
                     return member;
