@@ -211,4 +211,4 @@ We can do commands and scalars by calling the `Command` and `Scalar` methods res
 Low level usage of CoPilot is nice as a fallback method. What sets it apart from the next micro ORM though, is its abillity to write queries and other statements for you, based on the configuration you give it. Let's make a few more POCO classes and create a model configuration to see what we then can do.
 
 
-
+<Work in progress>
