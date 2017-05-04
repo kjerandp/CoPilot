@@ -147,13 +147,13 @@ namespace CoPilot.ORM.Helpers
             if (dataType == DbDataType.DateTime)
             {
                 var date = (DateTime)value;
-                return $"'{date.ToString("yyyy-MM-dd HH:mm")}'";
+                return $"'{date:yyyy-MM-dd HH:mm}'";
             }
 
             if (dataType == DbDataType.Date)
             {
                 var date = (DateTime)value;
-                return $"'{date.ToString("yyyy-MM-dd HH:mm")}'";
+                return $"'{date:yyyy-MM-dd HH:mm}'";
             }
             if (IsText(dataType))
             {

@@ -54,6 +54,7 @@ namespace CoPilot.ORM.Config.Builders
         public ColumnBuilder IsNullable()
         {
             _column.IsNullable = true;
+            _column.NullableExplicitSet = true;
             return this;
         }
 
@@ -67,6 +68,7 @@ namespace CoPilot.ORM.Config.Builders
         public ColumnBuilder IsRequired()
         {
             _column.IsNullable = false;
+            _column.NullableExplicitSet = true;
             return this;
         }
 

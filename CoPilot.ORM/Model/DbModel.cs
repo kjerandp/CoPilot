@@ -5,9 +5,9 @@ using System.Linq.Expressions;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Common.Config;
 using CoPilot.ORM.Config.DataTypes;
+using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Database;
-using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Mapping;
 
 namespace CoPilot.ORM.Model
@@ -20,16 +20,15 @@ namespace CoPilot.ORM.Model
         internal readonly HashSet<DbTable> Tables = new HashSet<DbTable>();
         internal readonly HashSet<DbStoredProcedure> StoredProcedures = new HashSet<DbStoredProcedure>();
 
-        internal bool PrefixColumnNamesWithTableName { get; set; }
+        internal DbColumnNamingConvention ColumnNamingConvention { get; set; }
         internal string DefaultSchemaName { get; set; }
 
         public ResourceLocator ResourceLocator { get; }
-
+        
         public DbModel(ResourceLocator resourceLocator)
         {
             ResourceLocator = resourceLocator;
             DefaultSchemaName = "dbo";
-            PrefixColumnNamesWithTableName = true;
             _tableMappings = new Dictionary<Type, TableMapEntry>();
 
         }
@@ -144,9 +143,13 @@ namespace CoPilot.ORM.Model
 
         internal string GenerateColumnName(DbTable table, ClassMemberInfo member)
         {
-            var name = ((PrefixColumnNamesWithTableName ? table.TableName.Replace(" ", "_") + "_" : "") +
-                          member.Name.ToTitleCase()).RemoveRepeatedNeighboringWords().ToUpper();
-            return name;
+            var namer = ColumnNamingConvention ?? DbColumnNamingConvention.Default;
+
+            return namer.Name(member.Name, table.TableName.Replace(" ", "_"));
+
+            //var name = ((PrefixColumnNamesWithTableName ? table.TableName.Replace(" ", "_") + "_" : "") +
+            //              member.Name.ToTitleCase()).RemoveRepeatedNeighboringWords().ToUpper();
+            //return name;
         }
 
         public IDb CreateDb(string connectionString)

@@ -11,6 +11,8 @@ namespace CoPilot.ORM.Model
         private bool _isPrimaryKey;
         private readonly HashSet<ClassMemberInfo> _mappedMembers = new HashSet<ClassMemberInfo>();
 
+        internal bool NullableExplicitSet;
+
         internal DbColumn(DbTable table, string columnName, string aliasName = null)
         {
             ColumnName = columnName;

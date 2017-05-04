@@ -5,6 +5,7 @@ using CoPilot.ORM.Common;
 using CoPilot.ORM.Common.Config;
 using CoPilot.ORM.Config.Builders;
 using CoPilot.ORM.Config.DataTypes;
+using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Extensions;
@@ -76,7 +77,7 @@ namespace CoPilot.ORM.Config
 
             if (key != null)
             {
-                builder.WithKey(key, keyColumnName);
+                builder.AddKey(key, keyColumnName);
             }
 
             return builder;
@@ -146,9 +147,10 @@ namespace CoPilot.ORM.Config
             _model.DefaultSchemaName = string.IsNullOrEmpty(schemaName) ? "dbo" : schemaName;
         }
 
-        public void SetPrefixColumnNamesWithTableName(bool value)
+
+        public void SetColumnNamingConvention(DbColumnNamingConvention columnNamingConvention)
         {
-            _model.PrefixColumnNamesWithTableName = value;
+            _model.ColumnNamingConvention = columnNamingConvention;
         }
     }
 }

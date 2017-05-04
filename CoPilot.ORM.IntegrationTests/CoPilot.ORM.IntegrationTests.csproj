@@ -35,9 +35,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="CoPilot.ORM">
-      <HintPath>..\CoPilot.ORM\bin\Debug\CoPilot.ORM.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />
   </ItemGroup>
@@ -64,7 +61,12 @@
     <Compile Include="TestDbConfig.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\CoPilot.ORM\CoPilot.ORM.csproj">
+      <Project>{b8972d09-a3b1-4500-9494-dc016be66d25}</Project>
+      <Name>CoPilot.ORM</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
       <ItemGroup>

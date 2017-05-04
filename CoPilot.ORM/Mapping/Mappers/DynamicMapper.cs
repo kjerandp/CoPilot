@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Threading.Tasks;
-using CoPilot.ORM.Extensions;
+using CoPilot.ORM.Config.Naming;
 
 namespace CoPilot.ORM.Mapping.Mappers
 {
@@ -28,6 +28,7 @@ namespace CoPilot.ORM.Mapping.Mappers
                         }
                     });
                 } else {
+                    var converter = new CamelCaseConverter();
                     Parallel.ForEach(dataset.Records, (r, n, i) =>
                     {
                         var model = new ExpandoObject() as IDictionary<string, object>;
@@ -61,7 +62,7 @@ namespace CoPilot.ORM.Mapping.Mappers
                                     }
                                 }
 
-                                propName = propName.ToCamelCase();
+                                propName = converter.Convert(propName);
 
                             }
                             else

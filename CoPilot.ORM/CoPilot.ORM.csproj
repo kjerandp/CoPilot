@@ -37,6 +37,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Common\GlobalResource.cs" />
+    <Compile Include="Config\Naming\CamelCaseConverter.cs" />
+    <Compile Include="Config\Naming\ILetterCaseConverter.cs" />
+    <Compile Include="Config\Naming\DbColumnNamingConvention.cs" />
+    <Compile Include="Config\Naming\SnakeOrKebabCaseConverter.cs" />
     <Compile Include="Database\Commands\DbRecordSet.cs" />
     <Compile Include="Filtering\Decoders\BinaryExpressionDecoder.cs" />
     <Compile Include="Filtering\Decoders\ConstantExpressionDecoder.cs" />

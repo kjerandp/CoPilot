@@ -19,7 +19,7 @@ namespace CoPilot.ORM.Config.Builders
         {
             _map = map;
         }
-        public ColumnBuilder WithKey(Expression<Func<T, object>> prop, string columnName = null)
+        public ColumnBuilder AddKey(Expression<Func<T, object>> prop, string columnName = null)
         {
             var member = ExpressionHelper.GetMemberInfoFromExpression(prop);
 
@@ -35,9 +35,9 @@ namespace CoPilot.ORM.Config.Builders
             pk.DefaultValue = DefaultValue.PrimaryKey;
             return new ColumnBuilder(Model, pk);
         }
-        public ColumnBuilder WithKey(Expression<Func<T, object>> prop, string columnName, DefaultValue defaultValue)
+        public ColumnBuilder AddKey(Expression<Func<T, object>> prop, string columnName, DefaultValue defaultValue)
         {
-            var cb = WithKey(prop, columnName);
+            var cb = AddKey(prop, columnName);
             cb.DefaultValue(defaultValue);
             return cb;
         }
@@ -48,7 +48,7 @@ namespace CoPilot.ORM.Config.Builders
             var col = AddColumnIfNotExist(member, columnName);
             if (col.DataType == DbDataType.Unknown)
             {
-                SetDataType(col, DbConversionHelper.GetDbDataType(member));
+                SetDataType(col, DbConversionHelper.GetDbDataType(member), member.MemberType.IsNullable());
             }
             return new ColumnBuilder(Model, col);
         }
@@ -78,7 +78,7 @@ namespace CoPilot.ORM.Config.Builders
             var col = AddColumnIfNotExist(member);
             if (col.DataType == DbDataType.Unknown)
             {
-                SetDataType(col, DbConversionHelper.GetDbDataType(member));
+                SetDataType(col, DbConversionHelper.GetDbDataType(member), member.MemberType.IsNullable());
             }
             return new ColumnBuilder(Model, col);
         }
@@ -121,7 +121,7 @@ namespace CoPilot.ORM.Config.Builders
             var fkCol = AddColumnIfNotExist(foreignKeyName);
             if (fkCol.DataType == DbDataType.Unknown)
             {
-                SetDataType(fkCol, foreignKeyDataType ?? DbDataType.Int32);
+                SetDataType(fkCol, foreignKeyDataType ?? keyMemberInfo.DataType, keyMemberInfo.MemberType.IsNullable());
             }
             var fkFor = keyMemberInfo;
 
@@ -170,7 +170,7 @@ namespace CoPilot.ORM.Config.Builders
         {
             var relationship = CreateRelationship(typeof(TTo), keyMemberInfo, foreignKeyName);
             relationship.ForeignKeyColumn.IsNullable = keyMemberInfo.MemberType.IsNullable();
-            SetDataType(relationship.ForeignKeyColumn, foreignKeyDataType ?? keyMemberInfo.DataType);
+            SetDataType(relationship.ForeignKeyColumn, foreignKeyDataType ?? keyMemberInfo.DataType, keyMemberInfo.MemberType.IsNullable());
 
             return new RelationshipBuilder<T, TTo>(Model, relationship);
         }

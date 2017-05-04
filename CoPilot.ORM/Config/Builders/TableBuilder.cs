@@ -54,7 +54,7 @@ namespace CoPilot.ORM.Config.Builders
                 col = AddColumnIfNotExist(columnName);
                 if (col.DataType == DbDataType.Unknown)
                 {
-                    SetDataType(col, DbConversionHelper.GetDbDataType(member));
+                    SetDataType(col, DbConversionHelper.GetDbDataType(member), member.MemberType.IsNullable());
                 }
                 col.MapToMember(member);
             }
@@ -110,7 +110,7 @@ namespace CoPilot.ORM.Config.Builders
 
             if (fkCol.DataType == DbDataType.Unknown)
             {
-                SetDataType(fkCol, foreignKeyMember.DataType);
+                SetDataType(fkCol, foreignKeyMember.DataType, foreignKeyMember.MemberType.IsNullable());
             }
             var relationship = new DbRelationship(fkCol, pkCol);
 
@@ -121,7 +121,7 @@ namespace CoPilot.ORM.Config.Builders
             return relationship;
         }
 
-        internal static void SetDataType(DbColumn col, DbDataType type)
+        internal static void SetDataType(DbColumn col, DbDataType type, bool isFromNullableType = false)
         {
             if (col.DataType != type)
             {
@@ -129,7 +129,11 @@ namespace CoPilot.ORM.Config.Builders
                 if (col.DataType == DbDataType.String && col.MaxSize == null)
                 {
                     col.MaxSize = DbConversionHelper.DefaultDbStringSize;
-                } 
+                }
+                if (!col.NullableExplicitSet && isFromNullableType)
+                {
+                    col.IsNullable = true;
+                }
             }
             if (!DbConversionHelper.HasSize(col.DataType))
             {

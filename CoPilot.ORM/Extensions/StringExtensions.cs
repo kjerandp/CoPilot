@@ -1,10 +1,26 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace CoPilot.ORM.Extensions
 {
     public static class StringExtensions
     {
+        public static string[] Tokenize(this string text)
+        {
+            if(string.IsNullOrEmpty(text)) throw new ArgumentException("text");
+
+            const string strRegex = @"((?<=[a-z])[A-Z]|[A-Z](?=[a-z]))";
+            const string strReplace = @" $1";
+            var regex = new Regex(strRegex);
+
+            text = regex.Replace(text, strReplace).Trim();
+
+            return text.Split(new [] {'_', '-', ' '}, StringSplitOptions.RemoveEmptyEntries);
+
+        }
+
+        [Obsolete]
         public static string ToTitleCase(this string camelCase)
         {
             const string strRegex = @"([A-Z])([A-Z][a-z])|([a-z0-9])([A-Z])";
@@ -14,6 +30,7 @@ namespace CoPilot.ORM.Extensions
             return myRegex.Replace(camelCase, strReplace).ToLower();
         }
 
+        [Obsolete]
         public static string ToCamelCase(this string text, char seperator = '_')
         {
             var parts = text.Split(seperator);
@@ -43,7 +60,7 @@ namespace CoPilot.ORM.Extensions
                 {
                     if (!textSplit[i].Equals(textSplit[i - 1], StringComparison.OrdinalIgnoreCase))
                     {
-                        newText += "_" + textSplit[i];
+                        newText += wordSeperator + textSplit[i];
                     }
                 }
                 return newText;
