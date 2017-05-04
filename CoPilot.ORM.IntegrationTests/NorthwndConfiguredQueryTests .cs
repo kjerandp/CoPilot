@@ -1,13 +1,10 @@
 ﻿
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using CoPilot.ORM.Common;
 using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.IntegrationTests.Models;
-using CoPilot.ORM.Mapping.Mappers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CoPilot.ORM.IntegrationTests
@@ -20,7 +17,10 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanQueryAllCustomers()
         {
-            var orders = _db.Query<Order>(null, "OrderDetails.Product");
+            var orders = _db.Query<Order>(null, "OrderDetails.Product").ToArray();
+            Assert.IsNotNull(orders);
+            Assert.IsTrue(orders.All(r => r.OrderDetails.Any()));
+            Assert.IsNotNull(orders.First()?.OrderDetails.First()?.Product);
         }
 
         [TestMethod]

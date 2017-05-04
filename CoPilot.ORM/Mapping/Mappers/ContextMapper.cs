@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using CoPilot.ORM.Config.DataTypes;
-using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Helpers;
@@ -179,7 +178,7 @@ namespace CoPilot.ORM.Mapping.Mappers
             
             ProcessNode(baseNode, "", baseSet, mapped, sets);
             
-            Console.WriteLine("Mapping took: " +w.ElapsedMilliseconds);
+            //Console.WriteLine("Mapping took: " +w.ElapsedMilliseconds);
             return mapped.Select(r => r.Instance);
            
         }
