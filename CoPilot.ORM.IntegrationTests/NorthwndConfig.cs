@@ -31,8 +31,8 @@ namespace CoPilot.ORM.IntegrationTests
             mapper.Map<Product>("Products", r => r.ProductId, "ProductID");
 
             var detailsMap = mapper.Map<OrderDetails>("Order Details");
-            detailsMap.AddKey(r => r.ProductId, "ProductID").DefaultValue(null);
-            detailsMap.AddKey(r => r.OrderId, "OrderID").DefaultValue(null);
+            detailsMap.AddKey(r => r.ProductId, "ProductID", null);
+            detailsMap.AddKey(r => r.OrderId, "OrderID", null);
             detailsMap.HasOne<Order>(r => r.OrderId, "OrderID").InverseKeyMember(r => r.OrderDetails);
             detailsMap.HasOne<Product>(r => r.ProductId, "ProductID").KeyForMember(r => r.Product);
 

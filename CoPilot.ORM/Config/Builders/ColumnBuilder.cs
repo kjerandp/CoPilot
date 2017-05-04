@@ -23,7 +23,7 @@ namespace CoPilot.ORM.Config.Builders
 
         public ColumnBuilder DefaultValue(object value)
         {
-            _column.DefaultValue = new DefaultValue(DbExpressionType.Constant, value);
+            _column.DefaultValue = value != null ? new DefaultValue(DbExpressionType.Constant, value) : null;
             return this;
         }
 

@@ -31,7 +31,6 @@ namespace CoPilot.ORM.IntegrationTests
 
             var firstNameIndex = response.RecordSets[1].GetIndex("FirstName"); //Get index of field name
             var names = response.RecordSets[1].Vector(firstNameIndex); //Get all values in set for this field
-            Assert.IsTrue(names.Contains("Nancy"));
             Assert.IsTrue(names.Contains("Andrew"));
             Assert.IsTrue(names.Contains("Janet"));
             Assert.IsTrue(names.Contains("Margaret"));
@@ -73,7 +72,7 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanQuerySingleColumnAndMapToSimpleType()
         {
-            var response = _db.Query<string>("select ProductName from products order by 1", null).ToArray();
+            var response = _db.Query<string>("select ProductName from products where ProductName <> @testName order by 1", new {testName= "Test product" }).ToArray();
             Assert.AreEqual(77, response.Length);
             Assert.AreEqual("Alice Mutton", response[0]);
         }
