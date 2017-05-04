@@ -21,7 +21,7 @@ namespace CoPilot.ORM.IntegrationTests
             {
                 CoPilotGlobalResources.LoggingLevel = LoggingLevel.Verbose;
 
-                var db = TestDbConfig.CreateDb(@"
+                var db = NorthwndConfig.CreateFromConfig(@"
                 data source=localhost; 
                 initial catalog=master; 
                 Integrated Security=true;
@@ -31,7 +31,7 @@ namespace CoPilot.ORM.IntegrationTests
                 db.Command(CreateDatabaseScript(scriptBuilder));
 
                 //seed data
-                Seed(db, scriptBuilder);
+                //Seed(db, scriptBuilder);
             }
 
             private string CreateDatabaseScript(ScriptBuilder builder)

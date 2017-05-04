@@ -552,6 +552,8 @@ namespace CoPilot.ORM.Context
             var mappedColumns = node.MapEntry.GetMappedColumns();
             var context = new OperationContext { Node = node };
             var index = 1;
+            var keyIndex = 0;
+
             foreach (var col in mappedColumns.Keys)
             {
                 object value = null;
@@ -599,6 +601,12 @@ namespace CoPilot.ORM.Context
                             continue;
                         }
                         paramName = "@key";
+                        keyIndex++;
+
+                        if (keyIndex > 1)
+                        {
+                            paramName += keyIndex;
+                        }
                     }
                     else
                     {
@@ -676,36 +684,46 @@ namespace CoPilot.ORM.Context
 
         public OperationContext Delete(ITableContextNode node, object entity)
         {
-            if (!node.Table.HasKey) throw new InvalidOperationException("Can only delete a record by id!");
-
-            var keyCol = node.Table.GetKey();
-            var keyMember = node.MapEntry.GetMappedMember(keyCol);
-            var keyValue = keyMember.GetValue(entity);
-
-            if (keyValue == null) throw new ArgumentException("Cannot delete a record that has no key value!");
+            var keyIndex = 0;
+            var keys = node.Table.GetKeys();
+            if (!keys.Any()) throw new InvalidOperationException("Can only delete a record by key!");
 
             var ctx = new OperationContext { Node = node };
+            foreach (var keyCol in keys)
+            {
+                var keyMember = node.MapEntry.GetMappedMember(keyCol);
+                var keyValue = keyMember.GetValue(entity);
 
-            var parameter = new DbParameter("@id", keyCol.DataType);
+                if (keyValue == null) throw new ArgumentException($"Cannot delete a record that has no key value! (column: {keyCol.ColumnName})");
+                var name = "@id";
+                keyIndex++;
+                if (keyIndex > 1)
+                {
+                    name += keyIndex;
+                }
+                var parameter = new DbParameter(name, keyCol.DataType);
 
-            ctx.Columns.Add(keyCol, parameter);
+                ctx.Columns.Add(keyCol, parameter);
+                ctx.Args.Add(parameter.Name, keyValue);
+            }
+            
+            
 
-            ctx.Args.Add(parameter.Name, keyValue);
+            
 
             return ctx;
         }
 
         public OperationContext Update(ITableContextNode node, object entity, Dictionary<string, object> additionalValues = null)
         {
-            if (!node.Table.HasKey) throw new InvalidOperationException("Can only update a record by id!");
+            var keys = node.Table.GetKeys();
+            var keyIndex = 0;
+
+            if (!keys.Any()) throw new InvalidOperationException("Can only update a record by id!");
+
             var mappedColumns = node.MapEntry.GetMappedColumns();
             var context = new OperationContext { Node = node };
-            var keyCol = node.Table.GetKey();
-            var keyMember = node.MapEntry.GetMappedMember(keyCol);
-            var keyValue = keyMember.GetValue(entity);
-
-            if (keyValue == null) throw new ArgumentException("Cannot update a record that has no key value!");
-
+            
             var index = 1;
             foreach (var col in mappedColumns.Keys)
             {
@@ -749,15 +767,22 @@ namespace CoPilot.ORM.Context
                     string paramName;
                     if (col.IsPrimaryKey)
                     {
-                        if (value == null || value.Equals(ReflectionHelper.GetDefaultValue(value.GetType())))
-                        {
-                            continue;
-                        }
+                        var keyMember = node.MapEntry.GetMappedMember(col);
+                        var keyValue = keyMember.GetValue(entity);
+
+                        if (keyValue == null)
+                            throw new ArgumentException("Cannot update a record that has no key value!");
+
                         paramName = "@key";
+                        keyIndex++;
+                        if (keyIndex > 1)
+                        {
+                            paramName += keyIndex;
+                        }
                     }
                     else
                     {
-                        paramName = $"@param{(index++)}";
+                        paramName = $"@param{index++}";
                     }
                     var param = new DbParameter(paramName, col.DataType, null, col.IsNullable);
                     
@@ -765,7 +790,10 @@ namespace CoPilot.ORM.Context
                     context.Columns.Add(col, param);
                 }
             }
-
+            if (keyIndex != keys.Length)
+            {
+                throw new ArgumentException("Cannot update a record that has no key value!");
+            }
             return context;
         }
 

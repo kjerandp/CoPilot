@@ -1,5 +1,4 @@
-using System.Linq;
-using CoPilot.ORM.Common;
+using System.Collections.Generic;
 using CoPilot.ORM.Context.Operations;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
@@ -14,22 +13,30 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
             options = options ?? ScriptOptions.Default();
 
             var statement = new SqlStatement();
-            var key = ctx.Columns.Keys.Single();
-            var parameter = ctx.Columns[key];
-            var valuePart = parameter.Name;
-            var value = ctx.Args[parameter.Name];
+            var qualifications = new List<string>();
 
-            if (!options.Parameterize)
+            foreach (var col in ctx.Columns.Keys)
             {
-                valuePart = DbConversionHelper.GetValueAsString(key.DataType, value, options.UseNvar);
-            }
-            else
-            {
-                statement.Parameters.Add(parameter);
-                statement.Args.Add(parameter.Name, value);
-            }
+                var param = ctx.Columns[col];
+                var part = "{value}";
+                
+                var value = ctx.Args[param.Name];
 
-            statement.Script.Add($"delete from {key.Table} where {key.ColumnName} = {valuePart}");
+                string valueString;
+                if (options.Parameterize)
+                {
+                    valueString = part.Replace("{value}", param.Name);
+                    statement.Parameters.Add(param);
+                    statement.Args.Add(param.Name, value);
+                }
+                else
+                {
+                    valueString = part.Replace("{value}", DbConversionHelper.GetValueAsString(col.DataType, value, options.UseNvar));
+                }
+                   
+                qualifications.Add($"[{col.ColumnName}] = {valueString}"); 
+            }
+            statement.Script.Add($"delete from {ctx.Node.Table} where {string.Join(" AND ", qualifications)}");
             
             return statement;
         }

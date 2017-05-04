@@ -45,7 +45,7 @@ namespace CoPilot.ORM.Database.Commands
 
                 if (node.IsInverted)
                 {
-                    var keyCol = node.Origin.Table.GetKey();
+                    var keyCol = node.Origin.Table.GetSingularKey();
                     var childFilter = filter;
                     if (keyCol != null && parentSet.Records.Length <= 10)
                     {

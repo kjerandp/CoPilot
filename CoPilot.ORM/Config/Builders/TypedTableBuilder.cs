@@ -41,6 +41,7 @@ namespace CoPilot.ORM.Config.Builders
             cb.DefaultValue(defaultValue);
             return cb;
         }
+
         public ColumnBuilder Column(Expression<Func<T, object>> property, string columnName)
         {
             var member = ExpressionHelper.GetMemberInfoFromExpression(property);
@@ -68,7 +69,7 @@ namespace CoPilot.ORM.Config.Builders
             if (Model.Tables.All(r => r.TableName != lookupTable)) throw new ArgumentException("Lookup table not defined!");
             var lTable = Model.Tables.Single(r => r.TableName == lookupTable);
             var builder = Column(property, columnName);
-            builder.DataType(lTable.GetKey().DataType);
+            builder.DataType(lTable.GetSingularKey().DataType);
             return builder.LookupTable(lTable, lookupColumn);
         }
         public ColumnBuilder Column(Expression<Func<T, object>> property)
@@ -100,7 +101,10 @@ namespace CoPilot.ORM.Config.Builders
             }
 
             var toTableMap = Model.GetTableMap<TTo>();
-            var pkCol = toTableMap.Table.GetKey();
+            var keys = toTableMap.Table.GetKeys();
+
+            if (keys.Length != 1) throw new NotSupportedException("Relationships to an entity with composite primary key or no key is not supported!");
+            var pkCol = keys.Single();
 
 
             if (pkCol == null)
@@ -111,7 +115,7 @@ namespace CoPilot.ORM.Config.Builders
 
             if (string.IsNullOrEmpty(foreignKeyName))
             {
-                foreignKeyName = toTableMap.Table.GetKey().ColumnName;
+                foreignKeyName = pkCol.ColumnName;
             } 
 
             var fkCol = AddColumnIfNotExist(foreignKeyName);
@@ -181,13 +185,17 @@ namespace CoPilot.ORM.Config.Builders
             {
                 throw new ArgumentException("A One-To-Many relationship must be mapped to a collection in the declaring entity!");
             }
-            var pkCol = Table.GetKey();
+
+            var keys = Table.GetKeys();
+            if (keys.Length != 1) throw new NotSupportedException("Relationships to an entity with composite primary key or no key is not supported!");
+            var pkCol = keys.Single();
+
             if (pkCol == null)
                 throw new ArgumentException($"Table '{Table.TableName}' does not have a key defined.");
 
             if (string.IsNullOrEmpty(foreignKeyName))
             {
-                foreignKeyName = Table.GetKey().ColumnName;
+                foreignKeyName = pkCol.ColumnName;
             }
             var inverseKey = ExpressionHelper.GetMemberInfoFromExpression(collection);
             
@@ -235,5 +243,7 @@ namespace CoPilot.ORM.Config.Builders
             _map.Operations = operations;
             return this;
         }
+
+        
     }
 }

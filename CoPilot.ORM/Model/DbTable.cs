@@ -46,7 +46,7 @@ namespace CoPilot.ORM.Model
         public DbColumn[] Columns => _columns.ToArray();
         public DbRelationship[] InverseRelationships => _inverseRelationships.ToArray();
         public bool HasKey => _columns.Any(r => r.IsPrimaryKey);
-
+        public bool HasCompositeKey => _columns.Count(r => r.IsPrimaryKey) > 1;
         public DbColumn AddColumn(string columnName, DbDataType dataType = DbDataType.Unknown, string alias = null)
         {
             if (alias != null && _columns.Any(r => r.AliasName.Equals(alias, StringComparison.OrdinalIgnoreCase)))
@@ -94,10 +94,18 @@ namespace CoPilot.ORM.Model
             _inverseRelationships.Add(relationship);
         }       
            
-        public DbColumn GetKey()
+        public DbColumn[] GetKeys()
         {
-            return _columns.SingleOrDefault(r => r.IsPrimaryKey);
+            return _columns.Where(r => r.IsPrimaryKey).ToArray(); //TODO: Should have ordered keys
         }
+
+        public DbColumn GetSingularKey()
+        {
+            var keys = GetKeys();
+            if(keys.Length > 1) throw new NotSupportedException("This operation is not supported for entities with composite primary key!");
+            return keys.SingleOrDefault();
+        }
+
         public override string ToString()
         {
             return $"[{Schema}].[{TableName}]";

@@ -6,8 +6,10 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using CoPilot.ORM.Common;
+using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
+using CoPilot.ORM.Context.Operations;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
 using CoPilot.ORM.Filtering;
@@ -67,7 +69,7 @@ namespace CoPilot.ORM.Database.Commands
         public void Save<T>(T entity, params string[] include) where T : class
         {
             var context = _model.CreateContext<T>(include);
-            DoSave(context, entity);
+            SaveNode(context, entity);
         }
 
         public void Save<T>(IEnumerable<T> entities, params string[] include) where T : class
@@ -75,30 +77,39 @@ namespace CoPilot.ORM.Database.Commands
             var context = _model.CreateContext<T>(include);
             foreach (var entity in entities)
             {
-                DoSave(context, entity);
+                SaveNode(context, entity);
             }
             
         }
 
-        public void Delete<T>(T entity, params string[] include) where T : class
+        public void Insert<T>(T entity, params string[] include) where T : class
         {
             var context = _model.CreateContext<T>(include);
-            DoDelete(context, entity);
+            InsertNode(context, entity);
         }
 
-        public void Delete<T>(IEnumerable<T> entities, string[] include) where T : class
+        public void Insert<T>(IEnumerable<T> entities, params string[] include) where T : class
         {
             var context = _model.CreateContext<T>(include);
             foreach (var entity in entities)
             {
-                DoDelete(context, entity);
-            } 
+                InsertNode(context, entity);
+            }
         }
 
-        public void Patch<T>(object dto) where T : class
+        public void Update<T>(T entity, params string[] include) where T : class
         {
-            var context = _model.CreateContext<T>();
-            DoPatch(context, dto);
+            var context = _model.CreateContext<T>(include);
+            UpdateNode(context, entity);
+        }
+
+        public void Update<T>(IEnumerable<T> entities, params string[] include) where T : class
+        {
+            var context = _model.CreateContext<T>(include);
+            foreach (var entity in entities)
+            {
+                UpdateNode(context, entity);
+            }
         }
 
         public void Insert(DbTable table, params object[] values)
@@ -108,47 +119,60 @@ namespace CoPilot.ORM.Database.Commands
                 var map = new TableMapEntry(value.GetType(), table, OperationType.Insert);
                 var ctx = new TableContext(_model, map);
                 var opCtx = ctx.InsertUsingTemplate(ctx, value);
-                var insertWriter = _model.ResourceLocator.Get<IInsertStatementWriter>();
-                var stm = insertWriter.GetStatement(opCtx, Options);
-                if (Options.EnableIdentityInsert && ((Options.Parameterize && stm.Args.ContainsKey("@key")) || (!Options.Parameterize && stm.Script.ToString().Contains(table.GetKey().ColumnName))))
-                {
-                    //TODO: Abstract behind interface
-                    stm.Script.WrapInside(
-                        $"SET IDENTITY_INSERT {table} ON",
-                        $"SET IDENTITY_INSERT {table} OFF",
-                        false);
 
-                    CommandExecutor.ExecuteNonQuery(Command, stm);
-                }
-                else
-                {
-                    CommandExecutor.ExecuteScalar(Command, stm);
-                }
+                ExecuteInsert(opCtx, table);
+
             });
-           
-            
+        }
+        
+        public void Delete<T>(T entity, params string[] include) where T : class
+        {
+            var context = _model.CreateContext<T>(include);
+            DeleteNode(context, entity);
         }
 
-        private void DoSave(ITableContextNode node, object instance, Dictionary<string,object> unmappedValues = null)
+        public void Delete<T>(IEnumerable<T> entities, string[] include) where T : class
         {
-            var keyColumn = node.Table.GetKey();
+            var context = _model.CreateContext<T>(include);
+            foreach (var entity in entities)
+            {
+                DeleteNode(context, entity);
+            } 
+        }
+
+        public void Patch<T>(object dto) where T : class
+        {
+            var context = _model.CreateContext<T>();
+            PatchNode(context, dto);
+        }
+
+        
+
+
+        private void SaveNode(ITableContextNode node, object instance, Dictionary<string,object> unmappedValues = null)
+        {
+            var keys = node.Table.GetKeys();
+            if (keys.Length > 1)
+            {
+                throw new NotSupportedException($"You need to use specific insert or update methods for entities with composite primary key (table: {node.Table}).");
+            }
+            var keyColumn = keys.SingleOrDefault();
             if (instance != null)
             {
                 var keyValue = node.MapEntry.GetValueForColumn(instance, keyColumn);
-                if (keyValue == null || keyValue.Equals(ReflectionHelper.GetDefaultValue(keyValue.GetType())) || (Options.EnableIdentityInsert && !_entities.ContainsKey(instance)))
+                if (keyValue == null || keyValue.Equals(ReflectionHelper.GetDefaultValue(keyValue.GetType())) ||
+                    (Options.EnableIdentityInsert && !_entities.ContainsKey(instance)))
                 {
-                    DoInsert(node, instance, unmappedValues);
+                    InsertNode(node, instance, unmappedValues);
                 }
                 else
                 {
-                    DoUpdate(node, instance, unmappedValues);
+                    UpdateNode(node, instance, unmappedValues);
                 }
             }
-            
-            
         }
 
-        private void DoInsert(ITableContextNode node, object instance, Dictionary<string, object> unmappedValues = null)
+        private void InsertNode(ITableContextNode node, object instance, Dictionary<string, object> unmappedValues = null)
         {
             if ((node.MapEntry.Operations & OperationType.Insert) == 0)
             {
@@ -158,48 +182,79 @@ namespace CoPilot.ORM.Database.Commands
             ProcessDependencies(node, instance);
 
             //Process this
-
             if ((Operations & OperationType.Insert) == 0) return;
 
+            var keys = node.Table.GetKeys();
+            if (keys.Length != 1)
+            {
+                InsertUntrackedNode(node, instance, unmappedValues);
+                return;
+            } 
+
             object pk;
+            var key = keys.Single();
+
             if (_entities.ContainsKey(instance))
             {
                 pk = _entities[instance];
             }
             else
             {
-                var writer = _model.ResourceLocator.Get<IInsertStatementWriter>();
                 var opCtx = node.Context.Insert(node, instance, unmappedValues);
-                var stm = writer.GetStatement(opCtx, Options);
-                
-                if (Options.EnableIdentityInsert && ((Options.Parameterize && stm.Args.ContainsKey("@key") )||(!Options.Parameterize && stm.Script.ToString().Contains(node.Table.GetKey().ColumnName))))
-                {
-                    //TODO: Abstract behind interface
-                    stm.Script.WrapInside(
-                        $"SET IDENTITY_INSERT {node.Table} ON", 
-                        $"SET IDENTITY_INSERT {node.Table} OFF", 
-                        false);
-
-                    CommandExecutor.ExecuteNonQuery(Command, stm);
-
-                    pk = opCtx.Args["@key"];
-                }
-                else
-                {
-                    pk = CommandExecutor.ExecuteScalar(Command, stm);
-                }
-
+                pk = ExecuteInsert(opCtx, node.Table);
                 _entities.Add(instance, pk);
             }
-            var keyCol = node.MapEntry.Table.GetKey();
-            var keyMember = node.MapEntry.GetMappedMember(keyCol);
+            var keyMember = node.MapEntry.GetMappedMember(key);
             keyMember.SetValue(instance, pk);
 
             //Process inverse dependant nodes
             ProcessInverseDependencies(node, instance, pk, OperationType.Insert);
+
+
         }
-        
-        private void DoUpdate(ITableContextNode node, object instance, Dictionary<string, object> unmappedValues = null)
+
+        private void InsertUntrackedNode(ITableContextNode node, object instance, Dictionary<string, object> unmappedValues = null)
+        {
+            var writer = _model.ResourceLocator.Get<IInsertStatementWriter>();
+            var opCtx = node.Context.Insert(node, instance, unmappedValues);
+            var stm = writer.GetStatement(opCtx, Options);
+
+            CommandExecutor.ExecuteNonQuery(Command, stm);
+        }
+
+        private object ExecuteInsert(OperationContext opCtx, DbTable table)
+        {
+            var keys = table.GetKeys();
+            object pk;
+
+            var insertWriter = _model.ResourceLocator.Get<IInsertStatementWriter>();
+            var stm = insertWriter.GetStatement(opCtx, Options);
+
+            if (keys.Length == 1 && keys[0].DefaultValue?.Expression == DbExpressionType.PrimaryKeySequence &&
+                    Options.EnableIdentityInsert &&
+                    (
+                        (Options.Parameterize && stm.Args.ContainsKey("@key")) ||
+                        (!Options.Parameterize && stm.Script.ToString().Contains(keys[0].ColumnName))
+                    ))
+            {
+                //TODO: Abstract behind interface
+                stm.Script.WrapInside(
+                    $"SET IDENTITY_INSERT {table} ON",
+                    $"SET IDENTITY_INSERT {table} OFF",
+                    false);
+
+                CommandExecutor.ExecuteNonQuery(Command, stm);
+                pk = opCtx.Args["@key"];
+            }
+            else
+            {
+                pk = CommandExecutor.ExecuteScalar(Command, stm);
+            }
+
+            return pk;
+        }
+
+        private void UpdateNode(ITableContextNode node, object instance, Dictionary<string, object> unmappedValues = null)
         {
             if ((node.MapEntry.Operations & OperationType.Update) == 0)
             {
@@ -217,20 +272,25 @@ namespace CoPilot.ORM.Database.Commands
                 var stm = writer.GetStatement(opCtx, Options);
                 CommandExecutor.ExecuteNonQuery(Command, stm);
             }
-            var pk = node.MapEntry.GetValueForColumn(instance, node.Table.GetKey());
-            ProcessInverseDependencies(node, instance, pk, OperationType.Update);
+            if (node.Table.HasKey && !node.Table.HasCompositeKey)
+            {
+                var pk = node.MapEntry.GetValueForColumn(instance, node.Table.GetSingularKey());
+                ProcessInverseDependencies(node, instance, pk, OperationType.Update);
+            }
         }
 
-        private void DoDelete(ITableContextNode node, object instance)
+        private void DeleteNode(ITableContextNode node, object instance)
         {
             if ((node.MapEntry.Operations & OperationType.Delete) == 0)
             {
                 throw new InvalidOperationException($"Entity is not allowed to perform deletes on the table '{node.Table.TableName}'");
             }
-            var pk = node.MapEntry.GetValueForColumn(instance, node.Table.GetKey());
+            if (node.Table.HasKey && !node.Table.HasCompositeKey)
+            {
+                var pk = node.MapEntry.GetValueForColumn(instance, node.Table.GetSingularKey());
 
-            ProcessInverseDependencies(node, instance, pk, OperationType.Delete);
-
+                ProcessInverseDependencies(node, instance, pk, OperationType.Delete);
+            }
             if ((Operations & OperationType.Delete) != 0)
             {
                 var writer = _model.ResourceLocator.Get<IDeleteStatementWriter>();
@@ -240,7 +300,7 @@ namespace CoPilot.ORM.Database.Commands
             }
         }
 
-        private void DoPatch(ITableContextNode node, object instance)
+        private void PatchNode(ITableContextNode node, object instance)
         {
             if ((Operations & OperationType.Update) != 0)
             {
@@ -251,36 +311,25 @@ namespace CoPilot.ORM.Database.Commands
             }
         }
 
-        private void SetForeignkeyToNull(TableContextNode node, object pk)
+        private void ProcessDependencies(ITableContextNode node, object instance)
         {
-            var fkCol = node.Relationship.ForeignKeyColumn;
-            var pkCol = node.Table.GetKey();
-            var parameter = new DbParameter("@key", pkCol.DataType, null, false);
-            //TODO: Abstract behind interface
-            var sql = $"UPDATE {node.Table} SET {fkCol.ColumnName}=NULL WHERE {pk} = {parameter.Name}";
-            var stm = new SqlStatement();
-            stm.Script.Add(sql);
-            stm.Parameters.Add(parameter);
-            stm.Args.Add(parameter.Name, pk);
-            CommandExecutor.ExecuteNonQuery(Command, stm);
-        }
-        private object[] SelectKeysFromChildTable(TableContextNode node, object pk)
-        {
-            var fkCol = node.Relationship.ForeignKeyColumn;
-            var pkCol = node.Table.GetKey();
+            if (instance == null) return;
 
-            var parameter = new DbParameter("@key", pkCol.DataType, null, false);
-            //TODO: Abstract behind interface
-            var sql = $"SELECT {pkCol.ColumnName} FROM {node.Table} WHERE {fkCol.ColumnName} = @key";
-            var stm = new SqlStatement();
-            stm.Script.Add(sql);
+            var depNodes = node.Nodes.Where(r => !r.Value.IsInverted && !r.Value.Relationship.IsLookupRelationship);
 
-            stm.Parameters.Add(parameter);
-            stm.Args.Add(parameter.Name, pk);
+            foreach (var item in depNodes)
+            {
+                var member = node.MapEntry.GetMemberByName(item.Key);
+                var depInstance = member.GetValue(instance);
+                if (depInstance == null) continue;
+                SaveNode(item.Value, depInstance);
+                var key = item.Value.MapEntry.GetValueForColumn(depInstance, item.Value.GetTargetKey);
+                if (!node.MapEntry.SetValueForColumn(instance, item.Value.GetSourceKey, key))
+                {
+                    throw new InvalidOperationException("What to do?");
+                }
 
-            var res = CommandExecutor.ExecuteQuery(Command, stm);
-
-            return res.RecordSets.Single().Vector(0);
+            }
         }
 
         private void ProcessInverseDependencies(ITableContextNode node, object instance, object pk, OperationType context)
@@ -296,8 +345,8 @@ namespace CoPilot.ORM.Database.Commands
                 var keys = new List<object>();
                 foreach (var invInstance in collection)
                 {
-                    
-                    
+
+
                     if (context == OperationType.Insert || context == OperationType.Update)
                     {
                         Dictionary<string, object> unmappedValues = null;
@@ -306,8 +355,8 @@ namespace CoPilot.ORM.Database.Commands
                             unmappedValues = new Dictionary<string, object> { { item.Value.Relationship.ForeignKeyColumn.AliasName, pk } };
                         }
 
-                        DoSave(item.Value, invInstance, unmappedValues);
-                        var keyCol = item.Value.Table.GetKey();
+                        SaveNode(item.Value, invInstance, unmappedValues);
+                        var keyCol = item.Value.Table.GetSingularKey();
                         var invKey = item.Value.MapEntry.GetValueForColumn(invInstance, keyCol);
                         keys.Add(invKey);
                     }
@@ -320,34 +369,64 @@ namespace CoPilot.ORM.Database.Commands
                         }
                         else
                         {
-                            DoDelete(item.Value, invInstance);
+                            DeleteNode(item.Value, invInstance);
                         }
                     }
                     else
                     {
-                        throw new InvalidOperationException("Hmm...suspicious!");
+                        throw new InvalidOperationException($"Invalid operation type: {context}!");
                     }
 
                 }
                 if (context == OperationType.Update)
                 {
                     var existingKeys = SelectKeysFromChildTable(item.Value, pk);
-                    
+
                     var toDelete = existingKeys.Except(keys).ToArray();
                     if (toDelete.Any())
                     {
                         foreach (var key in toDelete)
                         {
                             var instanceToRemove = GetInstanceByKey(item.Value, key);
-                            DoDelete(item.Value, instanceToRemove);
+                            DeleteNode(item.Value, instanceToRemove);
                         }
                     }
                 }
             });
-            //foreach (var item in invNodes)
-            //{
-                
-            //}
+           
+        }
+
+        //TODO: This must be abstracted and moved to Database folder
+        private void SetForeignkeyToNull(TableContextNode node, object pk)
+        {
+            var fkCol = node.Relationship.ForeignKeyColumn;
+            var pkCol = node.Table.GetSingularKey();
+            var parameter = new DbParameter("@key", pkCol.DataType, null, false);
+            //TODO: Abstract behind interface
+            var sql = $"UPDATE {node.Table} SET {fkCol.ColumnName}=NULL WHERE {pk} = {parameter.Name}";
+            var stm = new SqlStatement();
+            stm.Script.Add(sql);
+            stm.Parameters.Add(parameter);
+            stm.Args.Add(parameter.Name, pk);
+            CommandExecutor.ExecuteNonQuery(Command, stm);
+        }
+        private object[] SelectKeysFromChildTable(TableContextNode node, object pk)
+        {
+            var fkCol = node.Relationship.ForeignKeyColumn;
+            var pkCol = node.Table.GetSingularKey();
+
+            var parameter = new DbParameter("@key", pkCol.DataType, null, false);
+            //TODO: Abstract behind interface
+            var sql = $"SELECT {pkCol.ColumnName} FROM {node.Table} WHERE {fkCol.ColumnName} = @key";
+            var stm = new SqlStatement();
+            stm.Script.Add(sql);
+
+            stm.Parameters.Add(parameter);
+            stm.Args.Add(parameter.Name, pk);
+
+            var res = CommandExecutor.ExecuteQuery(Command, stm);
+
+            return res.RecordSets.Single().Vector(0);
         }
 
         private object GetInstanceByKey(ITableContextNode node, object key)
@@ -360,26 +439,7 @@ namespace CoPilot.ORM.Database.Commands
             return instance;
         }
 
-        private void ProcessDependencies(ITableContextNode node, object instance)
-        {
-            if (instance == null) return;
-
-            var depNodes = node.Nodes.Where(r => !r.Value.IsInverted && !r.Value.Relationship.IsLookupRelationship);
-
-            foreach (var item in depNodes)
-            {
-                var member = node.MapEntry.GetMemberByName(item.Key);
-                var depInstance = member.GetValue(instance);
-                if(depInstance == null) continue;
-                DoSave(item.Value, depInstance);
-                var key = item.Value.MapEntry.GetValueForColumn(depInstance, item.Value.GetTargetKey);
-                if (!node.MapEntry.SetValueForColumn(instance, item.Value.GetSourceKey, key))
-                {
-                    throw new InvalidOperationException("What to do?");
-                }
-
-            }
-        }
+        
 
         
     }

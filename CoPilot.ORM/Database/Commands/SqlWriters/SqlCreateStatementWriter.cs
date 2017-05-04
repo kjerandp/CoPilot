@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Database.Commands.Options;
@@ -13,15 +14,28 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
     {
         public SqlStatement GetStatement(DbTable table, CreateOptions options)
         {
+            List<string> compositeKeys = null;
+
+            var hasCompositeKey = table.HasCompositeKey;
+            if(hasCompositeKey) compositeKeys = new List<string>();
+
             var stm = new SqlStatement();
             stm.Script.Add($"CREATE TABLE [{table.Schema}].[{table.TableName}] (");
             var createColumns = new ScriptBlock();
             foreach (var dbColumn in table.Columns)
             {
                 var extendedInfo = "";
+                
                 if (dbColumn.IsPrimaryKey)
                 {
-                    extendedInfo = " " + GetPrimaryKeyString(dbColumn, options);
+                    if (hasCompositeKey)
+                    {
+                        compositeKeys.Add("["+dbColumn.ColumnName+"]");
+                    }
+                    else
+                    {
+                        extendedInfo = " " + GetPrimaryKeyString(dbColumn, options);
+                    }
                 }
                 else if (dbColumn.IsForeignKey)
                 {
@@ -30,12 +44,18 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
                 createColumns.Add($"{(createColumns.ItemCount > 0 ? "," : "")}{dbColumn.ColumnName}{GetDataTypeString(dbColumn, options)}{extendedInfo}");
             }
 
+            if (compositeKeys != null)
+            {
+                createColumns.Add($"CONSTRAINT PK_{table.TableName.Replace(" ", "_")} PRIMARY KEY NONCLUSTERED ({string.Join(", ", compositeKeys)})");
+            }
+
             var uniqueColumns = table.Columns.Where(r => r.Unique);
 
             foreach (var uniqueColumn in uniqueColumns)
             {
                 createColumns.Add($",CONSTRAINT UQ_{uniqueColumn.ColumnName} UNIQUE({uniqueColumn.ColumnName})");
             }
+            
 
             stm.Script.Add(createColumns);
             stm.Script.Add(")");
@@ -45,16 +65,14 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
         private static string GetPrimaryKeyString(DbColumn column, CreateOptions options)
         {
             var str = string.Empty;
-            if ((column.DefaultValue?.Expression == DbExpressionType.PrimaryKeySequence) || options.UseSequenceForPrimaryKeys)
+            if (column.DefaultValue?.Expression == DbExpressionType.PrimaryKeySequence)
             {
-                if (column.DefaultValue?.Value == null)
-                {
-                    str += $"IDENTITY({options.KeySequenceStartAt},{options.KeySequenceIncrementBy})";
-                }
-                else
-                {
-                    str += column.DefaultValue.Value as string;
-                }
+                str += $"IDENTITY({options.KeySequenceStartAt},{options.KeySequenceIncrementBy}) ";
+                
+            }
+            else if (column.DefaultValue?.Value != null)
+            {
+                str += column.DefaultValue.Value as string;
                 str += " ";
             }
 

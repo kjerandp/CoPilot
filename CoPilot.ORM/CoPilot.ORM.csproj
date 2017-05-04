@@ -119,7 +119,7 @@
     <Compile Include="Extensions\AdoNetExtensions.cs" />
     <Compile Include="Helpers\ExpressionHelper.cs" />
     <Compile Include="Config\DbMapper.cs" />
-    <Compile Include="Exceptions\PlainSqlConfigurationException.cs" />
+    <Compile Include="Exceptions\CoPilotConfigurationException.cs" />
     <Compile Include="Helpers\DbConversionHelper.cs" />
     <Compile Include="Helpers\PathHelper.cs" />
     <Compile Include="Helpers\ReflectionHelper.cs" />

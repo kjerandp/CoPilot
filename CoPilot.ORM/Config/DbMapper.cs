@@ -53,14 +53,16 @@ namespace CoPilot.ORM.Config
             if (!string.IsNullOrEmpty(keyMemberName))
             {
                 var keyMember = typeof(T).GetMember(keyMemberName).FirstOrDefault();
-                if (keyMember == null)
-                    throw new ArgumentException(
-                        $"Looking for field named '{keyMemberName}', but it was not found!");
+                //if (keyMember == null)
+                //    throw new ArgumentException(
+                //        $"Looking for field named '{keyMemberName}', but it was not found!");
+                if (keyMember != null)
+                {
+                    var cb = builder.Column(ClassMemberInfo.Create(keyMember), keyColumnName);
 
-                var cb = builder.Column(ClassMemberInfo.Create(keyMember), keyColumnName);
-
-                cb.IsKey();
-                cb.DefaultValue(DefaultValue.PrimaryKey);
+                    cb.IsKey();
+                    cb.DefaultValue(DefaultValue.PrimaryKey);
+                }
             }
             return builder;
         }
@@ -85,12 +87,6 @@ namespace CoPilot.ORM.Config
             return input.Replace("~", table.TableName + "_").ToUpper();
         }
 
-        internal static string GenerateColumnName(DbTable table, ClassMemberInfo member)
-        {
-            var name = (table.TableName + "_" + member.Name.ToTitleCase()).RemoveRepeatedNeighboringWords().ToUpper();
-            return name;
-        }
-
         public DbModel CreateModel()
         {
             if(IsInitialized) throw new InvalidOperationException("Model is already created!");
@@ -104,7 +100,7 @@ namespace CoPilot.ORM.Config
                     var col = tbl.GetColumn(member);
                     if (col == null)
                     {
-                        var columnName = GenerateColumnName(tbl, member);
+                        var columnName = _model.GenerateColumnName(tbl, member);
                         col = tbl.GetColumnByName(columnName);
                         if (col == null)
                         {
@@ -150,6 +146,9 @@ namespace CoPilot.ORM.Config
             _model.DefaultSchemaName = string.IsNullOrEmpty(schemaName) ? "dbo" : schemaName;
         }
 
-       
+        public void SetPrefixColumnNamesWithTableName(bool value)
+        {
+            _model.PrefixColumnNamesWithTableName = value;
+        }
     }
 }

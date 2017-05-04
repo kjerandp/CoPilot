@@ -92,7 +92,7 @@ namespace CoPilot.ORM.Config.Builders
                 : lookupTable.GetColumnByName(lookupColumnName, StringComparison.OrdinalIgnoreCase);
             if (lookupColumn == null) throw new ArgumentException("No lookup column configured");
 
-            var relationship = new DbRelationship(_column, lookupTable.GetKey()) {LookupColumn = lookupColumn};
+            var relationship = new DbRelationship(_column, lookupTable.GetSingularKey()) {LookupColumn = lookupColumn};
             _column.ForeignkeyRelationship = relationship;
             return this;
         }

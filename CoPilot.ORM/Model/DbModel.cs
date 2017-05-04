@@ -4,10 +4,10 @@ using System.Linq;
 using System.Linq.Expressions;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Common.Config;
-using CoPilot.ORM.Config;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Database;
+using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Mapping;
 
 namespace CoPilot.ORM.Model
@@ -19,6 +19,8 @@ namespace CoPilot.ORM.Model
         internal HashSet<ClassMemberInfo> Ignored = new HashSet<ClassMemberInfo>();
         internal readonly HashSet<DbTable> Tables = new HashSet<DbTable>();
         internal readonly HashSet<DbStoredProcedure> StoredProcedures = new HashSet<DbStoredProcedure>();
+
+        internal bool PrefixColumnNamesWithTableName { get; set; }
         internal string DefaultSchemaName { get; set; }
 
         public ResourceLocator ResourceLocator { get; }
@@ -27,6 +29,7 @@ namespace CoPilot.ORM.Model
         {
             ResourceLocator = resourceLocator;
             DefaultSchemaName = "dbo";
+            PrefixColumnNamesWithTableName = true;
             _tableMappings = new Dictionary<Type, TableMapEntry>();
 
         }
@@ -137,6 +140,13 @@ namespace CoPilot.ORM.Model
         internal IEnumerable<TableMapEntry> GetAllTableMaps()
         {
             return _tableMappings.Values;
+        }
+
+        internal string GenerateColumnName(DbTable table, ClassMemberInfo member)
+        {
+            var name = ((PrefixColumnNamesWithTableName ? table.TableName.Replace(" ", "_") + "_" : "") +
+                          member.Name.ToTitleCase()).RemoveRepeatedNeighboringWords().ToUpper();
+            return name;
         }
 
         public IDb CreateDb(string connectionString)

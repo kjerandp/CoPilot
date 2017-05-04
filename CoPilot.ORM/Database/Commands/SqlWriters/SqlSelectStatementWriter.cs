@@ -33,7 +33,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
 
             parts["SELECT"] += "\n\t" + string.Join("\n\t,", queryContext.SelectColumns.Select(r => r.ToString()));
 
-            parts["FROM"] = $"\n\t{queryContext.BaseNode.Table.TableName} T{queryContext.BaseNode.Index}";
+            parts["FROM"] = $"\n\t{SanitizeTableName(queryContext.BaseNode.Table.TableName)} T{queryContext.BaseNode.Index}";
 
             foreach (var item in queryContext.JoinedNodes)
             {
@@ -71,7 +71,12 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
 
         private static string GetFromItemText(TableJoinDescription join)
         {
-            return $"\n\t{(join.JoinType == TableJoinType.InnerJoin ? "INNER" : "LEFT")} JOIN {join.TargetKey.Table.TableName} T{join.TargetTableIndex} ON T{join.TargetTableIndex}.{join.TargetKey.ColumnName}=T{join.SourceTableIndex}.{join.SourceKey.ColumnName}";
+            return $"\n\t{(join.JoinType == TableJoinType.InnerJoin ? "INNER" : "LEFT")} JOIN {SanitizeTableName(join.TargetKey.Table.TableName)} T{join.TargetTableIndex} ON T{join.TargetTableIndex}.{join.TargetKey.ColumnName}=T{join.SourceTableIndex}.{join.SourceKey.ColumnName}";
+        }
+
+        private static string SanitizeTableName(string tableName)
+        {
+            return tableName.Contains(" ") ?  "[" + tableName + "]" : tableName;
         }
 
     }

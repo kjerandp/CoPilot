@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Context.Operations;
 using CoPilot.ORM.Database.Commands.Options;
@@ -19,8 +21,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
 
             var colBlock = new ScriptBlock();
 
-            DbColumn key = null;
-            var keyValueString = string.Empty;
+            var qualifications = new List<string>();
 
             foreach (var col in ctx.Columns.Keys)
             {
@@ -48,8 +49,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
                     }
                     if (col.IsPrimaryKey)
                     {
-                        key = col;
-                        keyValueString = valueString;
+                        qualifications.Add($"[{col.ColumnName}] = {valueString}");
                     }
                     else
                     {
@@ -61,13 +61,13 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
                      throw new ArgumentException($"No argument specified for the parameter '{param.Name}'.");  
                 }
             }
-            if (key == null || string.IsNullOrEmpty(keyValueString))
+            if (!qualifications.Any())
                 throw new ArgumentException("Key column not found among the columns provided by the operation context!");
 
             statement.Script.Add($"UPDATE {ctx.Node.Table} SET");
             statement.Script.Add(colBlock);
             statement.Script.Add("WHERE");
-            statement.Script.Add(new ScriptBlock($"{key.ColumnName} = {keyValueString}"));
+            statement.Script.Add(new ScriptBlock(string.Join(" AND ", qualifications)));
 
             return statement;
         }

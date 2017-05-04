@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Helpers;
@@ -40,7 +41,7 @@ namespace CoPilot.ORM.Config.Builders
 
         internal string GenerateColumnName(ClassMemberInfo member)
         {
-            return DbMapper.GenerateColumnName(Table, member);
+            return Model.GenerateColumnName(Table, member);
         }
 
         protected DbColumn AddColumnIfNotExist(ClassMemberInfo member, string columnName = null, string alias = null)
@@ -91,7 +92,11 @@ namespace CoPilot.ORM.Config.Builders
             var toTableMap = Model.GetTableMap(toEntityType);
             if(toTableMap == null) throw new ArgumentException("The entity type to create the relationship to is not mapped!");
 
-            var pkCol = toTableMap.Table.GetKey();
+            var keys = toTableMap.Table.GetKeys();
+
+            if (keys.Length > 1) throw new NotSupportedException("Relationships to an entity with composite primary key is not supported!");
+            
+            var pkCol = keys.SingleOrDefault();
             
             if (pkCol == null)
                 throw new ArgumentException($"Table '{toTableMap.Table.TableName}' does not have a key defined.");

@@ -65,11 +65,11 @@ namespace CoPilot.ORM.Model
             }
             set
             {
-                var pk = Table.GetKey();
-                if (pk != null)
-                {
-                    pk._isPrimaryKey = false;
-                }
+                //var pk = Table.GetKey();
+                //if (pk != null)
+                //{
+                //    pk._isPrimaryKey = false;
+                //}
                 _isPrimaryKey = value;
                 IsNullable = false;
             }
