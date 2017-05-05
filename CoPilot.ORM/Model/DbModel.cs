@@ -146,10 +146,6 @@ namespace CoPilot.ORM.Model
             var namer = ColumnNamingConvention ?? DbColumnNamingConvention.Default;
 
             return namer.Name(member.Name, table.TableName.Replace(" ", "_"));
-
-            //var name = ((PrefixColumnNamesWithTableName ? table.TableName.Replace(" ", "_") + "_" : "") +
-            //              member.Name.ToTitleCase()).RemoveRepeatedNeighboringWords().ToUpper();
-            //return name;
         }
 
         public IDb CreateDb(string connectionString)

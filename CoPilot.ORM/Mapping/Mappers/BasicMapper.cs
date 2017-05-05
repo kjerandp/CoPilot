@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CoPilot.ORM.Config.DataTypes;
+using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Helpers;
 
@@ -11,7 +12,7 @@ namespace CoPilot.ORM.Mapping.Mappers
     public static class BasicMapper
     {
       
-        public static ObjectMapper Create(Type type, Dictionary<string, string> columnMapping = null, bool ignoreCase = true)
+        public static ObjectMapper Create(Type type, Dictionary<string, string> columnMapping = null, bool ignoreCase = true, ILetterCaseConverter caseConverter = null)
         {
             columnMapping = columnMapping?.ToDictionary(k => k.Key.ToUpperInvariant(), v => v.Value);
             ObjectMapper mapper = dataset =>
@@ -37,6 +38,9 @@ namespace CoPilot.ORM.Mapping.Mappers
                             if (columnMapping != null && columnMapping.ContainsKey(key.ToUpperInvariant()))
                             {
                                 key = columnMapping[key.ToUpperInvariant()];
+                            } else if (caseConverter != null)
+                            {
+                                key = caseConverter.Convert(key);
                             }
                             var member = PathHelper.GetMemberFromPath(type, key, true, false);
                             if (member != null)

@@ -8,12 +8,21 @@ namespace CoPilot.ORM.Mapping.Mappers
 {
     public static class DynamicMapper
     {
+        public static ObjectMapper Create()
+        {
+            return Create(true, null);
+        }
 
         public static ObjectMapper Create(params string[] fieldNameMask)
         {
             return Create(true, fieldNameMask);
         }
+        
         public static ObjectMapper Create(bool convertToCamelCase = true, params string[] fieldNameMask)
+        {
+            return Create(convertToCamelCase?new CamelCaseConverter():null, fieldNameMask);
+        }
+        public static ObjectMapper Create(ILetterCaseConverter caseConverter = null, params string[] fieldNameMask)
         {
             return dataset =>
             {
@@ -28,7 +37,6 @@ namespace CoPilot.ORM.Mapping.Mappers
                         }
                     });
                 } else {
-                    var converter = new CamelCaseConverter();
                     Parallel.ForEach(dataset.Records, (r, n, i) =>
                     {
                         var model = new ExpandoObject() as IDictionary<string, object>;
@@ -37,10 +45,10 @@ namespace CoPilot.ORM.Mapping.Mappers
                         {
                             var propName = string.Empty;
                             var fieldNameParts = dataset.FieldNames[f].Split('.');
-
-                            if (convertToCamelCase)
+                            
+                            var isMasked = false;
+                            if (fieldNameMask != null)
                             {
-                                var isMasked = false;
                                 foreach (var part in fieldNameParts)
                                 {
                                     foreach (var mask in fieldNameMask)
@@ -61,14 +69,17 @@ namespace CoPilot.ORM.Mapping.Mappers
                                         propName += part;
                                     }
                                 }
-
-                                propName = converter.Convert(propName);
-
                             }
                             else
                             {
                                 propName = dataset.FieldNames[f];
                             }
+
+                            if (caseConverter != null)
+                            {
+                                propName = caseConverter.Convert(propName);
+                            }
+
                             var value = r[f];
                             model.Add(propName, value);
                         }

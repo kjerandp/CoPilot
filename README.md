@@ -1,38 +1,25 @@
 # CoPilot
-A feature rich object relational mapper that aims to: 
-* write clean sql 
-* offers great performance
-* be easy use and configure
-* not leak into your domain model or any other layers.
+CoPilot is an object relational mapper (ORM) with a specific purpose. If you are looking for a full featured enterprise level ORM then CoPilot is not what you are looking for. CoPilot is designed to assist you when  implementing the data access layer - simplifying the common tasks.
+
+Think of it more in the sense of a micro ORM, only with a set of helpful  features added on top of it. 
+
+**Key features:**  
+* Map POCO models to tables including relationships (one-to-many and many-to-one relationships). 
+* Author and execute SQL statements for CRUD operations. Related entities can be included for all operations, as long as they have a singular key defined. 
+* Mapping of data from queries or stored procedures to dynamic objects or POCO classes
+* Perform mulitple write operations as a unit-of-work (database transaction)
+* Generate scripts to build database from model
 
 ### Important Note
 This is still an early version and only works with MSSQL - use at your own risk!
 
-## Background
-CoPilot was developed from a specific need of an object relational mapper (ORM) that is simple to set up and predictable in how and when it executes database operations. Enterprise-level ORMs (like Entity Framework and NHibernate) are simply trying to solve too many problems in one big bloated package. Its counterparts, the micro-ORMs, are a more attractive option as it gives us full control over the interaction with the Db and with blazing performance. However, that would leave us writing a lot of SQL boilerplate code. What we really needed was something in-between these two extremes, where on the one side 
-
-I started to write my own ORM, which is the CoPilot. It's purpose is to save you from the 80-90% boilerplate that you would otherwise have to do in a typical CRUD focused application without using an ORM. Whenever you need to do something that CoPilot is not designed to handle, you would default to writing that as SQL or by calling a stored procedure (or whatever you would default to). 
-
-_CoPilot is designed to help you with the routine work - you are still in control of the data access layer - it's not an autopilot._
-
-## Features  
-CoPilot gives you some of the benefits that a micro ORM would give you. It handles connection to the database, map parameters to your SQL statements and map the response from the database back to simple objects. On top of this, you can configure how your models relate to the database tables and relationships. This will allow you to have CoPilot write the SQL statement(s) for you and map the resulting data back to those objects, similar to what you would expect Entity Framework or NHibernate to do. There are limitations of course, like you will not be able to explicitly do joins or grouping of the data. CoPilot will only do joins when you ask it to include related entities, and that is currently limited to one-to-many and many-to-one relationships.
-
-### Key features:
-* Map arguments to parameters when issueing command, scalar or query statemants.
-* Map POCO objects to database entities
-* Execute contextual queries, inserts, updates and deletes using a uniform interface 
-* Explicitly specify what related entities that should be included (no lazy loading!)
-* Execute write operations using the DbWriter-class to perform "unit of work" transactions.
-* Create and execute scripts to generate the database, tables and/or seed data
-
 ## Usage
-All the examples documented here can be found in the integration test project that is part of the source code of CoPilot.
+Most of the examples documented here can be found in the integration test project that is part of the source code of CoPilot.
 
 ### Basic usage
-First part of these examples will work against the well known Northwnd database, which I have restored in my SqlExpress instance after downloading it from <https://northwinddatabase.codeplex.com/>
+First part of these examples will work against the Northwnd database, which I have restored in my SqlExpress instance after downloading it from <https://northwinddatabase.codeplex.com/>
 
-#### Connectiing to the database
+#### Connecting to the database
 CoPilot works on an interface named `IDb`. So to start using CoPilot, we need to obtain a reference to an implementation of that interface. I have created a simple helper class here that uses a helper class in CoPilot called `DbMapper`. We will use this class later when we map our POCO models to database tables, but for now we will just have it create the simplest possible representation of the database, by handing it the connection string.
 
 ```
@@ -124,7 +111,7 @@ The `DbResponse` class is obviously not very convinient class to work with, so l
 ```
 There are a few new things to note here. First, we are mapping to a specific type, given by the generic argument. The second thing to note is the parameter binding in the query. You specify parameters in a query with the @[name] syntax and pass arguments for the named parameters by providing an anonymous object with a properties matching the names excluding the alpha-sign.
 
-By the way, the test above will fail. We are testing for a property called `EmployeeID`, which matches the column name in the Employee-table. However, the default mapper used will try to convert the column names by converting from titlecase to camel case. Example, if the column was named `EMPLOYEE_ID`, then the property would be named `EmployeeId`. It will take the first letter in each part (seperated by underscore) and make it uppercase while the rest of the letters will be turned into lowercase. 
+By the way, the test above will fail. We are testing for a property called `EmployeeID`, which matches the column name in the Employee-table. However, the default mapper used will try to convert the column names by converting from snake case to camel case. Example, if the column was named `EMPLOYEE_ID`, then the property would be named `EmployeeId`. It will take the first letter in each part (seperated by underscore) and make it uppercase while the rest of the letters will be turned into lowercase. 
 
 We can either change the way we access the property to use `Employeeid` or we can tell the mapper to not use its default behaviour like this:
 
@@ -208,7 +195,7 @@ We can do commands and scalars by calling the `Command` and `Scalar` methods res
 ```
 
 ## Mapping models and relationships
-Low level usage of CoPilot is nice as a fallback method. What sets it apart from the next micro ORM though, is its abillity to write queries and other statements for you, based on the configuration you give it. Let's make a few more POCO classes and create a model configuration to see what we then can do.
+Low level usage of CoPilot is nice as a fallback method. What sets it apart from the the typical micro ORM though, is its abillity to write queries and other statements for you, based on the configuration you give it. Let's make a few more POCO classes and create a model configuration to see what we then can do.
 
 
 (To be continued)

@@ -19,8 +19,6 @@ namespace CoPilot.ORM.IntegrationTests
             [TestMethod]
             public void DropCreateDatabase()
             {
-                CoPilotGlobalResources.LoggingLevel = LoggingLevel.Verbose;
-
                 var db = NorthwndConfig.CreateFromConfig(@"
                 data source=localhost; 
                 initial catalog=master; 

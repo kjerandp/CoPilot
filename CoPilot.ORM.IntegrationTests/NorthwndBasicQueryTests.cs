@@ -1,6 +1,7 @@
 ﻿
 using System.Collections.Generic;
 using System.Linq;
+using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Database;
 using CoPilot.ORM.IntegrationTests.Models;
 using CoPilot.ORM.Mapping.Mappers;
@@ -58,6 +59,13 @@ namespace CoPilot.ORM.IntegrationTests
             var response = _db.Query<dynamic>("select * from employees where EmployeeID=@id order by LastName", new { id = 5 }, DynamicMapper.Create(convertToCamelCase:false)).Single();
             Assert.AreEqual(5, response.EmployeeID);
             Assert.AreEqual("Steven", response.FirstName);
+        }
+
+        [TestMethod]
+        public void CanExecuteStoredProcedureAndMapToDynamicObject()
+        {
+            var response = _db.Query<dynamic>("[Ten Most Expensive Products]", null, DynamicMapper.Create(new SnakeOrKebabCaseConverter()));
+
         }
 
         [TestMethod]
