@@ -52,7 +52,7 @@
   </Choose>
   <ItemGroup>
     <Compile Include="BuildTestDatabase.cs" />
-    <Compile Include="NorthwndConfiguredQueryTests .cs" />
+    <Compile Include="NorthwndContextQueryTests .cs" />
     <Compile Include="NorthwndBasicQueryTests.cs" />
     <Compile Include="Models\Customer.cs" />
     <Compile Include="Models\Employee.cs" />

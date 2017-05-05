@@ -10,14 +10,14 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace CoPilot.ORM.IntegrationTests
 {
     [TestClass]
-    public class NorthwndConfiguredQueryTests
+    public class NorthwndContextQueryTests
     {
         private readonly IDb _db = NorthwndConfig.CreateFromConfig();
 
         [TestMethod]
         public void CanQueryAllCustomers()
         {
-            var orders = _db.Query<Order>(null, "OrderDetails.Product").ToArray();
+            var orders = _db.Query<Order>(null, "OrderDetails.Product", "Employee", "Customer").ToArray();
             Assert.IsNotNull(orders);
             Assert.IsTrue(orders.All(r => r.OrderDetails.Any()));
             Assert.IsNotNull(orders.First()?.OrderDetails.First()?.Product);

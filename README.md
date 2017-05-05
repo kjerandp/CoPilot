@@ -98,33 +98,54 @@ This will add a `DbRecordSet` for each query and name them according to the name
 
 This object is important if you want to create your own mapping delegate. If you want to see some more usage of this class, look into the Northwnd basic query tests.
 
-#### Basic mapping
-The `DbResponse` class is obviously not very convinient class to work with, so lets try to map the data to an object. We have not created any POCO models yet, so let's start by mapping a query to a dynamic object.
+#### Executing basic commands
+We can do commands and scalars by calling the `Command` and `Scalar` methods respectively. Here are two basic examples:
+
+```
+        
+// Update command
+var rows = _db.Command("update employees set FirstName=@newName where EmployeeID=@id", new {id = 1, newName = "Kjerand"});
+
+// Scalar
+var regions = _db.Scalar<int>("select count(*) from region");
+        
+```
+
+### Mapping
+In order to map data, from the database to CLR objects, CoPilot is using a mapping delegate. There are three available mappers buildt into CoPilot:
+* `DynamicMapper` - for mapping data to a dynamic object
+* `BasicMapper` - for mapping data to POCO classes by doing a best-effort matching betweeb fieldnames and property names. Can be assisted by passing in a dictionary of column-to-property mappings. 
+* `ContextMapper` - for mapping data to POCO classes that have been mapped with the `DbMapper`. Supports multiple resultsets with relational entities.  
+
+#### Dynamic mapping
+We have not created any POCO models yet, so in this example the query will be mapped to a dynamic object, using the `DynamicMapper`.
 
 ``` 
-    [TestMethod]
-    public void CanQuerySingleCustomerAndMapToDynamicObject()
-    {
-        var response = _db.Query<dynamic>("select * from employees where EmployeeID=@id order by LastName", new { id = 5 }).Single();
-        Assert.AreEqual(5, response.EmployeeID);
-    }
+var response = _db.Query<dynamic>("select * from employees where EmployeeID=@id order by LastName", new { id = 5 }).Single();
 ```
 There are a few new things to note here. First, we are mapping to a specific type, given by the generic argument. The second thing to note is the parameter binding in the query. You specify parameters in a query with the @[name] syntax and pass arguments for the named parameters by providing an anonymous object with a properties matching the names excluding the alpha-sign.
 
-By the way, the test above will fail. We are testing for a property called `EmployeeID`, which matches the column name in the Employee-table. However, the default mapper used will try to convert the column names by converting from snake case to camel case. Example, if the column was named `EMPLOYEE_ID`, then the property would be named `EmployeeId`. It will take the first letter in each part (seperated by underscore) and make it uppercase while the rest of the letters will be turned into lowercase. 
+When mapping database fields to properties on the dynamic object the mapper will by default convert field names to camel case. This means that the column name `EmployeeID` will be mapped to a property named `EmployeeId`.  
 
-We can either change the way we access the property to use `Employeeid` or we can tell the mapper to not use its default behaviour like this:
+We can prevent this by changing the bahaviour of the mapper:
 
 ``` 
-    [TestMethod]
-    public void CanQuerySingleCustomerAndMapToDynamicObject()
-    {
-        var response = _db.Query<dynamic>("select * from employees where EmployeeID=@id order by LastName", 
-            new { id = 5 }, DynamicMapper.Create(convertToCamelCase:false)).Single();
-        Assert.AreEqual(5, response.EmployeeID);
-    }
+var response = _db.Query<dynamic>(
+    "select * from employees where EmployeeID=@id order byLastName", 
+    new { id = 5 }, 
+    DynamicMapper.Create(convertToCamelCase:false))
+.Single();
 ```
+We can also specify what letter case converter to use. If you want uppercase snake-case names on the properties you can do this:
 
+```
+var response = _db.Query<dynamic>(
+    "select * from employees where EmployeeID=@id order byLastName", 
+    new { id = 5 }, 
+    DynamicMapper.Create(new SnakeOrKebabCaseConverter(r => r.ToUpper()))
+.Single();
+```
+#### Basic mapping
 Now let's go one step further and create a POCO class for an employee. I deliberately have not included a property for all columns as it is not required - it will map what it is able to match.
 
 ```
@@ -144,58 +165,104 @@ Now let's go one step further and create a POCO class for an employee. I deliber
 
 Let's update our test to map to this new class instead of the dynamic.
 ``` 
-    [TestMethod]
-    public void CanQuerySingleCustomerAndMapToPocoObject()
-    {
-        var response = _db.Query<Employee>("select * from employees where EmployeeID=@id order by LastName", new { id = 5 }).Single();
-        Assert.AreEqual(5, response.EmployeeId);
-        Assert.AreEqual("Steven", response.FirstName);
-    }
+var emp = _db.Query<Employee>("select * from employees where EmployeeID=@id order by LastName", new { id = 5 }).Single();
 ```
 
-This time it is not the same mapper as in the previous test, as we are not mapping to a dynamic object. When we map to a class that is not configured using the `DbMapper` the default mapper being used is the `BasicMapper`. It will try and map a column name directly to property names ignoring case. You can however provide a dictionary of column-to-property name mapping. Let's rename the `EmployeeId` to just `Id` and try this with the following command:
+This time the basic mapper is used, as we are not mapping to a dynamic object. By default, it will try and map a column name directly to property names ignoring case. You can however provide a dictionary of column-to-property name mapping. Let's assume we renamed the `EmployeeId` property in our POCO to just `Id`. We could then provide a mapping dictionary to help the mapper:
 ``` 
-    [TestMethod]
-    public void CanQuerySingleCustomerAndMapToPocoObject()
-    {
-        var response = _db.Query<Employee>("select * from employees where EmployeeID=@id order by LastName", new { id = 5 }, 
-            BasicMapper.Create(typeof(Employee), new Dictionary<string, string> { { "EmployeeID", "Id" } })).Single();
-        Assert.AreEqual(5, response.Id);
-        Assert.AreEqual("Steven", response.FirstName);
-    }
+var columnMapping = new Dictionary<string, string> { { "EmployeeID", "Id" } };
+
+var emp = _db.Query<Employee>("select * from employees where EmployeeID=@id order by LastName", 
+    new { id = 5 }, 
+    BasicMapper.Create(typeof(Employee), columnMapping)
+).Single();
 ```
 
-Final example on basic mapping is to map a single column to a simple CLR type. Notice the type specified in the generic argument.
+The basic mapper can also be used to map a single column to a basic system type. Notice the type specified in the generic argument.
 
 ```
-        [TestMethod]
-        public void CanQuerySingleColumnAndMapToSimpleType()
-        {
-            var response = _db.Query<string>("select ProductName from products order by 1", null).ToArray();
-            Assert.AreEqual(77, response.Length);
-            Assert.AreEqual("Alice Mutton", response[0]);
-        }
+var productNames = _db.Query<string>("select ProductName from products order by 1", null).ToArray();
 ```
 
-#### Executing basic commands
-We can do commands and scalars by calling the `Command` and `Scalar` methods respectively. Here are two basic examples:
+#### Contextual mapping
+To get the most out of the features available in CoPilot, we need to provide it with some configurations that describes how your POCO classes relates to the database model. We create this configuration using the `DbMapper`.
+
+Let's say we want all orders, with its order details, customer and employee information. First step would be to create a corresponding POCO class for these entites and then configure them using the `DbMapper`.
+
+We can then retrieve all orders, with all related data mapped by specifying what to include in the arguments passed to the query method. Includes are specified as an array (or params) of strings and represents paths, based on your POCO classes property names, to which relations to include.
+```
+var orders = _db.Query<Order>(null, "OrderDetails.Product", "Employee", "Customer");
+```
+The first NULL-argument passed is to specify no filter. The other arguments are the paths that we want to include. The above instructs that we want to retrieve the orders with the matching order details along with its belonging product, and then also the order's related customer and employee records.
+
+In order to bring in related entities, the POCO class being used for querying needs to have a property referencing the corresponding entity's POCO class and have its relationships explicitly declared in the config:
 
 ```
-        [TestMethod]
-        public void CanExecuteSimpleCommandAndScalar()
-        {
-            // Update command
-            var rows = _db.Command("update employees set FirstName=@newName where EmployeeID=@id", new {id = 1, newName = "Kjerand"});
-            Assert.AreEqual(1, rows);
+public static IDb CreateFromConfig(string connectionString = null)
+{
+    var mapper = new DbMapper();
+    
+    // Any properties that are not specifically mapped through 
+    // configuration will be attempted to be auto-mapped. The naming
+    // convention object allows you to control this behaviour when
+    // the default all-caps, snake-cased and table-name-prefixed column
+    // naming standard won't suit
+    mapper.SetColumnNamingConvention(DbColumnNamingConvention.SameAsClassMemberNames);
 
-            // Scalar
-            var regions = _db.Scalar<int>("select count(*) from region");
-            Assert.AreEqual(4, regions);
-        }
-```
+    // Maps the Customer POCO to the Customer's table and then using the 
+    // "AddKey"-method to specify that the property "ProductId" is representing 
+    // the primary key (PK) and that it maps to the column name "ProductID".
+    // The null-argument is passed to prevent CoPilot setting a default value 
+    // as it assumes key columns are Identity-columns (auto-sequence)
+    mapper.Map<Customer>("Customers").AddKey(r => r.CustomerId, "CustomerID", null);
 
-## Mapping models and relationships
-Low level usage of CoPilot is nice as a fallback method. What sets it apart from the the typical micro ORM though, is its abillity to write queries and other statements for you, based on the configuration you give it. Let's make a few more POCO classes and create a model configuration to see what we then can do.
+    // Maps the Employee POCO to the Employees table and specifying 
+    // that the property "Id" is the PK and that the corresponding 
+    // column name is "EmployeeID". This is a short hand version that
+    // can be used when the "AddKey"-method is not required for specifying
+    // additional settings (in this case the PK is an Identity-column).
+    mapper.Map<Employee>("Employees", r => r.Id, "EmployeeID");
 
+    // Maps the Product POCO to the Products table with PK column name
+    // ProductID
+    mapper.Map<Product>("Products", r => r.ProductId, "ProductID");
+
+    // Maps the Order POCO to the Orders table with PK column name
+    // OrderID
+    var orderMap = mapper.Map<Order>("Orders", r => r.OrderId, "OrderID");
+    
+    // Relating the order to the Employees table and specifying the 
+    // navigation property to the Employee POCO as well as what the 
+    // foreign key column is named. Note that we do not have a property
+    // to hold the employee id in the Order POCO
+    orderMap.HasOne(r => r.Employee, "EmployeeID");
+
+    // Relating the order to the Customers table and also specifying
+    // the foreign key column name as well as its data type, since it is
+    // not an int as will be assumed by CoPilot when omitted
+    orderMap.HasOne(r => r.Customer, "CustomerID", DbDataType.String);
+
+    // Maps the OrderDetails POCO to the "Order Details"-table
+    var detailsMap = mapper.Map<OrderDetails>("Order Details");
+
+    // The order details table has a composite PK, so they need to be
+    // both added using the "AddKey"-method. Again, the null-argument
+    // passed is because these keys are not Identity-columns.
+    detailsMap.AddKey(r => r.ProductId, "ProductID", null);
+    detailsMap.AddKey(r => r.OrderId, "OrderID", null);
+
+    // Relating the OrderDetails POCO to the Orders table. Here we do
+    // have a property for the order id, and no navigation property that
+    // points to an Order POCO. When present, relationships must be 
+    // declared using the property mapped to the foreign key column. 
+    // Navigation properties can be added (if present) by using the
+    // "KeyForMember" and "InverseKeyMember" methods as seen here. 
+    detailsMap.HasOne<Order>(r => r.OrderId, "OrderID").InverseKeyMember(r => r.OrderDetails);
+    detailsMap.HasOne<Product>(r => r.ProductId, "ProductID").KeyForMember(r => r.Product);
+
+    // Creates the IDb reference with the configurations applied
+    return mapper.CreateDb(connectionString ?? DefaultConnectionString);
+}
+``` 
 
 (To be continued)

@@ -57,7 +57,6 @@
     <Compile Include="Mapping\MappedRecordSet.cs" />
     <Compile Include="Logging\ConsoleLogger.cs" />
     <Compile Include="Logging\ILogger.cs" />
-    <Compile Include="Mapping\Mappers\DictionaryMapper.cs" />
     <Compile Include="Model\DbStoredProcedure.cs" />
     <Compile Include="Config\Builders\StoredProcedureBuilder.cs" />
     <Compile Include="Context\ContextColumn.cs" />

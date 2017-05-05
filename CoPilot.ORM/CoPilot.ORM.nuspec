@@ -9,6 +9,9 @@
     <licenseUrl>https://raw.githubusercontent.com/kjerandp/CoPilot/master/LICENSE</licenseUrl>
     <projectUrl>https://github.com/kjerandp/CoPilot</projectUrl>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <summary>
+      Light weight object relational mapper (ORM) for MS SQL 
+    </summary>
     <description>
       CoPilot is an object relational mapper (ORM) with a specific purpose. If you are looking for a full featured enterprise level ORM then CoPilot is not what you are looking for. CoPilot is designed to assist you when  implementing the data access layer - simplifying the common tasks.
 
