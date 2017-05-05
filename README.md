@@ -13,7 +13,14 @@ CoPilot is more like a micro ORM, but with some neat features added on top.
 ### Important Note
 This is still an early version and only works with MSSQL - use at your own risk!
 
-## Usage
+## Install
+CoPilot is available as a [Nuget package](https://www.nuget.org/packages/CoPilot.ORM). Note that it is flagged as a pre-release. 
+```
+Install-Package CoPilot.ORM -Pre
+```
+
+
+## How to use
 Most of the examples documented here can be found in the integration test project that is part of the source code of CoPilot.
 
 ### Basic usage
