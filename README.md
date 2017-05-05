@@ -214,7 +214,7 @@ public static IDb CreateFromConfig(string connectionString = null)
     // the primary key (PK) and that it maps to the column name "ProductID".
     // The null-argument is passed to prevent CoPilot setting a default value 
     // as it assumes key columns are Identity-columns (auto-sequence)
-    mapper.Map<Customer>("Customers").AddKey(r => r.CustomerId, "CustomerID", null);
+    mapper.Map<Customer>("Customers").AddKey(r => r.CustomerId, "CustomerID", null).MaxSize(5);
 
     // Maps the Employee POCO to the Employees table and specifying 
     // that the property "Id" is the PK and that the corresponding 

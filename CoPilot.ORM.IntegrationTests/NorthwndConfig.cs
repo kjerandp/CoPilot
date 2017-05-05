@@ -36,7 +36,7 @@ namespace CoPilot.ORM.IntegrationTests
             // the primary key (PK) and that it maps to the column name "ProductID".
             // The null-argument is passed to prevent CoPilot setting a default value 
             // as it assumes key columns are Identity-columns (auto-sequence)
-            mapper.Map<Customer>("Customers").AddKey(r => r.CustomerId, "CustomerID", null);
+            mapper.Map<Customer>("Customers").AddKey(r => r.CustomerId, "CustomerID", null).MaxSize(5);
 
             // Maps the Employee POCO to the Employees table and specifying 
             // that the property "Id" is the PK and that the corresponding 
@@ -62,7 +62,7 @@ namespace CoPilot.ORM.IntegrationTests
             // Relating the order to the Customers table and also specifying
             // the foreign key column name as well as its data type, since it is
             // not an int as will be assumed by CoPilot when omitted
-            orderMap.HasOne(r => r.Customer, "CustomerID", DbDataType.String);
+            orderMap.HasOne(r => r.Customer, "CustomerID");
 
             // Maps the OrderDetails POCO to the "Order Details"-table
             var detailsMap = mapper.Map<OrderDetails>("Order Details");

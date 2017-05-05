@@ -21,6 +21,13 @@ namespace CoPilot.ORM.Config.Builders
             Table = model.AddTable(tableName, schema);
         }
 
+        public ColumnBuilder Column(string columnName, string alias = null)
+        {
+            var col = AddColumnIfNotExist(columnName, alias);
+            SetDataType(col, DbDataType.Unknown);
+            return new ColumnBuilder(Model, col);
+        }
+
         public ColumnBuilder Column(string columnName, DbDataType dataType, string alias = null)
         {
             var col = AddColumnIfNotExist(columnName, alias);

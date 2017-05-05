@@ -121,7 +121,12 @@ namespace CoPilot.ORM.Config.Builders
             var fkCol = AddColumnIfNotExist(foreignKeyName);
             if (fkCol.DataType == DbDataType.Unknown)
             {
-                SetDataType(fkCol, foreignKeyDataType ?? keyMemberInfo.DataType, keyMemberInfo.MemberType.IsNullable());
+                SetDataType(fkCol, foreignKeyDataType ?? pkCol.DataType, keyMemberInfo.MemberType.IsNullable());
+                if (pkCol.DataType == fkCol.DataType) //should be
+                {
+                    fkCol.MaxSize = pkCol.MaxSize;
+                    fkCol.NumberPrecision = pkCol.NumberPrecision;
+                }
             }
             var fkFor = keyMemberInfo;
 

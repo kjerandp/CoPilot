@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Context;
@@ -21,6 +22,10 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
             
             if (queryContext.BaseNode.Level == 0 && queryContext.Predicates != null)
             {
+                if ((queryContext.OrderByClause == null || !queryContext.OrderByClause.Any()) && (queryContext.Predicates.Skip.HasValue || queryContext.Predicates.Take.HasValue))
+                {
+                    throw new ArgumentException("Need to specify an orderby-clause to use SKIP/TAKE");
+                }
                 if (queryContext.Predicates.Distinct)
                 {
                     parts["SELECT"] += " DISTINCT";
