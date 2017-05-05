@@ -73,11 +73,7 @@ The response will be an instance of the `DbResponse` class. This class holds bas
 ```
     public struct DbResponse
     {
-        internal DbResponse(DbRecordSet[] results, long elapsedMs)
-        {
-            RecordSets = results;
-            ElapsedMs = elapsedMs;
-        }
+        (...)
 
         public long ElapsedMs { get; }
         public DbRecordSet[] RecordSets { get; }
@@ -96,7 +92,7 @@ The response will be an instance of the `DbResponse` class. This class holds bas
 
     }
 ```
-This is the internal representation CoPilot uses and we'll look at some better options for handling responses shortly. But first, you can execute multiple queries and name each resultset like this: * 
+This is the internal representation CoPilot uses and we'll look at some better options for handling responses shortly. But first, you can execute multiple queries and name each resultset like this:  
 
 ```
     _db.Query("select * from customers; select * from employees", null, "Customers","Employees");
@@ -117,9 +113,10 @@ var rows = _db.Command("update employees set FirstName=@newName where EmployeeID
 var regions = _db.Scalar<int>("select count(*) from region");
         
 ```
+Parameter binding is acheived by specifying parameters in the sql statement with the @[name] syntax and pass arguments for the named parameters by providing an anonymous object with a properties matching the names excluding the alpha-sign.
 
 ### Mapping
-In order to map data, from the database to CLR objects, CoPilot is using a mapping delegate. There are three available mappers buildt into CoPilot:
+In order to map data from the database to CLR objects, CoPilot is using a mapping delegate. There are three available mappers buildt into CoPilot:
 * `DynamicMapper` - for mapping data to a dynamic object
 * `BasicMapper` - for mapping data to POCO classes by doing a best-effort matching betweeb fieldnames and property names. Can be assisted by passing in a dictionary of column-to-property mappings. 
 * `ContextMapper` - for mapping data to POCO classes that have been mapped with the `DbMapper`. Supports multiple resultsets with relational entities.  
@@ -130,7 +127,7 @@ We have not created any POCO models yet, so in this example the query will be ma
 ``` 
 var response = _db.Query<dynamic>("select * from employees where EmployeeID=@id order by LastName", new { id = 5 }).Single();
 ```
-There are a few new things to note here. First, we are mapping to a specific type, given by the generic argument. The second thing to note is the parameter binding in the query. You specify parameters in a query with the @[name] syntax and pass arguments for the named parameters by providing an anonymous object with a properties matching the names excluding the alpha-sign.
+Note that we are mapping to a specific type, given by the generic argument. 
 
 When mapping database fields to properties on the dynamic object the mapper will by default convert field names to camel case. This means that the column name `EmployeeID` will be mapped to a property named `EmployeeId`.  
 
@@ -138,7 +135,7 @@ We can prevent this by changing the bahaviour of the mapper:
 
 ``` 
 var response = _db.Query<dynamic>(
-    "select * from employees where EmployeeID=@id order byLastName", 
+    "select * from employees where EmployeeID=@id order by LastName", 
     new { id = 5 }, 
     DynamicMapper.Create(convertToCamelCase:false))
 .Single();
@@ -147,13 +144,13 @@ We can also specify what letter case converter to use. If you want uppercase sna
 
 ```
 var response = _db.Query<dynamic>(
-    "select * from employees where EmployeeID=@id order byLastName", 
+    "select * from employees where EmployeeID=@id order by LastName", 
     new { id = 5 }, 
     DynamicMapper.Create(new SnakeOrKebabCaseConverter(r => r.ToUpper()))
 .Single();
 ```
 #### Basic mapping
-Now let's go one step further and create a POCO class for an employee. I deliberately have not included a property for all columns as it is not required - it will map what it is able to match.
+Now let's go one step further and create a POCO class for an employee. I deliberately have not included a property for all columns and it is not required - it will map what it is able to match.
 
 ```
     public class Employee
@@ -172,7 +169,7 @@ Now let's go one step further and create a POCO class for an employee. I deliber
 
 Let's update our test to map to this new class instead of the dynamic.
 ``` 
-var emp = _db.Query<Employee>("select * from employees where EmployeeID=@id order by LastName", new { id = 5 }).Single();
+var emp = _db.Query<Employee>("select * from employees where EmployeeID=@id order by LastName", new { id = 5 }).SingleOrDefault();
 ```
 
 This time the basic mapper is used, as we are not mapping to a dynamic object. By default, it will try and map a column name directly to property names ignoring case. You can however provide a dictionary of column-to-property name mapping. Let's assume we renamed the `EmployeeId` property in our POCO to just `Id`. We could then provide a mapping dictionary to help the mapper:
@@ -182,13 +179,13 @@ var columnMapping = new Dictionary<string, string> { { "EmployeeID", "Id" } };
 var emp = _db.Query<Employee>("select * from employees where EmployeeID=@id order by LastName", 
     new { id = 5 }, 
     BasicMapper.Create(typeof(Employee), columnMapping)
-).Single();
+).SingleOrDefault();
 ```
 
 The basic mapper can also be used to map a single column to a basic system type. Notice the type specified in the generic argument.
 
 ```
-var productNames = _db.Query<string>("select ProductName from products order by 1", null).ToArray();
+var productNames = _db.Query<string>("select ProductName from products order by 1", null);
 ```
 
 #### Contextual mapping
