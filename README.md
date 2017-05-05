@@ -7,8 +7,10 @@ CoPilot is more like a micro ORM, but with some neat features added on top.
 * Map POCO models to tables including relationships (one-to-many and many-to-one relationships). 
 * Author and execute SQL statements for CRUD operations. Related entities can be included for all operations, as long as they have a singular key defined. 
 * Mapping of data from queries or stored procedures to dynamic objects or POCO classes
+* Solves the "1+N"-problem by fetching child records in a single query and then merging the data with the parent records when mapped
+* Support for limiting queries to only include specified columns when all you need is a subset of data from one or more tables. This will allow the database server to tweak its execution plans to reduce unnecessary table access. This is particularly useful if you only need data from columns that are indexed. 
 * Perform mulitple write operations as a unit-of-work (database transaction)
-* Generate scripts to build database from model
+* Generate scripts to build database from model configurations
 
 ### Important Note
 This is still an early version and only works with MSSQL - use at your own risk!
