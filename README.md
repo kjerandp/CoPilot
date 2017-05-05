@@ -1,7 +1,7 @@
 # CoPilot
-CoPilot is an object relational mapper (ORM) with a specific purpose. If you are looking for a full featured enterprise level ORM then CoPilot is not what you are looking for. CoPilot is designed to assist you when  implementing the data access layer - simplifying the common tasks.
+CoPilot is an object relational mapper (ORM) with a specific purpose. If you are looking for a full featured enterprise level ORM then CoPilot is probably not what you are looking for. CoPilot is designed to simplify the implementation of the database access layer. You will be the "pilot", while CoPilot will handle most of the tedious routine work. 
 
-Think of it more in the sense of a micro ORM, only with a set of helpful  features added on top of it. 
+CoPilot is more like a micro ORM, but with some neat features added on top. 
 
 **Key features:**  
 * Map POCO models to tables including relationships (one-to-many and many-to-one relationships). 
