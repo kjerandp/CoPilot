@@ -594,7 +594,7 @@ namespace CoPilot.ORM.Context
                 if (value != null || col.DefaultValue != null)
                 {
                     string paramName;
-                    if (col.IsPrimaryKey)
+                    if (col.IsPrimaryKey && col.DefaultValue?.Value == null)
                     {
                         if (value == null || value.Equals(ReflectionHelper.GetDefaultValue(value.GetType())))
                         {

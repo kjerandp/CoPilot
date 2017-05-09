@@ -26,7 +26,7 @@ Install-Package CoPilot.ORM -Pre
 Most of the examples documented here can be found in the integration test project that is part of the source code of CoPilot.
 
 ### Basic usage
-First part of these examples will work against the Northwnd database, which I have restored in my SqlExpress instance after downloading it from <https://northwinddatabase.codeplex.com/>
+First part of these examples will work against the Northwind database, which I have restored in my SqlExpress instance after downloading it from <https://northwinddatabase.codeplex.com/>
 
 #### Connecting to the database
 CoPilot works on an interface named `IDb`. So to start using CoPilot, we need to obtain a reference to an implementation of that interface. I have created a simple helper class here that uses a helper class in CoPilot called `DbMapper`. We will use this class later when we map our POCO models to database tables, but for now we will just have it create the simplest possible representation of the database, by handing it the connection string.
@@ -101,7 +101,7 @@ This is the internal representation CoPilot uses and we'll look at some better o
 ```
 This will add a `DbRecordSet` for each query and name them according to the names provided int the `params string[] names` parameter. In this case, "Customers" and "Employees". Each record set is then containing a list of field names (database column names), types and the records as a two dimensional array (indexed by row and then field).
 
-This object is important if you want to create your own mapping delegate. If you want to see some more usage of this class, look into the Northwnd basic query tests.
+This object is important if you want to create your own mapping delegate. If you want to see some more usage of this class, look into the Northwind basic query tests.
 
 #### Executing basic commands
 We can do commands and scalars by calling the `Command` and `Scalar` methods respectively. Here are two basic examples:
@@ -120,7 +120,7 @@ Parameter binding is acheived by specifying parameters in the sql statement with
 ### Mapping
 In order to map data from the database to CLR objects, CoPilot is using a mapping delegate. There are three available mappers buildt into CoPilot:
 * `DynamicMapper` - for mapping data to a dynamic object
-* `BasicMapper` - for mapping data to POCO classes by doing a best-effort matching betweeb fieldnames and property names. Can be assisted by passing in a dictionary of column-to-property mappings. 
+* `BasicMapper` - for mapping data to POCO classes by doing a best-effort matching between fieldnames and property names. Can be assisted by passing in a dictionary of column-to-property mappings. 
 * `ContextMapper` - for mapping data to POCO classes that have been mapped with the `DbMapper`. Supports multiple resultsets with relational entities.  
 
 #### Dynamic mapping
@@ -194,15 +194,6 @@ var productNames = _db.Query<string>("select ProductName from products order by 
 To get the most out of the features available in CoPilot, we need to provide it with some configurations that describes how your POCO classes relates to the database model. We create this configuration using the `DbMapper`.
 
 Let's say we want all orders, with its order details, customer and employee information. First step would be to create a corresponding POCO class for these entites and then configure them using the `DbMapper`.
-
-We can then retrieve all orders, with all related data mapped by specifying what to include in the arguments passed to the query method. Includes are specified as an array (or params) of strings and represents paths, based on your POCO classes property names, to which relations to include.
-```
-var orders = _db.Query<Order>(null, "OrderDetails.Product", "Employee", "Customer");
-```
-The first NULL-argument passed is to specify no filter. The other arguments are the paths that we want to include. The above instructs that we want to retrieve the orders with the matching order details along with its belonging product, and then also the order's related customer and employee records.
-
-In order to bring in related entities, the POCO class being used for querying needs to have a property referencing the corresponding entity's POCO class and have its relationships explicitly declared in the config:
-
 ```
 public static IDb CreateFromConfig(string connectionString = null)
 {
@@ -220,6 +211,7 @@ public static IDb CreateFromConfig(string connectionString = null)
     // the primary key (PK) and that it maps to the column name "ProductID".
     // The null-argument is passed to prevent CoPilot setting a default value 
     // as it assumes key columns are Identity-columns (auto-sequence)
+    // We are also setting a max size according to the column constraint in the db.
     mapper.Map<Customer>("Customers").AddKey(r => r.CustomerId, "CustomerID", null).MaxSize(5);
 
     // Maps the Employee POCO to the Employees table and specifying 
@@ -270,5 +262,99 @@ public static IDb CreateFromConfig(string connectionString = null)
     return mapper.CreateDb(connectionString ?? DefaultConnectionString);
 }
 ``` 
+We can then retrieve all orders, with all related data mapped by specifying what to include in the arguments passed to the query method. Includes are specified as an array (or params) of strings and represents paths, based on your POCO classes property names, to which relations to include.
+```
+var orders = _db.Query<Order>(null, "OrderDetails.Product", "Employee", "Customer");
+```
+The first NULL-argument passed is to specify no filter. The other arguments are the _paths_ of what related entities we want to include. Use the dot notation when you want to include multiple levels of related entities, like the `Product` reference of the `OrderDetails`-relation in the above example.
 
-(To be continued)
+In the following example I've applied ordering, predicates and filters. Predicates in CoPilot is a way to specify functions like `DISTINCT`, `TOP`, `SKIP` and `TAKE`. 
+```
+var orders = _db.Query<Order>(
+    OrderByClause<Order>.OrderByAscending(r => r.OrderDate)
+        .ThenByAscending(r => r.ShippedDate),
+    new Predicates { Skip = 10, Take = 20 }, 
+    r => r.Employee.Id == 4 && r.ShippedDate.HasValue,
+    "OrderDetails.Product", "Employee", "Customer"
+);
+```
+Here's another example based from the `Product` mapping.
+```
+var products = _db.Query<Product>(r => r.UnitPrice > 10f && r.ProductName != "Test product");
+``` 
+#### Write operations
+The `IDb` interface have methods for saving, patching and deleting entitities. Use these if you just want to execute a single command. Otherwise it is recommended that you use the `DbWriter` class, as it will allow you to perform multiple commands on one or more entities as a unit-of-work (database transaction). It supports all the write operations from the `IDb` interface.
+```
+// New up an instance of the DbWriter with a using statement. It takes the
+// IDb instance as an argument.
+using(var writer = new DbWriter(_db)){
+    try {
+        // do write operations and then commit
+        (...)
+        writer.Commit();
+    } catch (Exception ex){
+        // rollback the transaction 
+        writer.Rollback();
+        // handle exception
+    }
+}
+```
+The `include` parameter can also be used when saving and deleting entities, but only if the mapped tables involved has a singular primary key and an Identity column (auto sequence) defined. This can be useful if you want to insert/update/delete an entity along with its related entities. 
+
+```
+// insert a new order record and a new employee record
+var newOrder = new Order {
+    (...)
+    Employee = new Employee {
+        (...)
+    }
+};
+_db.Save<Order>(newOrder, "Employee");
+``` 
+This would not work with the `Customer` relationship, as the `Customers` table does not use an `Identity` column. I will not work with the `OrderDetails` relation either, as that table has a composite primary key. You could on the other hand save the order details along with its products:
+```
+using (var writer = new DbWriter(_db))
+{
+    try
+    {
+        var newOrder = new Order()
+        {
+            (...)
+        };
+
+        writer.Save(newOrder);
+
+        var newOrderDetails = new List<OrderDetails>
+        {
+            new OrderDetails
+            {
+                OrderId = newOrder.OrderId,
+                Product = new Product
+                {
+                    (...)
+                },
+                (...)    
+            },
+            new OrderDetails
+            {
+                OrderId = newOrder.OrderId,
+                Product = existingProduct, //imagine we loaded an existing product
+                (...)    
+            }
+        };
+
+        writer.Insert<OrderDetails>(newOrderDetails, "Product");
+        newOrder.OrderDetails = newOrderDetails;
+        
+        writer.Commit();
+    }
+    catch (Exception ex)
+    {
+        writer.Rollback();
+        // Error handling
+    }
+} 
+```
+This will insert a new order and populate the `OrderId` property of `newOrder` with the primary key value generated by the database. Then, the new product will be inserted and finally the two new order details records with the proper foreign key relationships (to the order, the new product and the existing product).
+
+(To be continued...)

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using CoPilot.ORM.Config.DataTypes;
@@ -103,13 +102,20 @@ namespace CoPilot.ORM.Mapping.Mappers
             var rec = new MappedRecord()
             {
                 UnmappedData = new Dictionary<string, object>(),
-                Instance = ReflectionHelper.CreateInstance(mappingNode.Node.MapEntry.EntityType)
+                Instance = null
             };
+
+            if (values == null || values.All(r => r is DBNull))
+            {
+                return rec;
+            }
+
+            rec.Instance = ReflectionHelper.CreateInstance(mappingNode.Node.MapEntry.EntityType);
 
             foreach (var col in mappingNode.ColumnToMemberDictionary.Keys)
             {
                 var value = values[col.FieldIndex];
-
+                
                 var member = mappingNode.ColumnToMemberDictionary[col];
                 if (member == null)
                 {
@@ -165,7 +171,7 @@ namespace CoPilot.ORM.Mapping.Mappers
 
         public static IEnumerable<object> MapAndMerge(ITableContextNode baseNode, IEnumerable<DbRecordSet> recordSets)
         {
-            var w = Stopwatch.StartNew();
+            //var w = Stopwatch.StartNew();
             if (recordSets == null) return new object[0];
 
             var sets = recordSets.ToDictionary(k => k.Name, v => v);

@@ -16,6 +16,12 @@ namespace CoPilot.ORM.IntegrationTests
         private readonly IDb _db = NorthwndConfig.CreateFromConfig();
 
         [TestMethod]
+        public void CanValidateModel()
+        {
+            _db.ValidateModel();
+        }
+
+        [TestMethod]
         public void CanQueryAllOrdersWithRelatedEntities()
         {
             var orders = _db.Query<Order>(null, "OrderDetails.Product", "Employee", "Customer").ToArray();
@@ -39,14 +45,15 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanQueryOrdersWithOrderByClauseAndPredicates()
         {
-            var order = _db.Query(
+            var orders = _db.Query(
                 OrderByClause<Order>.OrderByAscending(r => r.OrderDate)
                     .ThenByAscending(r => r.ShippedDate),
                 new Predicates { Skip = 10, Take = 20 }, 
-                r => r.Employee.Id == 4 && r.ShippedDate.HasValue
+                r => r.Employee.Id == 4 && r.ShippedDate.HasValue,
+                 "OrderDetails.Product", "Employee", "Customer"
             );
-            Assert.IsNotNull(order);
-            Assert.AreEqual(20, order.Count());
+            Assert.IsNotNull(orders);
+            Assert.AreEqual(20, orders.Count());
         
         }
 
@@ -82,10 +89,20 @@ namespace CoPilot.ORM.IntegrationTests
                     var newOrder = new Order()
                     {
                         ShipName = "Test",
-                        OrderDate = DateTime.Now
+                        OrderDate = DateTime.Now,
+                        Employee = new Employee
+                        {
+                            Address = "Some address",
+                            City = "Sandnes",
+                            BirthDate = new DateTime(1977, 6, 30),
+                            Title = "Mr",
+                            FirstName = "Kjerand",
+                            LastName = "Pedersen",
+                            HireDate = new DateTime(2000, 1, 1)
+                        }
                     };
 
-                    writer.Save(newOrder);
+                    writer.Save(newOrder, "Employee", "Customer");
 
                     var newOrderDetails = new List<OrderDetails>
                     {
@@ -109,7 +126,7 @@ namespace CoPilot.ORM.IntegrationTests
                     var orderDetail = newOrderDetails.First();
                     orderDetail.Discount = 0.3f;
                     writer.Update(orderDetail);
-                    writer.Commit();
+                    writer.Rollback();
                 }
                 catch (Exception ex)
                 {

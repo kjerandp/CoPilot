@@ -70,11 +70,11 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
                 str += $"IDENTITY({options.KeySequenceStartAt},{options.KeySequenceIncrementBy}) ";
                 
             }
-            else if (column.DefaultValue?.Value != null)
-            {
-                str += column.DefaultValue.Value as string;
-                str += " ";
-            }
+            //else if (column.DefaultValue?.Value != null)
+            //{
+            //    str += column.DefaultValue.Value as string;
+            //    str += " ";
+            //}
 
             return str + "PRIMARY KEY";
         }
