@@ -282,7 +282,7 @@ Here's another example based from the `Product` mapping.
 ```
 var products = _db.Query<Product>(r => r.UnitPrice > 10f && r.ProductName != "Test product");
 ``` 
-#### Write operations
+### Write operations
 The `IDb` interface have methods for saving, patching and deleting entitities. Use these if you just want to execute a single command. Otherwise it is recommended that you use the `DbWriter` class, as it will allow you to perform multiple commands on one or more entities as a unit-of-work (database transaction). It supports all the write operations from the `IDb` interface.
 ```
 // New up an instance of the DbWriter with a using statement. It takes the
