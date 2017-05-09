@@ -569,7 +569,7 @@ namespace CoPilot.ORM.Context
                 }
                 else if (col.IsForeignKey)
                 {
-                    value = MapEntry.GetValueForColumn(entity, col);
+                    value = node.MapEntry.GetValueForColumn(entity, col);
                     //var keyFor = node.MapEntry.GetKeyForMember(col.ForeignkeyRelationship);
                     //var keyForInstance = keyFor?.GetValue(entity);
                     //if (keyForInstance != null)
