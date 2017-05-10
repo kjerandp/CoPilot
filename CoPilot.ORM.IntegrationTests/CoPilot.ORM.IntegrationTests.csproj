@@ -46,20 +46,33 @@
     </When>
     <Otherwise>
       <ItemGroup>
-        <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework" />
+        <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework">
+          <Private>False</Private>
+        </Reference>
       </ItemGroup>
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="BuildTestDatabase.cs" />
-    <Compile Include="NorthwndContextQueryTests .cs" />
-    <Compile Include="NorthwndBasicQueryTests.cs" />
-    <Compile Include="Models\Customer.cs" />
-    <Compile Include="Models\Employee.cs" />
-    <Compile Include="Models\Order.cs" />
-    <Compile Include="NorthwndConfig.cs" />
-    <Compile Include="TestDbConfig.cs" />
+    <Compile Include="Config\BandSampleDatabase.cs" />
+    <Compile Include="Models\BandSample\City.cs" />
+    <Compile Include="Models\BandSample\Album.cs" />
+    <Compile Include="Models\BandSample\AlbumTrack.cs" />
+    <Compile Include="Models\BandSample\Band.cs" />
+    <Compile Include="Models\BandSample\BandMember.cs" />
+    <Compile Include="Models\BandSample\Country.cs" />
+    <Compile Include="Models\BandSample\FakeData.cs" />
+    <Compile Include="Models\BandSample\MusicGenre.cs" />
+    <Compile Include="Models\BandSample\Recording.cs" />
+    <Compile Include="Models\BandSample\Person.cs" />
+    <Compile Include="NorthwndContextTests .cs" />
+    <Compile Include="NorthwndTests.cs" />
+    <Compile Include="Models\Northwind\Customer.cs" />
+    <Compile Include="Models\Northwind\Employee.cs" />
+    <Compile Include="Models\Northwind\Order.cs" />
+    <Compile Include="Config\NorthwndConfig.cs" />
+    <Compile Include="Config\BandSampleConfig.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="BandSampleTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CoPilot.ORM\CoPilot.ORM.csproj">
@@ -67,6 +80,7 @@
       <Name>CoPilot.ORM</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
       <ItemGroup>

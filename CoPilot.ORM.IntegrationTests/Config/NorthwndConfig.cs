@@ -1,11 +1,10 @@
 ﻿using CoPilot.ORM.Common;
 using CoPilot.ORM.Config;
-using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Database;
-using CoPilot.ORM.IntegrationTests.Models;
+using CoPilot.ORM.IntegrationTests.Models.Northwind;
 
-namespace CoPilot.ORM.IntegrationTests
+namespace CoPilot.ORM.IntegrationTests.Config
 {
     public class NorthwndConfig
     {

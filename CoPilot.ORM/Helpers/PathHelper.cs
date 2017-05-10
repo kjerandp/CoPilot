@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Extensions;
 
@@ -215,7 +216,15 @@ namespace CoPilot.ORM.Helpers
         {
             if (string.IsNullOrEmpty(mask)) return path;
 
-            var masked = path.Replace(mask, "");
+            var index = path.IndexOf(mask, 0, StringComparison.OrdinalIgnoreCase);
+            if (index < 0)
+            {
+                return path;
+            }
+
+            index += mask.Length;
+            var masked = path.Substring(index);
+            
             if (masked.Length > 1 && masked[0] == '.')
             {
                 return masked.Substring(1);

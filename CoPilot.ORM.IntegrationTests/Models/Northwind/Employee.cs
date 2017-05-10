@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace CoPilot.ORM.IntegrationTests.Models
+namespace CoPilot.ORM.IntegrationTests.Models.Northwind
 {
     public class Employee
     {

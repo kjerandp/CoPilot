@@ -5,13 +5,14 @@ using System.Linq;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands;
-using CoPilot.ORM.IntegrationTests.Models;
+using CoPilot.ORM.IntegrationTests.Config;
+using CoPilot.ORM.IntegrationTests.Models.Northwind;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CoPilot.ORM.IntegrationTests
 {
     [TestClass]
-    public class NorthwndContextQueryTests
+    public class NorthwndContextTests
     {
         private readonly IDb _db = NorthwndConfig.CreateFromConfig();
 

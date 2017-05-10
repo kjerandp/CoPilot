@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace CoPilot.ORM.IntegrationTests.Models
+namespace CoPilot.ORM.IntegrationTests.Models.Northwind
 {
     public class Order
     {
