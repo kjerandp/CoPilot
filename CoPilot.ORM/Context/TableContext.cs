@@ -900,8 +900,9 @@ namespace CoPilot.ORM.Context
                             }
 
                         }
+                        return;
                     }
-                    return;
+                    
                 }
                 
                 BuildFromPath(memberExpression.Member.Name, path);
