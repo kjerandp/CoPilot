@@ -24,7 +24,7 @@ namespace CoPilot.ORM.IntegrationTests
             //CoPilotGlobalResources.LoggingLevel = LoggingLevel.Verbose;
             var model = BandSampleConfig.CreateModel();
 
-            BandSampleDatabase.DropCreateDatabase(model);
+            //BandSampleDatabase.DropCreateDatabase(model);
 
             _db = model.CreateDb(ConnectionString);
             
@@ -54,6 +54,11 @@ namespace CoPilot.ORM.IntegrationTests
             var albums = _db.Query<Album>(null, "Tracks.Recording");
         }
 
+        [TestMethod]
+        public void CanQueryForAllRecordingsFromASpecificAlbumUsingSelectorSyntax()
+        {
+            var recordings = _db.Query<AlbumTrack, Recording>(r => r.Recording, r => r.Album.Id == 1);
+        }
 
 
     }

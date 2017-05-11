@@ -892,7 +892,11 @@ namespace CoPilot.ORM.Context
                     var dtoMembers = classMemberInfo.MemberType.GetClassMembers();
                     foreach (var memberInfo in dtoMembers)
                     {
-                        BuildFromPath(memberInfo.Name, path + "." + memberInfo.Name);
+                        if (memberInfo.MemberType.IsSimpleValueType())
+                        {
+                            BuildFromPath(memberInfo.Name, path + "." + memberInfo.Name);
+                        }
+                        
                     }
                 }
                 else
