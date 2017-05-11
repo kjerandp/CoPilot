@@ -495,16 +495,21 @@ namespace CoPilot.ORM.Context
                     throw new NotSupportedException("Selector object can only contain direct member access!");
                 }
                 var path = PathHelper.RemoveFirstElementFromPathString(memberExpression.ToString());
-                var splitPath = PathHelper.SplitLastInPathString(path);
-                if (!string.IsNullOrEmpty(splitPath.Item1))
-                {
-                    AddPath(splitPath.Item1, false);
-                }
-
-                CreateLookupNodeIfNotExist(splitPath.Item1, splitPath.Item2);
-
-                _selectTemplate.Add(path, key);
+                BuildFromPath(key, path);
             } 
+        }
+
+        protected void BuildFromPath(string key, string path)
+        {
+            var splitPath = PathHelper.SplitLastInPathString(path);
+            if (!string.IsNullOrEmpty(splitPath.Item1))
+            {
+                AddPath(splitPath.Item1, false);
+            }
+
+            CreateLookupNodeIfNotExist(splitPath.Item1, splitPath.Item2);
+
+            _selectTemplate.Add(path, key);
         }
 
         private void CreateLookupNodesIfNotExist(ITableContextNode node)
@@ -521,7 +526,7 @@ namespace CoPilot.ORM.Context
             var node = (string.IsNullOrEmpty(path) ? this : FindByPath(path));
             var member = node.MapEntry.GetMemberByName(memberName);
             var col = node.Table.GetColumnByMember(member);
-            if (col.ForeignkeyRelationship != null && col.ForeignkeyRelationship.IsLookupRelationship)
+            if (col?.ForeignkeyRelationship != null && col.ForeignkeyRelationship.IsLookupRelationship)
             {
                 GetOrCreateLookupNode(node, col);
             }
@@ -878,7 +883,23 @@ namespace CoPilot.ORM.Context
             }
             if (memberExpression != null)
             {
-                BuildFromMemberExpressions(new Dictionary<string, MemberExpression> { { memberExpression.Member.Name, memberExpression } });
+                var classMemberInfo = ClassMemberInfo.Create(ExpressionHelper.GetPropertyFromMemberExpression<T>(memberExpression));
+                if(classMemberInfo.MemberType.IsCollection()) throw new NotSupportedException("The selector cannot return a collection type!");
+                var path = PathHelper.RemoveFirstElementFromPathString(memberExpression.ToString());
+
+                if (classMemberInfo.MemberType.IsReference())
+                {
+                    var dtoMembers = classMemberInfo.MemberType.GetClassMembers();
+                    foreach (var memberInfo in dtoMembers)
+                    {
+                        BuildFromPath(memberInfo.Name, path + "." + memberInfo.Name);
+                    }
+                }
+                else
+                {
+                    
+                    BuildFromPath(memberExpression.Member.Name, path);
+                }
                 return;
             }
             
