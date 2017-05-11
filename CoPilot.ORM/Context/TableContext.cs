@@ -883,27 +883,28 @@ namespace CoPilot.ORM.Context
             }
             if (memberExpression != null)
             {
-                var classMemberInfo = ClassMemberInfo.Create(ExpressionHelper.GetPropertyFromMemberExpression<T>(memberExpression));
-                if(classMemberInfo.MemberType.IsCollection()) throw new NotSupportedException("The selector cannot return a collection type!");
                 var path = PathHelper.RemoveFirstElementFromPathString(memberExpression.ToString());
 
-                if (classMemberInfo.MemberType.IsReference())
+                if (!path.Contains("."))
                 {
-                    var dtoMembers = classMemberInfo.MemberType.GetClassMembers();
-                    foreach (var memberInfo in dtoMembers)
+                    var classMemberInfo = ClassMemberInfo.Create(ExpressionHelper.GetPropertyFromMemberExpression<T>(memberExpression));
+                    if (classMemberInfo.MemberType.IsCollection()) throw new NotSupportedException("The selector cannot return a collection type!");
+                    if (classMemberInfo.MemberType.IsReference())
                     {
-                        if (memberInfo.MemberType.IsSimpleValueType())
+                        var dtoMembers = classMemberInfo.MemberType.GetClassMembers();
+                        foreach (var memberInfo in dtoMembers)
                         {
-                            BuildFromPath(memberInfo.Name, path + "." + memberInfo.Name);
+                            if (memberInfo.MemberType.IsSimpleValueType())
+                            {
+                                BuildFromPath(memberInfo.Name, path + "." + memberInfo.Name);
+                            }
+
                         }
-                        
                     }
+                    return;
                 }
-                else
-                {
-                    
-                    BuildFromPath(memberExpression.Member.Name, path);
-                }
+                
+                BuildFromPath(memberExpression.Member.Name, path);
                 return;
             }
             
