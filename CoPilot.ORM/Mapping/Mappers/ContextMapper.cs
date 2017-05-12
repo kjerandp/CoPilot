@@ -189,7 +189,7 @@ namespace CoPilot.ORM.Mapping.Mappers
            
         }
 
-        private static void ProcessNode(ITableContextNode node, string prefix, DbRecordSet parentSet, IReadOnlyList<MappedRecord> parentRecords, IReadOnlyDictionary<string, DbRecordSet> sets)
+        private static void ProcessNode(ITableContextNode node, string prefix, DbRecordSet parentSet, MappedRecord[] parentRecords, IDictionary<string, DbRecordSet> sets)
         {
             Parallel.ForEach(node.Nodes.Where(r => !r.Value.Relationship.IsLookupRelationship), rel =>
             {
@@ -200,7 +200,7 @@ namespace CoPilot.ORM.Mapping.Mappers
                     var pkIndex = parentSet.GetIndex(pkName);
 
                     var indexed = new Dictionary<object, MappedRecord>();
-                    for (var i = 0; i < parentRecords.Count; i++)
+                    for (var i = 0; i < parentRecords.Length; i++)
                     {
                         var keyValue = parentSet.Records[i][pkIndex];
                         indexed.Add(keyValue, parentRecords[i]);

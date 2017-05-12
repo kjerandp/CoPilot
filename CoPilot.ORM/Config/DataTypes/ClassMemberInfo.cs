@@ -40,7 +40,7 @@ namespace CoPilot.ORM.Config.DataTypes
             {
                 return DeclaringClassType.GetField(Name).GetValue(obj);
             }
-            return DeclaringClassType.GetProperty(Name).GetValue(obj);
+            return DeclaringClassType.GetProperty(Name).GetValue(obj, null);
         }
 
         public void SetValue(object obj, object value)
@@ -54,7 +54,7 @@ namespace CoPilot.ORM.Config.DataTypes
                 }
                 else
                 {
-                    DeclaringClassType.GetProperty(Name).SetValue(obj, convertedValue);
+                    DeclaringClassType.GetProperty(Name).SetValue(obj, convertedValue, null);
                 }
             }
         }

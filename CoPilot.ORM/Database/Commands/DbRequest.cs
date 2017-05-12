@@ -21,7 +21,7 @@ namespace CoPilot.ORM.Database.Commands
             foreach (var prop in props)
             {
                 var name = "@" + prop.Name;
-                var value = prop.GetValue(args);
+                var value = prop.GetValue(args, null);
                 Parameters.Add(new DbParameter(name, DbConversionHelper.MapToDbDataType(value.GetType())));
                 Args.Add(name, value);
             }
@@ -35,7 +35,7 @@ namespace CoPilot.ORM.Database.Commands
                 (p, a) => new
                 {
                     Parameter = p,
-                    Arg = a != null ? a.GetValue(args) : p.DefaultValue
+                    Arg = a != null ? a.GetValue(args, null) : p.DefaultValue
                 }).ToArray();
 
             Parameters.AddRange(prm.Select(r => r.Parameter));

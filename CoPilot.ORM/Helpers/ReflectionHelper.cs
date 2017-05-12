@@ -80,7 +80,7 @@ namespace CoPilot.ORM.Helpers
                     
                     if (ConvertValueToType(prop.PropertyType, value, out convertedValue, throwOnError))
                     {
-                        prop.SetValue(entity, convertedValue);
+                        prop.SetValue(entity, convertedValue, null);
                     }
                 }
                 else
@@ -108,11 +108,11 @@ namespace CoPilot.ORM.Helpers
                     if (member.MemberType == MemberTypes.Property)
                     {
                         var prop = (PropertyInfo) member;
-                        collection = prop.GetValue(entity) as IList;
+                        collection = prop.GetValue(entity, null) as IList;
                         if (collection == null)
                         {
                             collection = Activator.CreateInstance(member.GetMemberType()) as IList;
-                            prop.SetValue(entity, collection);
+                            prop.SetValue(entity, collection, null);
                         }
                     }
                     else
