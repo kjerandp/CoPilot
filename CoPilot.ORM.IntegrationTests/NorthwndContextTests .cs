@@ -87,10 +87,20 @@ namespace CoPilot.ORM.IntegrationTests
             {
                 try
                 {
+                    var customer = new Customer
+                    {
+                        CompanyName = "Acme",
+                        ContactName = "John Smith",
+                        Country = "USA",
+                        CustomerId = "XYXMZ"
+                    };
+                    writer.Insert(customer);
+
                     var newOrder = new Order()
                     {
                         ShipName = "Test",
                         OrderDate = DateTime.Now,
+                        Customer = customer,
                         Employee = new Employee
                         {
                             Address = "Some address",
@@ -103,7 +113,7 @@ namespace CoPilot.ORM.IntegrationTests
                         }
                     };
 
-                    writer.Save(newOrder, "Employee", "Customer");
+                    writer.Save(newOrder, "Employee");
 
                     var newOrderDetails = new List<OrderDetails>
                     {

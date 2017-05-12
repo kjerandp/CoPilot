@@ -59,7 +59,7 @@ namespace CoPilot.ORM.IntegrationTests
         public void CanQueryForAllRecordingsFromASpecificAlbumUsingSelectorSyntax()
         {
             var recordings = _db.Query<AlbumTrack, Recording>(r => r.Recording, r => r.Album.Id == 1);
-            
+
             //Results in the following query:
 
             /* 
@@ -70,7 +70,7 @@ namespace CoPilot.ORM.IntegrationTests
 		        ,T3.RECORDING_RECORDED as [Recorded]
 	        FROM
 		        ALBUM_TRACK T1
-		        LEFT JOIN RECORDING T3 ON T3.RECORDING_ID=T1.ALBUM_TRACK_RECORDING_ID
+		        INNER JOIN RECORDING T3 ON T3.RECORDING_ID=T1.ALBUM_TRACK_RECORDING_ID
 	        WHERE
 		        T1.ALBUM_TRACK_ALBUM_ID = @param1     
              */
@@ -91,10 +91,16 @@ namespace CoPilot.ORM.IntegrationTests
 		        T3.RECORDING_SONG_TITLE as [SongTitle]
 	        FROM
 		        ALBUM_TRACK T1
-		        LEFT JOIN RECORDING T3 ON T3.RECORDING_ID=T1.ALBUM_TRACK_RECORDING_ID
+		        INNER JOIN RECORDING T3 ON T3.RECORDING_ID=T1.ALBUM_TRACK_RECORDING_ID
 	        WHERE
 		        T1.ALBUM_TRACK_ALBUM_ID = @param1 
             */
+        }
+
+        [TestMethod]
+        public void CanValidateModel()
+        {
+            _db.ValidateModel();
         }
     }
 }

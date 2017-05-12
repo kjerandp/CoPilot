@@ -183,17 +183,9 @@ namespace CoPilot.ORM.Database.Commands
 
             //Process this
             if ((Operations & OperationType.Insert) == 0) return;
-
-            var keys = node.Table.GetKeys();
-            if (keys.Length != 1)
-            {
-                InsertUntrackedNode(node, instance, unmappedValues);
-                return;
-            } 
-
+            
             object pk;
-            var key = keys.Single();
-
+            
             if (_entities.ContainsKey(instance))
             {
                 pk = _entities[instance];
@@ -204,22 +196,15 @@ namespace CoPilot.ORM.Database.Commands
                 pk = ExecuteInsert(opCtx, node.Table);
                 _entities.Add(instance, pk);
             }
-            var keyMember = node.MapEntry.GetMappedMember(key);
-            keyMember.SetValue(instance, pk);
+            if (pk != null && !(pk is DBNull))
+            {
+                var key = node.Table.GetSingularKey();
+                var keyMember = node.MapEntry.GetMappedMember(key);
+                keyMember.SetValue(instance, pk);
 
-            //Process inverse dependant nodes
-            ProcessInverseDependencies(node, instance, pk, OperationType.Insert);
-
-
-        }
-
-        private void InsertUntrackedNode(ITableContextNode node, object instance, Dictionary<string, object> unmappedValues = null)
-        {
-            var writer = _model.ResourceLocator.Get<IInsertStatementWriter>();
-            var opCtx = node.Context.Insert(node, instance, unmappedValues);
-            var stm = writer.GetStatement(opCtx, Options);
-
-            CommandExecutor.ExecuteNonQuery(Command, stm);
+                //Process inverse dependant nodes
+                ProcessInverseDependencies(node, instance, pk, OperationType.Insert);
+            }
         }
 
         private object ExecuteInsert(OperationContext opCtx, DbTable table)
@@ -231,11 +216,11 @@ namespace CoPilot.ORM.Database.Commands
             var stm = insertWriter.GetStatement(opCtx, Options);
 
             if (keys.Length == 1 && keys[0].DefaultValue?.Expression == DbExpressionType.PrimaryKeySequence &&
-                    Options.EnableIdentityInsert &&
-                    (
-                        (Options.Parameterize && stm.Args.ContainsKey("@key")) ||
-                        (!Options.Parameterize && stm.Script.ToString().Contains(keys[0].ColumnName))
-                    ))
+                Options.EnableIdentityInsert &&
+                (
+                    (Options.Parameterize && stm.Args.ContainsKey("@key")) ||
+                    (!Options.Parameterize && stm.Script.ToString().Contains(keys[0].ColumnName))
+                ))
             {
                 //TODO: Abstract behind interface
                 stm.Script.WrapInside(

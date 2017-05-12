@@ -21,7 +21,7 @@ namespace CoPilot.ORM.IntegrationTests.Config
 
         public static IDb CreateFromConfig(string connectionString = null)
         {
-            CoPilotGlobalResources.LoggingLevel = LoggingLevel.Verbose;
+            //CoPilotGlobalResources.LoggingLevel = LoggingLevel.Verbose;
 
             var mapper = new DbMapper();
 

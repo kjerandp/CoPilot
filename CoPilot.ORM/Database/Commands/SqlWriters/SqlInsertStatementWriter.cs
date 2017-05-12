@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Context.Operations;
 using CoPilot.ORM.Database.Commands.Options;
@@ -17,7 +18,8 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
 
             var colBlock = new ScriptBlock();
             var valBlock = new ScriptBlock();
- 
+            var identityInsertUsed = !ctx.Columns.Keys.Any(r => r.IsPrimaryKey);
+
             foreach (var col in ctx.Columns.Keys)
             {
                 var param = ctx.Columns[col];
@@ -30,6 +32,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
                     {
                         if (col.DefaultValue?.Expression == DbExpressionType.PrimaryKeySequence && (!options.EnableIdentityInsert || value == null || value.Equals(ReflectionHelper.GetDefaultValue(value.GetType()))))
                         {
+                            identityInsertUsed = true;
                             continue;
                         }
                     }
@@ -71,7 +74,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
             statement.Script.Add(") values (");
             statement.Script.Add(valBlock);
             statement.Script.Add(")");
-            if (!options.EnableIdentityInsert && options.SelectScopeIdentity)
+            if (identityInsertUsed && !options.EnableIdentityInsert && options.SelectScopeIdentity)
             {
                 statement.Script.Add("SELECT SCOPE_IDENTITY()");
             }
