@@ -329,35 +329,51 @@ using (var writer = new DbWriter(_db))
 {
     try
     {
+        var customer = new Customer
+        {
+            CustomerId = "ACMEC",
+            CompanyName = "Acme"
+            (...)
+        };
+        writer.Insert(customer);
+
         var newOrder = new Order()
         {
             (...)
+            Customer = customer,
+            Employee = new Employee
+            {
+                (...)
+            }
         };
-
-        writer.Save(newOrder);
+        
+        // inserts the dependant employee record and the the order
+        writer.Save(newOrder, "Employee");
 
         var newOrderDetails = new List<OrderDetails>
         {
             new OrderDetails
             {
-                OrderId = newOrder.OrderId,
                 Product = new Product
                 {
                     (...)
                 },
-                (...)    
-            },
-            new OrderDetails
-            {
-                OrderId = newOrder.OrderId,
-                Product = existingProduct, //imagine we loaded an existing product
-                (...)    
+                (...)
+                OrderId = newOrder.OrderId
             }
         };
 
-        // insert order details and include the related 'Product' entitity
         writer.Insert<OrderDetails>(newOrderDetails, "Product");
         newOrder.OrderDetails = newOrderDetails;
+        
+        // explicit update example (save only supported for single PK)
+        var orderDetail = newOrderDetails.First();
+        orderDetail.Discount = 0.3f;
+        writer.Update(orderDetail);
+
+        // example for deleting all new records created
+        writer.Delete<OrderDetails>(newOrderDetails, "Product");
+        writer.Delete(newOrder, "Employee", "Customer");
         
         writer.Commit();
     }
