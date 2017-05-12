@@ -10,8 +10,7 @@ namespace CoPilot.ORM.Common
             Locator.Register<ILogger, ConsoleLogger>();
         }
         public static ResourceLocator Locator = new ResourceLocator();
-        public static OperationType DefaultOperations = OperationType.Select | OperationType.Update | OperationType.Insert;
-
+        
         public static LoggingLevel LoggingLevel
         {
             get { return Locator.Get<ILogger>().LoggingLevel; }

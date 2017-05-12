@@ -19,8 +19,8 @@ namespace CoPilot.ORM.IntegrationTests
                 App=CoPilotIntegrationTest;";
 
 
-        [AssemblyInitialize()]
-        public static void MyTestInitialize(TestContext testContext)
+        [ClassInitialize]
+        public static void BandSampleTestsInitialize(TestContext testContext)
         {
             //CoPilotGlobalResources.LoggingLevel = LoggingLevel.Verbose;
             var model = BandSampleConfig.CreateModel();

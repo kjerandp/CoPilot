@@ -24,11 +24,13 @@ namespace CoPilot.ORM.Config
             var resourceLocator = new ResourceLocator();
             Defaults.RegisterDefaults(resourceLocator);
             _model = new DbModel(resourceLocator);
+            DefaultAllowedOperations = OperationType.Select | OperationType.Update | OperationType.Insert;
         }
 
 
         public bool IsInitialized { get; private set; }
-        
+        public OperationType DefaultAllowedOperations { get; set; }
+
         public TableBuilder Map(string tableName)
         {
 
@@ -48,7 +50,7 @@ namespace CoPilot.ORM.Config
             var sanitized = DbTable.SanitizeTableName(tableName);
             var tbl = _model.GetTable(tableName) ?? _model.AddTable(sanitized.Item2, sanitized.Item1);
 
-            var map = _model.AddTableMap(typeof(T), tbl, CoPilotGlobalResources.DefaultOperations);
+            var map = _model.AddTableMap(typeof(T), tbl, DefaultAllowedOperations);
 
             var builder = new TableBuilder<T>(_model, map);
             if (!string.IsNullOrEmpty(keyMemberName))
@@ -71,7 +73,7 @@ namespace CoPilot.ORM.Config
         {
             var tbl = _model.GetTable(tableName) ?? _model.AddTable(tableName);
 
-            var map = _model.AddTableMap(typeof(T), tbl, CoPilotGlobalResources.DefaultOperations);
+            var map = _model.AddTableMap(typeof(T), tbl, DefaultAllowedOperations);
 
             var builder = new TableBuilder<T>(_model, map);
 

@@ -137,7 +137,12 @@ namespace CoPilot.ORM.IntegrationTests
                     var orderDetail = newOrderDetails.First();
                     orderDetail.Discount = 0.3f;
                     writer.Update(orderDetail);
-                    writer.Rollback();
+
+                    //delete all new records created
+                    writer.Delete<OrderDetails>(newOrderDetails, "Product");
+                    writer.Delete(newOrder, "Employee", "Customer");
+
+                    writer.Rollback(); //normally you would commit here, but we do a rollback since this is a test
                 }
                 catch (Exception ex)
                 {

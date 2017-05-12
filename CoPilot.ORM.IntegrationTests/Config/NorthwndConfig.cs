@@ -23,7 +23,8 @@ namespace CoPilot.ORM.IntegrationTests.Config
         {
             //CoPilotGlobalResources.LoggingLevel = LoggingLevel.Verbose;
 
-            var mapper = new DbMapper();
+            var mapper = new DbMapper {DefaultAllowedOperations = OperationType.All};
+
 
             // Any properties that are not specifically mapped through 
             // configuration will be attempted to be auto-mapped. The naming

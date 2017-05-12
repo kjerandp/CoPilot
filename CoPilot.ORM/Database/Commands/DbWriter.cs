@@ -12,6 +12,7 @@ using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Context.Operations;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping;
@@ -68,6 +69,10 @@ namespace CoPilot.ORM.Database.Commands
 
         public void Save<T>(T entity, params string[] include) where T : class
         {
+            if (typeof(T).IsCollection())
+            {
+                throw new ArgumentException("To save all entities in a collection you need to explicitly provide the entity type as a generic argument to the save method.");
+            }
             var context = _model.CreateContext<T>(include);
             SaveNode(context, entity);
         }
@@ -84,6 +89,10 @@ namespace CoPilot.ORM.Database.Commands
 
         public void Insert<T>(T entity, params string[] include) where T : class
         {
+            if (typeof(T).IsCollection())
+            {
+                throw new ArgumentException("To insert all entities in a collection you need to explicitly provide the entity type as a generic argument to the insert method.");
+            }
             var context = _model.CreateContext<T>(include);
             InsertNode(context, entity);
         }
@@ -99,6 +108,10 @@ namespace CoPilot.ORM.Database.Commands
 
         public void Update<T>(T entity, params string[] include) where T : class
         {
+            if (typeof(T).IsCollection())
+            {
+                throw new ArgumentException("To update all entities in a collection you need to explicitly provide the entity type as a generic argument to the update method.");
+            }
             var context = _model.CreateContext<T>(include);
             UpdateNode(context, entity);
         }
@@ -127,16 +140,34 @@ namespace CoPilot.ORM.Database.Commands
         
         public void Delete<T>(T entity, params string[] include) where T : class
         {
+            if (typeof(T).IsCollection())
+            {
+                throw new ArgumentException("To delete all entities in a collection you need to explicitly provide the entity type as a generic argument to the delete method.");
+            }
             var context = _model.CreateContext<T>(include);
-            DeleteNode(context, entity);
+            if (include != null && include.Any())
+            {
+                DeleteIncludingReferred(context, entity);
+            }
+            else
+            {
+                DeleteNode(context, entity);
+            }
         }
 
-        public void Delete<T>(IEnumerable<T> entities, string[] include) where T : class
+        public void Delete<T>(IEnumerable<T> entities, params string[] include) where T : class
         {
             var context = _model.CreateContext<T>(include);
             foreach (var entity in entities)
             {
-                DeleteNode(context, entity);
+                if (include != null && include.Any())
+                {
+                    DeleteIncludingReferred(context, entity);
+                }
+                else
+                {
+                    DeleteNode(context, entity);
+                }
             } 
         }
 
@@ -293,6 +324,23 @@ namespace CoPilot.ORM.Database.Commands
                 var opCtx = node.Context.Patch(node, instance);
                 var stm = writer.GetStatement(opCtx, Options);
                 CommandExecutor.ExecuteNonQuery(Command, stm);
+            }
+        }
+
+        private void DeleteIncludingReferred(ITableContextNode node, object instance)
+        {
+            if (instance == null) return;
+
+            DeleteNode(node, instance);
+
+            var depNodes = node.Nodes.Where(r => !r.Value.IsInverted && !r.Value.Relationship.IsLookupRelationship);
+
+            foreach (var item in depNodes)
+            {
+                var member = node.MapEntry.GetMemberByName(item.Key);
+                var depInstance = member.GetValue(instance);
+                if (depInstance == null) continue;
+                DeleteIncludingReferred(item.Value, depInstance);
             }
         }
 

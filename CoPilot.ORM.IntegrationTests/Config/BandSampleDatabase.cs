@@ -23,11 +23,13 @@ namespace CoPilot.ORM.IntegrationTests.Config
                 MultipleActiveResultSets=True; 
                 App=CoPilotIntegrationTest;");
             var scriptBuilder = new ScriptBuilder(db.Model);
-            Console.WriteLine("Building database...");
+            
             db.Command(CreateDatabaseScript(scriptBuilder));
 
+            Console.WriteLine(DbName + " database created...");
             //seed data
             Seed(db, scriptBuilder);
+            
         }
 
         private static string CreateDatabaseScript(ScriptBuilder builder)
@@ -60,9 +62,13 @@ namespace CoPilot.ORM.IntegrationTests.Config
 
         private static void Seed(IDb db, ScriptBuilder builder)
         {
+            
+
             //var options = new ScriptOptions { EnableIdentityInsert = false, SelectScopeIdentity = true, UseNvar = true, Parameterize = true };
             using (var writer = new DbWriter(db) { Operations = OperationType.All })
             {
+                var currentLoggingLevel = CoPilotGlobalResources.LoggingLevel;
+                CoPilotGlobalResources.LoggingLevel = LoggingLevel.None; //suppress logging during seeding
                 try
                 {
                     var script = builder.UseDatabase(DbName);
@@ -73,13 +79,20 @@ namespace CoPilot.ORM.IntegrationTests.Config
                     fakeData.Seed(writer);
 
                     writer.Commit();
+                    Console.WriteLine(DbName + " database seeded...");
                 }
                 catch (Exception ex)
                 {
                     writer.Rollback();
                     Assert.Fail(ex.Message);
                 }
+                finally
+                {
+                    CoPilotGlobalResources.LoggingLevel = currentLoggingLevel;
+                }
             }
+
+            
         }
     }
 }
