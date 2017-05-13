@@ -10,7 +10,10 @@ Note: This is still an early version and only works with MSSQL.
 * Solves the "1+N"-problem by fetching child records in a single query and then merging the data with the parent records when mapped
 * Support for limiting queries to only include specified columns when all you need is a subset of data from one or more tables. This will allow the database server to tweak its execution plans to reduce unnecessary table access. This is particularly useful if you only need data from columns that are indexed. 
 * Perform mulitple write operations as a unit-of-work (database transaction)
+* Transform values from and to the database by associating a `ValueAdapter` to relevant POCO properties. Examples of use cases is to serialize/deserialize to and from json, joining/splitting collections of primitive values, converting from/to enums etc.
+* Use lookup tables - meaning that the value of a property can be used to lookup a key value in another table, and then pass that value to the mapped table and then do the same in reverse. Can be handy if you for instance want to use enums in your POCOs, but you want to enforce a foreign key constraint to another table for the mapped column.
 * Generate scripts to build database from model configurations
+* Validate configuration against database schema
 
 ## Install
 CoPilot is available as a [Nuget package](https://www.nuget.org/packages/CoPilot.ORM). Note that it is flagged as a pre-release. 
@@ -41,7 +44,7 @@ Some basic examples can be found in the following sections, but many more exampl
 First part of these examples will work against the Northwind database, which I have restored in my SqlExpress instance after downloading it from <https://northwinddatabase.codeplex.com/>
 
 #### Connecting to the database
-CoPilot works on an interface named `IDb`. So to start using CoPilot, we need to obtain a reference to an implementation of that interface. I have created a simple helper class here that uses a helper class in CoPilot called `DbMapper`. We will use this class later when we map our POCO models to database tables, but for now we will just have it create the simplest possible representation of the database, by handing it the connection string.
+I have created a simple helper class here that uses the `DbMapper` class to obtain an instance of the `IDb` interface that CoPilot works with. We will use this class later when we map our POCO models to database tables, but for now we will just have it create the simplest possible representation of the database, by handing it the connection string.
 
 ```
     public class NorthwndConfig
@@ -63,7 +66,7 @@ CoPilot works on an interface named `IDb`. So to start using CoPilot, we need to
 ```
 
 #### Executing basic queries
-For the first test, let's try to get some data. I have create a simple unit test in order to query for customers. Using the `Query` method, I can write regular sql and pass it an object with any arguments. In this case I have none, so I'm passing NULL.  
+Let's try to get some data. I have created a simple unit test to query for customers. Using the `Query` method, I can write regular sql and pass it an object with any arguments. In this case I have none, so I'm passing NULL.  
 
 
 ```
@@ -323,7 +326,7 @@ var newOrder = new Order {
 };
 _db.Save<Order>(newOrder, "Employee");
 ``` 
-This would not work with the `Customer` relationship, as the `Customers` table does not use an `Identity` column. I will not work with the `OrderDetails` relation either, as that table has a composite primary key. You could on the other hand save the order details along with its products:
+This would not work with the `Customer` relationship, as the `Customers` table does not use an `Identity` column. It will not work with the `OrderDetails` relation either, as that table has a composite primary key. You could on the other hand save the order details along with its products:
 ```
 using (var writer = new DbWriter(_db))
 {
