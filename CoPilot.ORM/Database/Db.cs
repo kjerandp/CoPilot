@@ -192,6 +192,7 @@ namespace CoPilot.ORM.Database
             
         }
 
+        
         public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
         {
             return Query<TEntity, TDto>(selector, orderByClause, null, filter);
@@ -215,6 +216,26 @@ namespace CoPilot.ORM.Database
         public TDto Single<TEntity, TDto>(Expression<Func<TEntity, object>> selector, Expression<Func<TEntity, bool>> filter) where TEntity : class
         {
             return Query<TEntity, TDto>(selector, filter).SingleOrDefault();
+        }
+
+        public IEnumerable<T> All<T>(params string[] include) where T : class
+        {
+            return Query<T>(null, include);
+        }
+
+        public IEnumerable<T> All<T>(Predicates predicates, params string[] include) where T : class
+        {
+            return Query<T>(predicates, null, include);
+        }
+
+        public IEnumerable<T> All<T>(OrderByClause<T> orderByClause, params string[] include) where T : class
+        {
+            return Query(orderByClause, null, include);
+        }
+
+        public IEnumerable<T> All<T>(OrderByClause<T> orderByClause, Predicates predicates, params string[] include) where T : class
+        {
+            return Query(orderByClause, predicates, null, include);
         }
 
         public int Command(string commandText, object args = null)
