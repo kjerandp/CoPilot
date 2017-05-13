@@ -10,8 +10,16 @@ using CoPilot.ORM.Model;
 
 namespace CoPilot.ORM.Mapping.Mappers
 {
+    /// <summary>
+    /// Maps to POCO object mapped with the DbMapper 
+    /// </summary>
     public static class ContextMapper
     {
+        /// <summary>
+        /// Create a mapping delegate using the ContextMapper
+        /// </summary>
+        /// <param name="node">The table context node to map</param>
+        /// <returns>Mapping delegate</returns>
         public static ObjectMapper Create(ITableContextNode node)
         {
             ObjectMapper mapper = dataset =>

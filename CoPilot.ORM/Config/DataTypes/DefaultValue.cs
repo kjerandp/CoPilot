@@ -2,6 +2,9 @@
 
 namespace CoPilot.ORM.Config.DataTypes
 {
+    /// <summary>
+    /// Used to configure a database level default value
+    /// </summary>
     public class DefaultValue
     {
         public static DefaultValue PrimaryKey => new DefaultValue(DbExpressionType.PrimaryKeySequence);

@@ -7,8 +7,14 @@ using CoPilot.ORM.Model;
 
 namespace CoPilot.ORM.Config.Builders
 {
+    /// <summary>
+    /// Non-generic table builder used for configuring table specific entities or settings
+    /// </summary>
     public class TableBuilder : BaseBuilder
     {
+        /// <summary>
+        /// Representation of database table for the DbModel
+        /// </summary>
         public DbTable Table { get; }
 
         public TableBuilder(DbModel model, DbTable table): base(model)
@@ -21,6 +27,14 @@ namespace CoPilot.ORM.Config.Builders
             Table = model.AddTable(tableName, schema);
         }
 
+        /// <summary>
+        /// Map a column
+        /// </summary>
+        /// <param name="columnName">Name of column
+        /// <remarks>Column names can be prefixed with the tilde sign (~) to automatically add the table name as column name prefix</remarks>
+        /// </param>
+        /// <param name="alias">Alias for column that can be used when setting values using anonymous objects or unmapped POCOs</param>
+        /// <returns>Column builder for chaining column specific configurations</returns>
         public ColumnBuilder Column(string columnName, string alias = null)
         {
             var col = AddColumnIfNotExist(columnName, alias);
@@ -28,6 +42,15 @@ namespace CoPilot.ORM.Config.Builders
             return new ColumnBuilder(Model, col);
         }
 
+        /// <summary>
+        /// Map a column
+        /// </summary>
+        /// <param name="columnName">Name of column
+        /// <remarks>Column names can be prefixed with the tilde sign (~) to automatically add the table name as column name prefix</remarks>
+        /// </param>
+        /// <param name="dataType">Datatype of the column</param>
+        /// <param name="alias">Alias for column that can be used when setting values using anonymous objects or unmapped POCOs</param>
+        /// <returns>Column builder for chaining column specific configurations</returns>
         public ColumnBuilder Column(string columnName, DbDataType dataType, string alias = null)
         {
             var col = AddColumnIfNotExist(columnName, alias);
@@ -35,7 +58,32 @@ namespace CoPilot.ORM.Config.Builders
             return new ColumnBuilder(Model, col);
         }
 
-        public ColumnBuilder Column(ClassMemberInfo member, string columnName)
+        /// <summary>
+        /// Specify primary key for table
+        /// </summary>
+        /// <param name="columnName">Name of primary key column
+        /// <remarks>Column names can be prefixed with the tilde sign (~) to automatically add the table name as column name prefix</remarks>
+        /// </param>
+        /// <param name="dataType">Primary key column datatype</param>
+        /// <param name="alias">Alias for column that can be used when setting values using anonymous objects or unmapped POCOs</param>
+        /// <returns>Column builder for chaining column specific configurations</returns>
+        public ColumnBuilder HasKey(string columnName, DbDataType dataType, string alias = null)
+        {
+            var pk = AddColumnIfNotExist(columnName, alias);
+            SetDataType(pk, dataType);
+            pk.IsPrimaryKey = true;
+            return new ColumnBuilder(Model, pk);
+        }
+        
+        /// <summary>
+        /// Map a column (internal use)
+        /// </summary>
+        /// <param name="member"><see cref="ClassMemberInfo"/></param>
+        /// <param name="columnName">Name of column
+        /// <remarks>Column names can be prefixed with the tilde sign (~) to automatically add the table name as column name prefix</remarks>
+        /// </param>
+        /// <returns>Column builder for chaining column specific configurations</returns>
+        internal ColumnBuilder Column(ClassMemberInfo member, string columnName)
         {
             var col = AddColumnIfNotExist(member, columnName);
             return new ColumnBuilder(Model, col);
@@ -79,14 +127,6 @@ namespace CoPilot.ORM.Config.Builders
                 col = Table.AddColumn(columnName, DbDataType.Unknown, alias);
             }
             return col;
-        }
-
-        public ColumnBuilder HasKey(string columnName, DbDataType dataType, string alias = null)
-        {
-            var pk = AddColumnIfNotExist(columnName, alias);
-            SetDataType(pk, dataType);
-            pk.IsPrimaryKey = true;
-            return new ColumnBuilder(Model, pk);
         }
 
         protected DbRelationship CreateRelationship(Type toEntityType, ClassMemberInfo foreignKeyMember, string foreignKeyName)

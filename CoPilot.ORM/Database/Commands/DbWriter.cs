@@ -20,13 +20,27 @@ using CoPilot.ORM.Model;
 
 namespace CoPilot.ORM.Database.Commands
 {
+    /// <summary>
+    /// Use this class to perform database write operations as a unit of work (using database transaction) 
+    /// </summary>
     public class DbWriter : UnitOfWork
     {
+        /// <summary>
+        /// Set which operations CoPilot is allowed to execute. Default is all.
+        /// </summary>
         public OperationType Operations { get; set; }
         private readonly Dictionary<object,object> _entities = new Dictionary<object, object>();
         private readonly DbModel _model;
+
+        /// <summary>
+        /// <see cref="ScriptOptions"/>
+        /// </summary>
         public ScriptOptions Options;
 
+        /// <summary>
+        /// Create an instance of the DbWriter with default behaviours
+        /// </summary>
+        /// <param name="db">CoPilot interface implementation</param>
         public DbWriter(IDb db) : base(db.Connection)
         {
             _model = db.Model;
@@ -37,6 +51,12 @@ namespace CoPilot.ORM.Database.Commands
             Command.CommandType = CommandType.Text;
         }
 
+        /// <summary>
+        /// Internal use only
+        /// </summary>
+        /// <param name="model">The DbModel is available from the IDb interface</param>
+        /// <param name="connection">SqlConnection instance</param>
+        /// <param name="options">Options allows to control parameterization, identity insert etc <see cref="ScriptOptions"/></param>
         internal DbWriter(DbModel model, SqlConnection connection, ScriptOptions options = null) : base(connection)
         {
             _model = model;
@@ -47,18 +67,36 @@ namespace CoPilot.ORM.Database.Commands
             Command.CommandType = CommandType.Text;
         }
 
+        /// <summary>
+        /// Same as Command-method in the IDb interface <seealso cref="IDb.Command"/>
+        /// </summary>
+        /// <param name="commandText">Parameterized sql statement</param>
+        /// <param name="args">Anonymous object for passing arguments to named parameters</param>
+        /// <returns>Rows affected</returns>
         public int ExecuteCommand(string commandText, object args = null)
         {
             var request = DbRequest.CreateRequest(_model, commandText, args);
             return CommandExecutor.ExecuteNonQuery(Command, request);
         }
 
+        /// <summary>
+        /// Same as Scalar-method in the IDb interface <seealso cref="IDb.Scalar"/>
+        /// </summary>
+        /// <param name="commandText">Parameterized sql statement</param>
+        /// <param name="args">Anonymous object for passing arguments to named parameters</param>
+        /// <returns>Scalar value</returns>
         public object Scalar(string commandText, object args = null)
         {
             var request = DbRequest.CreateRequest(_model, commandText, args);
             return CommandExecutor.ExecuteScalar(Command, request);
         }
 
+        /// <summary>
+        /// Same as Scalar-method in the IDb interface <seealso cref="IDb.Scalar"/>
+        /// </summary>
+        /// <param name="commandText">Parameterized sql statement</param>
+        /// <param name="args">Anonymous object for passing arguments to named parameters</param>
+        /// <returns>Scalar value converted to type of T</returns>
         public T Scalar<T>(string commandText, object args = null)
         {
             object convertedValue;
@@ -67,6 +105,12 @@ namespace CoPilot.ORM.Database.Commands
             return (T)convertedValue;
         }
 
+        /// <summary>
+        /// Same as Save method in IDb interface <see cref="IDb.Save{T}(T,string[])"/>
+        /// </summary>
+        /// <typeparam name="T">POCO class for context</typeparam>
+        /// <param name="entity">Instance of POCO</param>
+        /// <param name="include">Included entities</param>
         public void Save<T>(T entity, params string[] include) where T : class
         {
             if (typeof(T).IsCollection())
@@ -77,6 +121,12 @@ namespace CoPilot.ORM.Database.Commands
             SaveNode(context, entity);
         }
 
+        /// <summary>
+        /// Same as batch Save method in IDb interface <see cref="IDb.Save{T}(IEnumerable{T},string[])"/>
+        /// </summary>
+        /// <typeparam name="T">POCO class for context</typeparam>
+        /// <param name="entities">Collection of instances</param>
+        /// <param name="include">Included entities</param>
         public void Save<T>(IEnumerable<T> entities, params string[] include) where T : class
         {
             var context = _model.CreateContext<T>(include);
@@ -87,6 +137,12 @@ namespace CoPilot.ORM.Database.Commands
             
         }
 
+        /// <summary>
+        /// Method for explicitly issuing an insert statement. Required if the entity doesn't have a singular primary key defined.
+        /// </summary>
+        /// <typeparam name="T">POCO class for context</typeparam>
+        /// <param name="entity">Instance of POCO to insert</param>
+        /// <param name="include">Included entities</param>
         public void Insert<T>(T entity, params string[] include) where T : class
         {
             if (typeof(T).IsCollection())
@@ -97,6 +153,12 @@ namespace CoPilot.ORM.Database.Commands
             InsertNode(context, entity);
         }
 
+        /// <summary>
+        /// Batch version of Insert.
+        /// </summary>
+        /// <typeparam name="T">POCO class for context</typeparam>
+        /// <param name="entities">Collection of instances</param>
+        /// <param name="include">Included entities</param>
         public void Insert<T>(IEnumerable<T> entities, params string[] include) where T : class
         {
             var context = _model.CreateContext<T>(include);
@@ -106,6 +168,12 @@ namespace CoPilot.ORM.Database.Commands
             }
         }
 
+        /// <summary>
+        /// Method for explicitly issuing an update statement. Required if the entity doesn't have a singular primary key defined.
+        /// </summary>
+        /// <typeparam name="T">POCO class for context</typeparam>
+        /// <param name="entity">Instance of POCO to update</param>
+        /// <param name="include">Included entities</param>
         public void Update<T>(T entity, params string[] include) where T : class
         {
             if (typeof(T).IsCollection())
@@ -116,6 +184,12 @@ namespace CoPilot.ORM.Database.Commands
             UpdateNode(context, entity);
         }
 
+        /// <summary>
+        /// Batch version of Update.
+        /// </summary>
+        /// <typeparam name="T">POCO class for context</typeparam>
+        /// <param name="entities">Collection of instances</param>
+        /// <param name="include">Included entities</param>
         public void Update<T>(IEnumerable<T> entities, params string[] include) where T : class
         {
             var context = _model.CreateContext<T>(include);
@@ -125,6 +199,11 @@ namespace CoPilot.ORM.Database.Commands
             }
         }
 
+        /// <summary>
+        /// Used to insert values into unmapped database tables 
+        /// </summary>
+        /// <param name="table">Description of the database table <see cref="DbTable"/> <seealso cref="DbColumn"/></param>
+        /// <param name="values">Single or multiple objects containing values to insert (normally provided with anonymous objects)</param>
         public void Insert(DbTable table, params object[] values)
         {
             Parallel.ForEach(values, value =>
@@ -137,7 +216,13 @@ namespace CoPilot.ORM.Database.Commands
 
             });
         }
-        
+
+        /// <summary>
+        /// Same as Delete method in IDb interface <see cref="IDb.Delete{T}(T,string[])"/>
+        /// </summary>
+        /// <typeparam name="T">POCO class for context</typeparam>
+        /// <param name="entity">Instance of POCO</param>
+        /// <param name="include">Included entities</param>
         public void Delete<T>(T entity, params string[] include) where T : class
         {
             if (typeof(T).IsCollection())
@@ -155,6 +240,12 @@ namespace CoPilot.ORM.Database.Commands
             }
         }
 
+        /// <summary>
+        /// Batch version of Delete.
+        /// </summary>
+        /// <typeparam name="T">POCO class for context</typeparam>
+        /// <param name="entities">Collection of instances</param>
+        /// <param name="include">Included entities</param>
         public void Delete<T>(IEnumerable<T> entities, params string[] include) where T : class
         {
             var context = _model.CreateContext<T>(include);
@@ -171,6 +262,11 @@ namespace CoPilot.ORM.Database.Commands
             } 
         }
 
+        /// <summary>
+        /// Same as Patch method in IDb interface <see cref="IDb.Patch{T}(object)"/>
+        /// </summary>
+        /// <typeparam name="T">POCO class for context</typeparam>
+        /// <param name="dto">Dto object to patch from</param>
         public void Patch<T>(object dto) where T : class
         {
             var context = _model.CreateContext<T>();

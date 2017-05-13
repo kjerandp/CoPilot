@@ -9,9 +9,20 @@ using CoPilot.ORM.Helpers;
 
 namespace CoPilot.ORM.Mapping.Mappers
 {
+    /// <summary>
+    /// Maps by converting case and to a best effort to match column names with property names. Can be assisted
+    /// by providing a dictionary that contains specific column-to-property mappings
+    /// </summary>
     public static class BasicMapper
     {
-      
+        /// <summary>
+        /// Create a mapping delegate using the BasicMapper
+        /// </summary>
+        /// <param name="type">The type of the object to map the values to</param>
+        /// <param name="columnMapping">Dictionary to define specific column-to-property mappings</param>
+        /// <param name="ignoreCase">Set if matching should be done case sensitive or not</param>
+        /// <param name="caseConverter">Set specific case converter <see cref="ILetterCaseConverter"/></param>
+        /// <returns>Mapping delegate</returns>
         public static ObjectMapper Create(Type type, Dictionary<string, string> columnMapping = null, bool ignoreCase = true, ILetterCaseConverter caseConverter = null)
         {
             columnMapping = columnMapping?.ToDictionary(k => k.Key.ToUpperInvariant(), v => v.Value);

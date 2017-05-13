@@ -11,6 +11,9 @@ using CoPilot.ORM.Model;
 
 namespace CoPilot.ORM.Scripting
 {
+    /// <summary>
+    /// Used to generate SQL scripts
+    /// </summary>
     public class ScriptBuilder
     {
         private readonly DbModel _model;

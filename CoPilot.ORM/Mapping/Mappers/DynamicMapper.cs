@@ -6,22 +6,47 @@ using CoPilot.ORM.Config.Naming;
 
 namespace CoPilot.ORM.Mapping.Mappers
 {
+    /// <summary>
+    /// Maps to dynamic object and convert column names to camel case (default)
+    /// </summary>
     public static class DynamicMapper
     {
+        /// <summary>
+        /// Create a mapping delegate using the DynamicMapper with default settings
+        /// </summary>
+        /// <returns>Mapping delegate</returns>
         public static ObjectMapper Create()
         {
             return Create(true, null);
         }
 
+        /// <summary>
+        /// Create a mapping delegate using the DynamicMapper with default settings
+        /// </summary>
+        /// <param name="fieldNameMask">Provide a set of prefixes that should be removed from column names before converting to a property name</param>
+        /// <returns>Mapping delegate</returns>
         public static ObjectMapper Create(params string[] fieldNameMask)
         {
             return Create(true, fieldNameMask);
         }
-        
+
+        /// <summary>
+        /// Create a mapping delegate using the DynamicMapper with default settings
+        /// </summary>
+        /// <param name="convertToCamelCase">Toggle the default behaviour of converting column names into camel case for property names</param>
+        /// <param name="fieldNameMask">Provide a set of prefixes that should be removed from column names before converting to a property name</param>
+        /// <returns>Mapping delegate</returns>
         public static ObjectMapper Create(bool convertToCamelCase = true, params string[] fieldNameMask)
         {
             return Create(convertToCamelCase?new CamelCaseConverter():null, fieldNameMask);
         }
+
+        /// <summary>
+        /// Create a mapping delegate using the DynamicMapper with default settings
+        /// </summary>
+        /// <param name="caseConverter">Choose the case converter that fits your need <see cref="ILetterCaseConverter"/></param>
+        /// <param name="fieldNameMask">Provide a set of prefixes that should be removed from column names before converting to a property name</param>
+        /// <returns>Mapping delegate</returns>
         public static ObjectMapper Create(ILetterCaseConverter caseConverter = null, params string[] fieldNameMask)
         {
             return dataset =>
