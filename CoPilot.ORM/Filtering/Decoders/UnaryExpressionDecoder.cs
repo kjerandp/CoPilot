@@ -26,24 +26,6 @@ namespace CoPilot.ORM.Filtering.Decoders
             var decoder = ExpressionTypeResolver.Get(_expression.Operand);
             var result = decoder.Decode();
 
-            //var valueResult = result as DecodedValue;
-            //if (valueResult != null)
-            //{
-            //    switch (_expression.NodeType)
-            //    {
-            //        case ExpressionType.Not:
-            //            {
-            //                if (valueResult.ValueType == typeof(bool) || valueResult.ValueType == typeof(bool?))
-            //                {
-            //                    var val = valueResult.Value != null && ((bool?)valueResult.Value == true);
-            //                    return new DecodedValue(valueResult.ValueType, !val);
-            //                }
-            //                throw new ArgumentException($"Value type not supported for the NOT operator! {valueResult.ValueType.Name}");
-            //            }
-            //        case ExpressionType.Convert: return valueResult;
-            //        default: throw new ArgumentException($"Unary expression operator '{_expression.NodeType}' not supported for this node type! ({result.GetType().Name})");
-            //    }
-            //}
             var refResult = result as DecodedReference;
             if (refResult != null)
             {
@@ -55,8 +37,7 @@ namespace CoPilot.ORM.Filtering.Decoders
                         {
                             if (refResult.ReferencedType == typeof(bool) || refResult.ReferencedType == typeof(bool?))
                             {
-                                var transformedRef = new DecodedReference(refResult.BaseType, refResult.Path);
-                                return new DecodedExpression(ExpressionType.Equal, transformedRef, new DecodedValue(typeof(bool), false));
+                                return ExpressionDecoder.TransformBooleanReferenceToBinaryExpression(refResult, false);
                             }
                         }
                         else if (refResult.ReferencedTypeMemberAccess == "HasValue")
@@ -75,5 +56,7 @@ namespace CoPilot.ORM.Filtering.Decoders
             }
             throw new ArgumentException($"Node not supported as part of unary expression! {result.GetType().Name}");
         }
+
+        
     }
 }

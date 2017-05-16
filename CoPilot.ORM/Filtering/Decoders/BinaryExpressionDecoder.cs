@@ -19,7 +19,25 @@ namespace CoPilot.ORM.Filtering.Decoders
             
             var right = ExpressionTypeResolver.Get(_expression.Right).Decode();
 
+            if (left is DecodedReference && right is DecodedExpression)
+            {
+                left = ConvertIfBool((DecodedReference)left);
+
+            } else if (right is DecodedReference && left is DecodedExpression)
+            {
+                right = ConvertIfBool((DecodedReference)right);
+            }
+            
             return new DecodedExpression(_expression.NodeType, left, right);
+        }
+
+        private IDecodedNode ConvertIfBool(DecodedReference reference)
+        {
+            if (reference.ReferencedType == typeof(bool) || reference.ReferencedType == typeof(bool?))
+            {
+                return ExpressionDecoder.TransformBooleanReferenceToBinaryExpression(reference, true);
+            }
+            return reference;
         }
     }
 }

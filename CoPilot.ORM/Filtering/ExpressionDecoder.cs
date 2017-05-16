@@ -156,7 +156,12 @@ namespace CoPilot.ORM.Filtering
             }
         }
 
-        
-        
+        internal static IDecodedNode TransformBooleanReferenceToBinaryExpression(DecodedReference reference, bool value)
+        {
+            var transformedRef = new DecodedReference(reference.BaseType, reference.Path);
+            return new DecodedExpression(ExpressionType.Equal, transformedRef, new DecodedValue(typeof(bool), value));
+
+        }
+
     }
 }
