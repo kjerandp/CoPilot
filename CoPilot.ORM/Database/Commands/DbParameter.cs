@@ -20,5 +20,7 @@ namespace CoPilot.ORM.Database.Commands
         public bool IsOutput { get; private set; }
         public object DefaultValue { get; set; }
         public int Size { get; set; }
+        public NumberPrecision NumberPrecision { get; set; }
+
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CoPilot.ORM.Config.DataTypes;
+using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Helpers;
@@ -71,7 +72,7 @@ namespace CoPilot.ORM.Mapping.Mappers
             {
                 if (!node.Nodes.ContainsKey(rKey))
                 {
-
+                    continue;
                 }
                 var rNode = node.Nodes[rKey];
                 var members = node.MapEntry.EntityType.GetMember(rKey);
@@ -177,15 +178,30 @@ namespace CoPilot.ORM.Mapping.Mappers
             public DbColumn Column { get; }
         }
 
+        public static IEnumerable<T> MapAndMerge<T>(TableContext<T> baseNode, IEnumerable<DbRecordSet> recordSets)
+            where T : class
+        {
+            return MapAndMerge(baseNode as ITableContextNode, recordSets).OfType<T>();
+        }
+
         public static IEnumerable<object> MapAndMerge(ITableContextNode baseNode, IEnumerable<DbRecordSet> recordSets)
         {
             //var w = Stopwatch.StartNew();
             if (recordSets == null) return new object[0];
 
-            var sets = recordSets.ToDictionary(k => k.Name, v => v);
+            var dbRecordSets = recordSets.ToArray();
+            for (var i=0; i<dbRecordSets.Length;i++)
+            {
+                var n = PathHelper.SplitFirstInPathString(dbRecordSets[i].Name);
+                if (!n.Item1.Equals("Base", StringComparison.Ordinal))
+                {
+                    dbRecordSets[i].Name = "Base" + (string.IsNullOrEmpty(n.Item2)?"":"."+n.Item2);
+                }
+            }
+            var sets = dbRecordSets.ToDictionary(k => k.Name, v => v);
 
             if(sets.Count == 0) return new object[0];
-
+            
             var mapper = Create(baseNode);
             var baseSet = sets[baseNode.Path];
             var mapped = mapper.Invoke(baseSet);

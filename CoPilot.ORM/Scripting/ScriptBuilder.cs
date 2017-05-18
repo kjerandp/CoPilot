@@ -1,11 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
+using System.Linq.Expressions;
 using CoPilot.ORM.Common;
+using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Context;
+using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
+using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Filtering;
+using CoPilot.ORM.Filtering.Interfaces;
+using CoPilot.ORM.Filtering.Operands;
+using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
 
@@ -48,6 +57,145 @@ namespace CoPilot.ORM.Scripting
             var createScript = CreateTable<T>(options);
             var block = If().NotExists().Table(table.TableName).Then(createScript).End();
             return block;
+        }
+
+        public ScriptBlock CreateStoredProcedure(string name, DbParameter[] parameters, ScriptBlock body)
+        {
+            if (string.IsNullOrEmpty(name)) throw new ArgumentException("You need to provide a name for the stored procedure");
+
+            var paramsString = string.Join(", ",
+                parameters.Select(GetParameterAsString));
+
+            var script = new ScriptBlock($"CREATE PROCEDURE {name} ({paramsString})","AS","BEGIN",body.ToString(),"END");
+            return script;
+        }
+
+        public static string GetParameterAsString(DbParameter prm)
+        {
+            var str = prm.Name + " " + DbConversionHelper.GetAsString(prm.DataType);
+            if (DbConversionHelper.HasSize(prm.DataType))
+            {
+                str += $"({(prm.Size == 0?"max":prm.Size.ToString())})";
+            } else if (prm.NumberPrecision != null)
+            {
+                str += $"({prm.NumberPrecision.Scale},{prm.NumberPrecision.Precision})";
+            }
+            if (prm.DefaultValue != null)
+            {
+                str += $" DEFAULT({prm.DefaultValue as string})"; 
+            }
+
+            return str;
+        }
+
+        public ScriptBlock CreateStoredProcedureFromQuery<T>(string name, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
+        {
+            var ctx = _model.CreateContext<T>(include);
+
+            if (filter != null)
+            {
+                var expression = ExpressionHelper.DecodeExpression(filter);
+                ctx.ApplyFilter(expression);
+            }
+            
+            var rootFilter = ctx.GetFilter();
+            var paramToColumnMap = new Dictionary<string, ContextColumn>();
+            var parameters = new List<DbParameter>();
+
+            MapParametersToColumns(rootFilter.Root, paramToColumnMap);
+            
+            var statements = new List<SqlStatement>();
+            GenerateNodeQueries(ctx, statements, _model.ResourceLocator.Get<ISelectStatementWriter>());
+            var caseConverter = new SnakeOrKebabCaseConverter(r => r.ToLower());
+            var script = new ScriptBlock();
+
+
+            foreach (var sqlStatement in statements)
+            {
+                var stm = sqlStatement.ToString();
+                for (var i = 0; i<sqlStatement.Parameters.Count;i++)
+                {
+                    var p = sqlStatement.Parameters[i];
+                    var contextColumn = paramToColumnMap[p.Name];
+                    var newName = "@"+caseConverter.Convert(contextColumn.Node.MapEntry.GetMappedMember(contextColumn.Column).Name);
+                    if (!parameters.Any(r => r.Name.Equals(newName, StringComparison.Ordinal)))
+                    {
+                        var param = new DbParameter(newName, p.DataType, p.DefaultValue, p.CanBeNull, p.IsOutput);
+                        if (DbConversionHelper.HasSize(contextColumn.Column.DataType))
+                        {
+                            param.Size = contextColumn.Column.MaxSize == null || contextColumn.Column.MaxSize == "max" ? 0 : int.Parse(contextColumn.Column.MaxSize);
+                        } else if (contextColumn.Column.NumberPrecision != null)
+                        {
+                            param.NumberPrecision = contextColumn.Column.NumberPrecision;
+                        }
+                        parameters.Add(param);
+                    }
+                    stm = stm.Replace(p.Name, newName);
+                }
+                script.AddMultiLineText(stm);
+                script.Add("");
+            }
+
+            return CreateStoredProcedure(name, parameters.ToArray(), script);
+        }
+
+        private static void MapParametersToColumns(IExpressionOperand operand, Dictionary<string, ContextColumn> mappingDictionary)
+        {
+            
+            var bo = operand as BinaryOperand;
+            if (bo != null)
+            {
+                var left = bo.Left as ValueOperand;
+
+                if (left != null)
+                {
+                    var col = bo.Right as ContextMemberOperand;
+                    if (col != null)
+                    {
+                        mappingDictionary.Add(left.ParamName,
+                            col.ContextColumn);
+                    }
+
+                }
+                else
+                {
+                    MapParametersToColumns(bo.Left, mappingDictionary);
+                }
+                var right = bo.Right as ValueOperand;
+
+                if (right != null)
+                {
+                    var col = bo.Left as ContextMemberOperand;
+                    if (col != null)
+                    {
+                        mappingDictionary.Add(right.ParamName,
+                            col.ContextColumn);
+                    }
+
+                }
+                else
+                {
+                    MapParametersToColumns(bo.Right, mappingDictionary);
+                }
+            }
+        }
+
+        private static void GenerateNodeQueries(ITableContextNode parentNode, List<SqlStatement> statements, ISelectStatementWriter writer)
+        {
+            var q = parentNode.Context.GetQueryContext(parentNode);
+            var stm = writer.GetStatement(q);
+
+            statements.Add(stm);
+
+            foreach (var rel in parentNode.Nodes.Where(r => !r.Value.Relationship.IsLookupRelationship))
+            {
+                var node = rel.Value;
+                
+                if (node.IsInverted)
+                {
+                    GenerateNodeQueries(node, statements, writer);
+                } 
+            }
         }
 
         public ScriptBlock CreateTableIfNotExists(DbTable table, CreateOptions options = null)

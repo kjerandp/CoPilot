@@ -89,7 +89,8 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanExecuteSimpleCommandAndScalar()
         {
-            var employeeName = _db.Query<string>("select FirstName from employees where  EmployeeID=@id", new {id = 1}).Single();
+            var result = _db.Query<string>("select FirstName from employees where  EmployeeID=@id", new {id = 1});
+            var employeeName = result.Single();
             // Update command
             var rows = _db.Command("update employees set FirstName=@newName where EmployeeID=@id", new {id = 1, newName = "Kjerand"});
             Assert.AreEqual(1, rows);

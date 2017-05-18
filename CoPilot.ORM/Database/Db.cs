@@ -72,15 +72,13 @@ namespace CoPilot.ORM.Database
         {
             var response = Query(commandText, args, names);
 
-            if(mapper == null)
+            if(mapper == null && Model.IsMapped(typeof(T)))
             {
-                mapper = (typeof(T) == typeof(object) || typeof(T) == typeof(IDictionary<string, object>))? 
-                    DynamicMapper.Create():
-                    BasicMapper.Create(typeof(T));
-            }
-            return mapper.Invoke(response.RecordSets.FirstOrDefault()).Select(r => r.Instance).OfType<T>();
-            
-           
+                var ctx = Model.CreateContext(typeof(T), response.GetPaths());
+                return ContextMapper.MapAndMerge(ctx, response.RecordSets).OfType<T>();
+            } 
+
+            return response.Map<T>(mapper);
         }
 
         public IEnumerable<T> Query<T>(Expression<Func<T, bool>> filter = null, params string[] include) where T : class

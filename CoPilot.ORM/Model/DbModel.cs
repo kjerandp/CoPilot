@@ -111,6 +111,12 @@ namespace CoPilot.ORM.Model
             return context;
         }
 
+        public TableContext CreateContext(Type type, params string[] include) 
+        {
+            var context = new TableContext(this, type, include);
+            return context;
+        }
+
         public DbRelationship[] GetRelationshipsFromPath(Type entityType, string path)
         {
             var relationships = new HashSet<DbRelationship>();

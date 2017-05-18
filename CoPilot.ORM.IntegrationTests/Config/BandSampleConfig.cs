@@ -37,7 +37,7 @@ namespace CoPilot.ORM.IntegrationTests.Config
 
             personMap.HasOne(r => r.City, "~CITY_ID");
 
-            bandMap.HasOne(r => r.Based, "~CITY_ID");
+            bandMap.HasOne(r => r.Based, "CITY_ID");
 
             bandMemberMap.HasOne(r => r.Person, "~PERSON_ID");
             bandMemberMap.HasOne(r => r.Band, "~BAND_ID").InverseKeyMember(r => r.BandMembers);
