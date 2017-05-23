@@ -66,7 +66,12 @@ namespace CoPilot.ORM.Scripting
             var paramsString = string.Join(", ",
                 parameters.Select(GetParameterAsString));
 
-            var script = new ScriptBlock($"CREATE PROCEDURE {name} ({paramsString})","AS","BEGIN",body.ToString(),"END");
+            if (!string.IsNullOrEmpty(paramsString))
+            {
+                paramsString = $"({paramsString})";
+            }
+
+            var script = new ScriptBlock($"CREATE PROCEDURE {name} {paramsString}","AS","BEGIN",body.ToString(),"END");
             return script;
         }
 
@@ -102,10 +107,14 @@ namespace CoPilot.ORM.Scripting
             var paramToColumnMap = new Dictionary<string, ContextColumn>();
             var parameters = new List<DbParameter>();
 
-            MapParametersToColumns(rootFilter.Root, paramToColumnMap);
-            
             var statements = new List<SqlStatement>();
             GenerateNodeQueries(ctx, statements, _model.ResourceLocator.Get<ISelectStatementWriter>());
+
+            if (rootFilter != null)
+            {
+                MapParametersToColumns(rootFilter.Root, paramToColumnMap);
+            }
+
             var caseConverter = new SnakeOrKebabCaseConverter(r => r.ToLower());
             var script = new ScriptBlock();
 
@@ -113,9 +122,8 @@ namespace CoPilot.ORM.Scripting
             foreach (var sqlStatement in statements)
             {
                 var stm = sqlStatement.ToString();
-                for (var i = 0; i<sqlStatement.Parameters.Count;i++)
+                foreach (var p in sqlStatement.Parameters)
                 {
-                    var p = sqlStatement.Parameters[i];
                     var contextColumn = paramToColumnMap[p.Name];
                     var newName = "@"+caseConverter.Convert(contextColumn.Node.MapEntry.GetMappedMember(contextColumn.Column).Name);
                     if (!parameters.Any(r => r.Name.Equals(newName, StringComparison.Ordinal)))

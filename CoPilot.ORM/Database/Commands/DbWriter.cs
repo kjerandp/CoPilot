@@ -13,7 +13,6 @@ using CoPilot.ORM.Context.Operations;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
 using CoPilot.ORM.Extensions;
-using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
@@ -48,7 +47,7 @@ namespace CoPilot.ORM.Database.Commands
 
             Operations = (OperationType.Insert | OperationType.Update | OperationType.Delete);
 
-            Command.CommandType = CommandType.Text;
+            SqlCommand.CommandType = CommandType.Text;
         }
 
         /// <summary>
@@ -64,7 +63,7 @@ namespace CoPilot.ORM.Database.Commands
 
             Operations = (OperationType.Insert | OperationType.Update | OperationType.Delete);
 
-            Command.CommandType = CommandType.Text;
+            SqlCommand.CommandType = CommandType.Text;
         }
 
         /// <summary>
@@ -73,10 +72,10 @@ namespace CoPilot.ORM.Database.Commands
         /// <param name="commandText">Parameterized sql statement</param>
         /// <param name="args">Anonymous object for passing arguments to named parameters</param>
         /// <returns>Rows affected</returns>
-        public int ExecuteCommand(string commandText, object args = null)
+        public int Command(string commandText, object args = null)
         {
             var request = DbRequest.CreateRequest(_model, commandText, args);
-            return CommandExecutor.ExecuteNonQuery(Command, request);
+            return CommandExecutor.ExecuteNonQuery(SqlCommand, request);
         }
 
         /// <summary>
@@ -88,7 +87,7 @@ namespace CoPilot.ORM.Database.Commands
         public object Scalar(string commandText, object args = null)
         {
             var request = DbRequest.CreateRequest(_model, commandText, args);
-            return CommandExecutor.ExecuteScalar(Command, request);
+            return CommandExecutor.ExecuteScalar(SqlCommand, request);
         }
 
         /// <summary>
@@ -273,7 +272,10 @@ namespace CoPilot.ORM.Database.Commands
             PatchNode(context, dto);
         }
 
-        
+        public DbReader GetReader()
+        {
+            return new DbReader(SqlCommand, _model);
+        }
 
 
         private void SaveNode(ITableContextNode node, object instance, Dictionary<string,object> unmappedValues = null)
@@ -355,12 +357,12 @@ namespace CoPilot.ORM.Database.Commands
                     $"SET IDENTITY_INSERT {table} OFF",
                     false);
 
-                CommandExecutor.ExecuteNonQuery(Command, stm);
+                CommandExecutor.ExecuteNonQuery(SqlCommand, stm);
                 pk = opCtx.Args["@key"];
             }
             else
             {
-                pk = CommandExecutor.ExecuteScalar(Command, stm);
+                pk = CommandExecutor.ExecuteScalar(SqlCommand, stm);
             }
 
             return pk;
@@ -382,7 +384,7 @@ namespace CoPilot.ORM.Database.Commands
                 var writer = _model.ResourceLocator.Get<IUpdateStatementWriter>();
                 var opCtx = node.Context.Update(node, instance, unmappedValues);
                 var stm = writer.GetStatement(opCtx, Options);
-                CommandExecutor.ExecuteNonQuery(Command, stm);
+                CommandExecutor.ExecuteNonQuery(SqlCommand, stm);
             }
             if (node.Table.HasKey && !node.Table.HasCompositeKey)
             {
@@ -408,7 +410,7 @@ namespace CoPilot.ORM.Database.Commands
                 var writer = _model.ResourceLocator.Get<IDeleteStatementWriter>();
                 var opCtx = node.Context.Delete(node, instance);
                 var stm = writer.GetStatement(opCtx, Options);
-                CommandExecutor.ExecuteNonQuery(Command, stm);
+                CommandExecutor.ExecuteNonQuery(SqlCommand, stm);
             }
         }
 
@@ -419,7 +421,7 @@ namespace CoPilot.ORM.Database.Commands
                 var writer = _model.ResourceLocator.Get<IUpdateStatementWriter>();
                 var opCtx = node.Context.Patch(node, instance);
                 var stm = writer.GetStatement(opCtx, Options);
-                CommandExecutor.ExecuteNonQuery(Command, stm);
+                CommandExecutor.ExecuteNonQuery(SqlCommand, stm);
             }
         }
 
@@ -516,7 +518,7 @@ namespace CoPilot.ORM.Database.Commands
                     {
                         foreach (var key in toDelete)
                         {
-                            var instanceToRemove = GetInstanceByKey(item.Value, key);
+                            var instanceToRemove = GetReader().FindByKey(item.Value, key);
                             DeleteNode(item.Value, instanceToRemove);
                         }
                     }
@@ -531,13 +533,12 @@ namespace CoPilot.ORM.Database.Commands
             var fkCol = node.Relationship.ForeignKeyColumn;
             var pkCol = node.Table.GetSingularKey();
             var parameter = new DbParameter("@key", pkCol.DataType, null, false);
-            //TODO: Abstract behind interface
-            var sql = $"UPDATE {node.Table} SET {fkCol.ColumnName}=NULL WHERE {pk} = {parameter.Name}";
+            var sql = $"UPDATE {node.Table} SET [{fkCol.ColumnName}]=NULL WHERE [{pkCol.ColumnName}] = {parameter.Name}";
             var stm = new SqlStatement();
             stm.Script.Add(sql);
             stm.Parameters.Add(parameter);
             stm.Args.Add(parameter.Name, pk);
-            CommandExecutor.ExecuteNonQuery(Command, stm);
+            CommandExecutor.ExecuteNonQuery(SqlCommand, stm);
         }
         private object[] SelectKeysFromChildTable(TableContextNode node, object pk)
         {
@@ -553,23 +554,12 @@ namespace CoPilot.ORM.Database.Commands
             stm.Parameters.Add(parameter);
             stm.Args.Add(parameter.Name, pk);
 
-            var res = CommandExecutor.ExecuteQuery(Command, stm);
+            var res = CommandExecutor.ExecuteQuery(SqlCommand, stm);
 
             return res.RecordSets.Single().Vector(0);
         }
 
-        private object GetInstanceByKey(ITableContextNode node, object key)
-        {
-            var writer = _model.ResourceLocator.Get<ISelectStatementWriter>();
-            var filter = FilterGraph.CreateByPrimaryKeyFilter(node, key);
-
-            var instance = DbReader.ExecuteContextQuery(node, filter, Command, writer).Single();
-
-            return instance;
-        }
-
         
-
         
     }
 }

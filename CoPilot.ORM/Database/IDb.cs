@@ -271,6 +271,15 @@ namespace CoPilot.ORM.Database
         TDto Single<TEntity, TDto>(Expression<Func<TEntity, object>> selector, Expression<Func<TEntity, bool>> filter) where TEntity : class;
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="key"></param>
+        /// <param name="include"></param>
+        /// <returns></returns>
+        T FindByKey<T>(object key, params string[] include) where T : class;
+
+        /// <summary>
         /// Issues a non-query command to the database by writing a parameterized statement or name of stored procedure
         /// </summary>
         /// <param name="commandText">Command statement or stored procedure name.<remarks>Name paramters with @-sign followed by name, ex: @id or @firstName</remarks></param>
@@ -370,5 +379,7 @@ namespace CoPilot.ORM.Database
         /// </summary>
         /// <returns>True if the model is valid - also writes detailed output to console</returns>
         bool ValidateModel();
+
+        
     }
 }

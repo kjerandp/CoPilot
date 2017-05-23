@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Database;
+using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.IntegrationTests.Config;
 using CoPilot.ORM.IntegrationTests.Models.Northwind;
 using CoPilot.ORM.Mapping.Mappers;
@@ -89,20 +90,27 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanExecuteSimpleCommandAndScalar()
         {
-            var result = _db.Query<string>("select FirstName from employees where  EmployeeID=@id", new {id = 1});
-            var employeeName = result.Single();
-            // Update command
-            var rows = _db.Command("update employees set FirstName=@newName where EmployeeID=@id", new {id = 1, newName = "Kjerand"});
-            Assert.AreEqual(1, rows);
+            using (var writer = new DbWriter(_db))
+            {
+                var reader = writer.GetReader();
+                var result = reader.Query<string>("select FirstName from employees where  EmployeeID=@id", new { id = 1 });
+                var employeeName = result.Single();
+                // Update command
+                var rows = writer.Command("update employees set FirstName=@newName where EmployeeID=@id", new { id = 1, newName = "Kjerand" });
+                Assert.AreEqual(1, rows);
 
-            var updatedEmployeeName = _db.Query<string>("select FirstName from employees where  EmployeeID=@id", new { id = 1 }).Single();
-            Assert.AreEqual("Kjerand", updatedEmployeeName);
+                var updatedEmployeeName = reader.Query<string>("select FirstName from employees where  EmployeeID=@id", new { id = 1 }).Single();
+                Assert.AreEqual("Kjerand", updatedEmployeeName);
 
-            _db.Command("update employees set FirstName=@newName where EmployeeID=@id", new { id = 1, newName = employeeName });
+                writer.Command("update employees set FirstName=@newName where EmployeeID=@id", new { id = 1, newName = employeeName });
 
-            // Scalar
-            var regions = _db.Scalar<int>("select count(*) from region");
-            Assert.AreEqual(4, regions);
+                // Scalar
+                var regions = writer.Scalar<int>("select count(*) from region");
+                Assert.AreEqual(4, regions);
+
+                writer.Rollback();
+            }
+            
         }
     }
 }

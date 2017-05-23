@@ -6,5 +6,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters.Interfaces
     {
         SqlStatement GetStatement(QueryContext ctx);
 
+        SqlStatement GetSelectIntoStatement(QueryContext ctx);
+
     }
 }

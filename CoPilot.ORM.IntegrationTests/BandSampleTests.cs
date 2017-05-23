@@ -1,7 +1,10 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database;
 using CoPilot.ORM.IntegrationTests.Config;
 using CoPilot.ORM.IntegrationTests.Models.BandSample;
+using CoPilot.ORM.Scripting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CoPilot.ORM.IntegrationTests
@@ -25,7 +28,7 @@ namespace CoPilot.ORM.IntegrationTests
             //CoPilotGlobalResources.LoggingLevel = LoggingLevel.Verbose;
             var model = BandSampleConfig.CreateModel();
 
-            BandSampleDatabase.DropCreateDatabase(model);
+            //BandSampleDatabase.DropCreateDatabase(model);
 
             _db = model.CreateDb(ConnectionString);
             
@@ -57,11 +60,21 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanQueryForRecordings()
         {
-            var recordings = _db.Query<Recording>(null, "Genre", "Band").ToList();
+            var recordings = _db.All<Recording>(new Predicates { Top = 3000 }, "Genre", "Band", "AlbumTracks").ToList();
 
             Assert.IsTrue(recordings.Any());
             Assert.IsTrue(recordings.Any(r => r.Genre != null));
             Assert.IsTrue(recordings.Any(r => r.Band != null));
+            Assert.IsTrue(recordings.Any(r => r.AlbumTracks != null && r.AlbumTracks.Any()));
+        }
+
+        [TestMethod]
+        public void CanCreateStoredProcedureFromQuery()
+        {
+            var builder = new ScriptBuilder(_db.Model);
+            var proc = builder.CreateStoredProcedureFromQuery<Recording>("Get_Recordings_CTE",r => r.Recorded > DateTime.MinValue, "Genre", "Band", "AlbumTracks").ToString();
+
+            Console.WriteLine(proc);
         }
 
         [TestMethod]
@@ -118,6 +131,32 @@ namespace CoPilot.ORM.IntegrationTests
 	        WHERE
 		        T1.ALBUM_TRACK_ALBUM_ID = @param1 
             */
+        }
+
+        [TestMethod]
+        public void CanExecuteStatememtAndPassObjectWithMatchingParameterNamesAsArgs()
+        {
+            var band = new Band {Id = 1, Name = "Not the actual name"};
+            var dbBand = _db.Query<Band>("SELECT * FROM BAND WHERE BAND_ID=@Id", band).Single();
+
+            Assert.AreEqual(band.Id, dbBand.Id);
+            Assert.AreNotEqual(band.Name, dbBand.Name);
+
+            var rowsUpdated = _db.Command("UPDATE BAND SET BAND_NAME=@Name WHERE BAND_ID=@Id", band);
+
+            Assert.AreEqual(1, rowsUpdated);
+            
+            var updatedBand = _db.Query<Band>("SELECT * FROM BAND WHERE BAND_ID=@Id", new {band.Id}).Single();
+            Assert.AreEqual(band.Id, updatedBand.Id);
+            Assert.AreEqual(band.Name, updatedBand.Name);
+
+            rowsUpdated = _db.Command("UPDATE BAND SET BAND_NAME=@Name WHERE BAND_ID=@Id", dbBand);
+
+            Assert.AreEqual(1, rowsUpdated);
+
+            updatedBand = _db.Query<Band>("SELECT * FROM BAND WHERE BAND_ID=@Id", new { updatedBand.Id }).Single();
+            Assert.AreEqual(dbBand.Id, updatedBand.Id);
+            Assert.AreEqual(dbBand.Name, updatedBand.Name);
         }
 
         [TestMethod]

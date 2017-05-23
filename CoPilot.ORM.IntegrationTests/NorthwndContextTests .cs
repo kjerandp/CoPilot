@@ -41,6 +41,12 @@ namespace CoPilot.ORM.IntegrationTests
             Assert.AreEqual(5, order.Employee.Id);
             Assert.AreEqual(3, order.OrderDetails.Count);
             Assert.AreEqual(625.2f, order.OrderDetails.Sum(r => r.Quantity * r.UnitPrice));
+            var order2 = _db.FindByKey<Order>(10254, "OrderDetails.Product", "Employee", "Customer");
+            Assert.AreEqual(order.OrderId, order2.OrderId);
+            Assert.AreEqual(order.Employee.Id, order2.Employee.Id);
+            Assert.AreEqual(order.OrderDetails.Count, order2.OrderDetails.Count);
+            Assert.AreEqual(order.OrderDetails.Sum(r => r.Quantity * r.UnitPrice), order2.OrderDetails.Sum(r => r.Quantity * r.UnitPrice));
+
         }
 
         [TestMethod]
@@ -52,9 +58,10 @@ namespace CoPilot.ORM.IntegrationTests
                 new Predicates { Skip = 10, Take = 20 }, 
                 r => r.Employee.Id == 4 && r.ShippedDate.HasValue,
                  "OrderDetails.Product", "Employee", "Customer"
-            );
+            ).ToArray();
             Assert.IsNotNull(orders);
             Assert.AreEqual(20, orders.Count());
+            Assert.IsTrue(orders.Any(r => r.OrderDetails != null && r.OrderDetails.Any()));
         
         }
 

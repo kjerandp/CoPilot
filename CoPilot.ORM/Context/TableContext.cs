@@ -24,7 +24,7 @@ namespace CoPilot.ORM.Context
         internal TableContext(DbModel model, TableMapEntry map)
         {
             _nodeIndex = new Dictionary<int, ITableContextNode> { { _index, this } };
-            _model = model;
+            Model = model;
             _selectTemplate = new Dictionary<string, string>();
 
             MapEntry = map;
@@ -37,10 +37,10 @@ namespace CoPilot.ORM.Context
         {
             _nodeIndex = new Dictionary<int, ITableContextNode> { { _index, this } };
             _include = include;
-            _model = model;
+            Model = model;
             _selectTemplate = new Dictionary<string, string>();
 
-            MapEntry = _model.GetTableMap(baseType);
+            MapEntry = Model.GetTableMap(baseType);
             if(MapEntry == null)
                 throw new ArgumentException($"'{baseType.Name}' is not mapped!");
             Index = _index;
@@ -60,11 +60,12 @@ namespace CoPilot.ORM.Context
         private readonly Dictionary<int, ITableContextNode> _nodeIndex;
         private int _index = 1;
         private readonly string[] _include;
-        private readonly DbModel _model;
+        public readonly DbModel Model;
         protected FilterGraph RootFilter;
         private readonly Dictionary<string, string> _selectTemplate;
         private Dictionary<ContextColumn, Ordering> _ordering;
-        private Predicates _predicates;
+        public Predicates Predicates { get; private set; }
+
         public int Index { get; }
         public int Level => 0;
         public int Order => 0;
@@ -103,7 +104,7 @@ namespace CoPilot.ORM.Context
                     {
                         memberType = memberType.GetCollectionType();
                     }
-                    var mapEntry = _model.GetTableMap(memberType);
+                    var mapEntry = Model.GetTableMap(memberType);
                     if(mapEntry == null) throw new NotSupportedException("Can only create context node from mapped entities!");
                     var newNode = new TableContextNode(currentNode, rel, isInverse, ++_index, mapEntry);
                     _nodeIndex.Add(_index, newNode);
@@ -218,7 +219,7 @@ namespace CoPilot.ORM.Context
             {
                 SelectColumns = selectColumns.ToArray(),
                 OrderByClause = _ordering,
-                Predicates = _predicates,
+                Predicates = Predicates,
                 BaseNode = firstNode,
                 JoinedNodes = orderedList.Select(r => new TableJoinDescription(r)).ToArray(),
                 Filter = filter
@@ -324,7 +325,7 @@ namespace CoPilot.ORM.Context
 
         public void SetQueryPredicates(Predicates predicates)
         {
-            _predicates = predicates;
+            Predicates = predicates;
         }
         public bool Exist(string path)
         {
@@ -749,7 +750,7 @@ namespace CoPilot.ORM.Context
                     var keyForInstance = keyFor?.GetValue(entity);
                     if (keyForInstance != null)
                     {
-                        var map = _model.GetTableMap(keyForInstance.GetType());
+                        var map = Model.GetTableMap(keyForInstance.GetType());
                         value = map.GetValueForColumn(keyForInstance, col.ForeignkeyRelationship.PrimaryKeyColumn);
                     }
                 }

@@ -4,24 +4,25 @@ using System.Data.SqlClient;
 
 namespace CoPilot.ORM.Database.Commands
 {
-    public class UnitOfWork : IDisposable
+    public abstract class UnitOfWork : IDisposable
     {
         private readonly string _transactionId;
         
         private bool _isCommited;
-        public SqlTransaction Transaction { get; }
-        public SqlConnection Connection { get; }
-        public SqlCommand Command { get; }
+        protected SqlTransaction Transaction { get; }
+        protected SqlConnection SqlConnection { get; }
+        protected SqlCommand SqlCommand { get; }
 
-        public UnitOfWork(SqlConnection connection, IsolationLevel isolation = IsolationLevel.ReadCommitted, int timeout = 30)
+        protected UnitOfWork(SqlConnection connection, IsolationLevel isolation = IsolationLevel.ReadCommitted, int timeout = 30)
         {
             _transactionId = "T"+DateTime.Now.ToFileTime();
-            Connection = connection;
-            Connection.Open();
+
+            SqlConnection = connection;
+            SqlConnection.Open();
             Transaction = connection.BeginTransaction(isolation, _transactionId);
-            Command = new SqlCommand()
+            SqlCommand = new SqlCommand()
             {
-                Connection = Connection,
+                Connection = SqlConnection,
                 Transaction = Transaction,
                 CommandTimeout = timeout
             };
@@ -29,11 +30,10 @@ namespace CoPilot.ORM.Database.Commands
 
         public void Commit()
         {
-            if (!_isCommited)
-            {
-                Transaction.Commit();
-                _isCommited = true;
-            }          
+            if (_isCommited) return;
+
+            Transaction.Commit();
+            _isCommited = true;
         }
 
         public void Rollback()
@@ -43,10 +43,10 @@ namespace CoPilot.ORM.Database.Commands
 
         public void Dispose()
         {
-            Connection.Close();
-            Command.Dispose();
+            SqlConnection.Close();
+            SqlCommand.Dispose();
             Transaction.Dispose();
-            Connection.Dispose();
+            SqlConnection.Dispose();
         }
 
         public override string ToString()

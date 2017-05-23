@@ -3,6 +3,7 @@ using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Filtering.Interfaces;
 using CoPilot.ORM.Filtering.Operands;
+using CoPilot.ORM.Model;
 
 namespace CoPilot.ORM.Filtering
 {
@@ -87,6 +88,31 @@ namespace CoPilot.ORM.Filtering
             filter.Root = new BinaryOperand(left, right, "=");
 
             return filter;
+        }
+
+        public static FilterGraph CreateChildFilterUsingTempTable(TableContextNode node, string tempTableName)
+        {
+            var filter = new FilterGraph();
+            var left = new ContextMemberOperand(null) { ContextColumn = new ContextColumn(node, node.GetTargetKey, null) };
+            var right = new CustomOperand($"(Select [{node.GetSourceKey.ColumnName}] from {tempTableName})");
+            filter.Root = new BinaryOperand(left, right, "IN");
+
+            return filter;
+
+        }
+    }
+
+    public class CustomOperand : IExpressionOperand
+    {
+        private readonly string _stm;
+        public CustomOperand(string s)
+        {
+            _stm = s;
+        }
+
+        public override string ToString()
+        {
+            return _stm;
         }
     }
 }

@@ -192,7 +192,7 @@ namespace CoPilot.ORM.Mapping.Mappers
             var dbRecordSets = recordSets.ToArray();
             for (var i=0; i<dbRecordSets.Length;i++)
             {
-                var n = PathHelper.SplitFirstInPathString(dbRecordSets[i].Name);
+                var n = PathHelper.SplitFirstInPathString(dbRecordSets[i].Name ?? "Q"+i);
                 if (!n.Item1.Equals("Base", StringComparison.Ordinal))
                 {
                     dbRecordSets[i].Name = "Base" + (string.IsNullOrEmpty(n.Item2)?"":"."+n.Item2);

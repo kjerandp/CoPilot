@@ -5,6 +5,7 @@ using CoPilot.ORM.Common;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Scripting;
 
 namespace CoPilot.ORM.Database.Commands.SqlWriters
 {
@@ -74,6 +75,17 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
             return statement;
         }
 
+        public SqlStatement GetSelectIntoStatement(QueryContext ctx)
+        {
+            var stm = GetStatement(ctx);
+            var scriptText = stm.Script.ToString();
+            var tempName = ctx.BaseNode.Path.Replace(".", "_");
+            var idx = scriptText.IndexOf("\nFROM\n\t", StringComparison.OrdinalIgnoreCase);
+
+            stm.Script = new ScriptBlock(scriptText.Insert(idx, $"\nINTO #{tempName}"));
+            stm.Script.Add($"SELECT * FROM #{tempName}");
+            return stm;
+        }
         private static string GetFromItemText(TableJoinDescription join)
         {
             return $"\n\t{(join.JoinType == TableJoinType.InnerJoin ? "INNER" : "LEFT")} JOIN {SanitizeTableName(join.TargetKey.Table.TableName)} T{join.TargetTableIndex} ON T{join.TargetTableIndex}.{join.TargetKey.ColumnName}=T{join.SourceTableIndex}.{join.SourceKey.ColumnName}";

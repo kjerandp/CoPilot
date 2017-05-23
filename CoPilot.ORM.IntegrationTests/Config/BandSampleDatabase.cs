@@ -72,7 +72,7 @@ namespace CoPilot.ORM.IntegrationTests.Config
                 try
                 {
                     var script = builder.UseDatabase(DbName);
-                    writer.ExecuteCommand(script.ToString());
+                    writer.Command(script.ToString());
 
                     var fakeData = new FakeData();
 
