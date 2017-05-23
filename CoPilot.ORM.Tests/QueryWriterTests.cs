@@ -1,6 +1,7 @@
 ﻿using System;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.Database.Commands.SqlWriters;
+using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
@@ -30,11 +31,12 @@ namespace CoPilot.ORM.Tests
         [TestMethod]
         public void CanWriteProperSqlForSelectSingle()
         {
-            var writer = new SqlSelectStatementWriter(new FilterExpressionWriter());
+            var writer = new SqlSelectStatementWriter();
+            var builder = new SqlQueryBuilder(new FilterExpressionWriter());
             var ctx = _model.CreateContext<Resource>("Owner.City", "UsedBy.City");
             var filterGraph = ExpressionHelper.DecodeExpression<Resource>(r => r.Id == 1);
             ctx.ApplyFilter(filterGraph);
-            var sql = writer.GetStatement(ctx.GetQueryContext());
+            var sql = writer.GetStatement(builder.Build(ctx.GetQueryContext()));
 
             Console.WriteLine(sql);
         }

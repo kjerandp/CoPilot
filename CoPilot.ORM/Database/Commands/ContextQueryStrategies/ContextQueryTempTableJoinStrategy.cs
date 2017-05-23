@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
 using CoPilot.ORM.Filtering;
@@ -8,14 +9,14 @@ using CoPilot.ORM.Mapping.Mappers;
 
 namespace CoPilot.ORM.Database.Commands.ContextQueryStrategies
 {
-    public class ContextQueryTempTableStrategy : IContextQueryStrategy
+    public class ContextQueryTempTableJoinStrategy : IContextQueryStrategy
     {
         public IEnumerable<object> Execute(ITableContextNode node, FilterGraph filter, DbReader reader)
         {
             var ctx = node.Context;
-            
+
             var stm = GetStatement(ctx, filter);
-            var names = new List<string> {node.Path};
+            var names = new List<string> { node.Path };
 
             AddContextNodeQueries(node, stm, names);
 
@@ -24,7 +25,7 @@ namespace CoPilot.ORM.Database.Commands.ContextQueryStrategies
             return ContextMapper.MapAndMerge(node, response.RecordSets);
         }
 
-        private SqlStatement GetStatement(ITableContextNode node, FilterGraph filter)
+        private SqlStatement GetStatement(ITableContextNode node, FilterGraph filter, ITableContextNode parantNode = null)
         {
             var ctx = node.Context;
             var writer = ctx.Model.ResourceLocator.Get<ISelectStatementWriter>();
@@ -34,10 +35,19 @@ namespace CoPilot.ORM.Database.Commands.ContextQueryStrategies
             var tempName = node.Path.Replace(".", "_");
 
             if (node.Nodes.Any(r => r.Value.IsInverted))
-            {    
+            {
                 segments.AddToSegment(QuerySegment.PostSelect, $"INTO #{tempName}");
             }
-
+            if (parantNode != null)
+            {
+                var tn = node as TableContextNode;
+                if (tn != null)
+                {
+                    var join = $"INNER JOIN #{parantNode.Path.Replace(".", "_")} T0 ON T{node.Index}.{tn.GetTargetKey.ColumnName} = T0.{tn.GetSourceKey.ColumnName}";
+                    segments.AddToSegment(QuerySegment.PostBaseTable, join);
+                }
+                
+            }
             var stm = writer.GetStatement(segments);
 
             if (segments.Exist(QuerySegment.PostSelect))
@@ -54,12 +64,10 @@ namespace CoPilot.ORM.Database.Commands.ContextQueryStrategies
                 var node = rel.Value;
                 if (node.IsInverted)
                 {
-                    var filter = FilterGraph.CreateChildFilterUsingTempTable(node, "#" + parentNode.Path.Replace(".", "_"));
-                    var cStm = GetStatement(node, filter);
-                    
+                    var cStm = GetStatement(node, null, parentNode);
                     stm.Script.Append(cStm.Script);
                     names.Add(node.Path);
-                    
+
                 }
 
                 AddContextNodeQueries(node, stm, names);

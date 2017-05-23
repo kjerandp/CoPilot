@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Linq.Expressions;
 using CoPilot.ORM.Common;
@@ -9,9 +8,7 @@ using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
-using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
-using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Filtering.Interfaces;
 using CoPilot.ORM.Filtering.Operands;
 using CoPilot.ORM.Helpers;
@@ -108,7 +105,7 @@ namespace CoPilot.ORM.Scripting
             var parameters = new List<DbParameter>();
 
             var statements = new List<SqlStatement>();
-            GenerateNodeQueries(ctx, statements, _model.ResourceLocator.Get<ISelectStatementWriter>());
+            GenerateNodeQueries(ctx, statements, _model.ResourceLocator.Get<ISelectStatementWriter>(), _model.ResourceLocator.Get<IQueryBuilder>());
 
             if (rootFilter != null)
             {
@@ -188,10 +185,10 @@ namespace CoPilot.ORM.Scripting
             }
         }
 
-        private static void GenerateNodeQueries(ITableContextNode parentNode, List<SqlStatement> statements, ISelectStatementWriter writer)
+        private static void GenerateNodeQueries(ITableContextNode parentNode, List<SqlStatement> statements, ISelectStatementWriter writer, IQueryBuilder builder)
         {
             var q = parentNode.Context.GetQueryContext(parentNode);
-            var stm = writer.GetStatement(q);
+            var stm = writer.GetStatement(builder.Build(q));
 
             statements.Add(stm);
 
@@ -201,7 +198,7 @@ namespace CoPilot.ORM.Scripting
                 
                 if (node.IsInverted)
                 {
-                    GenerateNodeQueries(node, statements, writer);
+                    GenerateNodeQueries(node, statements, writer, builder);
                 } 
             }
         }

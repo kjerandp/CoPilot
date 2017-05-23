@@ -22,18 +22,21 @@ namespace CoPilot.ORM.Database.Commands
         private readonly SqlCommand _sqlCommand;
         private readonly SqlConnection _sqlConnection;
         private readonly DbModel _model;
-
+        private readonly ISelectStatementWriter _writer;
+        private readonly IQueryBuilder _builder;
+        private readonly IContextQueryStrategySelector _strategySelector;
         public DbReader(IDb db) : this(db.Connection, db.Model) { }
 
-        internal DbReader(SqlCommand command, DbModel model)
+        internal DbReader(SqlCommand command, DbModel model) : this(model)
         {
             _model = model;
             _sqlCommand = command;
             
             _sqlConnection = null;
+
         }
 
-        internal DbReader(SqlConnection connection, DbModel model)
+        internal DbReader(SqlConnection connection, DbModel model) : this(model)
         {
             _model = model;
             _sqlConnection = connection;
@@ -43,6 +46,15 @@ namespace CoPilot.ORM.Database.Commands
                 CommandTimeout = 0
             };
             _sqlConnection.Open();
+
+            
+        }
+
+        private DbReader(DbModel model)
+        {
+            _writer = model.ResourceLocator.Get<ISelectStatementWriter>();
+            _builder = model.ResourceLocator.Get<IQueryBuilder>();
+            _strategySelector = model.ResourceLocator.Get<IContextQueryStrategySelector>();
         }
 
         public object FindByKey(ITableContextNode node, object key)
@@ -108,23 +120,51 @@ namespace CoPilot.ORM.Database.Commands
             return response.Map<T>(mapper);
         }
 
+        public IEnumerable<T> Query<T>(Expression<Func<T, bool>> filter = null, params string[] include) where T : class
+        {
+            return Query(null, null, filter, include);
+        }
+
+        public IEnumerable<T> Query<T>(Predicates predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
+        {
+            return Query(null, predicates, filter, include);
+        }
+
+        public IEnumerable<T> Query<T>(OrderByClause<T> orderBy, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
+        {
+            return Query(orderBy, null, filter, include);
+        }
+
         public IEnumerable<T> Query<T>(OrderByClause<T> orderBy, Predicates predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
         {
             var ctx = CreateContext(orderBy, predicates, filter, include);
             var rootFilter = ctx.GetFilter();
             _sqlCommand.CommandType = CommandType.Text;
 
-            return GetStrategy(ctx).Execute(ctx, rootFilter, this).OfType<T>();
+            return _strategySelector.Get(ctx).Execute(ctx, rootFilter, this).OfType<T>();
         }
 
-        public IContextQueryStrategy GetStrategy(TableContext ctx) 
+        public IEnumerable<dynamic> Query<TEntity>(Expression<Func<TEntity, object>> selector, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
         {
-            if(ctx.Predicates != null && ctx.Nodes.Any(r => r.Value.IsInverted))
-                return new ContextQueryTempTableStrategy();
-
-            return new ContextQueryDefaultStrategy();
+            return Query(selector, null, null, filter);
         }
- 
+
+        public IEnumerable<dynamic> Query<TEntity>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
+        {
+            return Query(selector, orderByClause, null, filter);
+        }
+
+        public IEnumerable<dynamic> Query<TEntity>(Expression<Func<TEntity, object>> selector, Predicates predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
+        {
+            return Query(selector, null, predicates, filter);
+        }
+
+        public IEnumerable<dynamic> Query<TEntity>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, Predicates predicates,
+            Expression<Func<TEntity, bool>> filter = null) where TEntity : class
+        {
+            return Query<TEntity, object>(selector, orderByClause, predicates, filter);
+        }
+
         public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, Predicates predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
         {
             var ctx = CreateContext(selector, orderByClause, predicates, filter);
@@ -135,11 +175,35 @@ namespace CoPilot.ORM.Database.Commands
             return queryResult.Map<TDto>();
         }
 
-        private static SqlStatement GetStatement(ITableContextNode node, FilterGraph filter)
+        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
         {
-            var writer = node.Context.Model.ResourceLocator.Get<ISelectStatementWriter>();
+            return Query<TEntity, TDto>(selector, orderByClause, null, filter);
+        }
+
+        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, Predicates predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
+        {
+            return Query<TEntity, TDto>(selector, null, predicates, filter);
+        }
+
+        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
+        {
+            return Query<TEntity, TDto>(selector, null, null, filter);
+        }
+
+        public T Single<T>(Expression<Func<T, bool>> filter, params string[] include) where T : class
+        {
+            return Query(filter, include).SingleOrDefault();
+        }
+
+        public TDto Single<TEntity, TDto>(Expression<Func<TEntity, object>> selector, Expression<Func<TEntity, bool>> filter) where TEntity : class
+        {
+            return Query<TEntity, TDto>(selector, filter).SingleOrDefault();
+        }
+
+        private SqlStatement GetStatement(ITableContextNode node, FilterGraph filter)
+        {
             var q = node.Context.GetQueryContext(node, filter);
-            return writer.GetStatement(q);
+            return _writer.GetStatement(_builder.Build(q));
         }
 
         private TableContext<T> CreateContext<T>(Expression<Func<T, bool>> filter = null, params string[] include) where T : class
@@ -194,5 +258,7 @@ namespace CoPilot.ORM.Database.Commands
             }
             _sqlCommand.Dispose();
         }
+
+        
     }
 }

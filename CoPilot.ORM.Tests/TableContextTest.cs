@@ -49,13 +49,14 @@ namespace CoPilot.ORM.Tests
             Assert.AreEqual("5", ((ValueOperand)orgCtx.GetFilter().Root.Right).Value);
 
             var writer = _model.ResourceLocator.Get<ISelectStatementWriter>();
-            Console.WriteLine(writer.GetStatement(orgCtx.GetQueryContext()));
+            var builder = _model.ResourceLocator.Get<IQueryBuilder>();
+            Console.WriteLine(writer.GetStatement(builder.Build(orgCtx.GetQueryContext())));
             Console.WriteLine();
             var node = orgCtx.FindByPath("OwnedResources");
-            Console.WriteLine(writer.GetStatement(orgCtx.GetQueryContext(node)));
+            Console.WriteLine(writer.GetStatement(builder.Build(orgCtx.GetQueryContext(node))));
             Console.WriteLine();
             node = orgCtx.FindByPath("UsedResources");
-            Console.WriteLine(writer.GetStatement(orgCtx.GetQueryContext(node)));
+            Console.WriteLine(writer.GetStatement(builder.Build(orgCtx.GetQueryContext(node))));
         }
 
         [TestMethod]
@@ -92,11 +93,12 @@ namespace CoPilot.ORM.Tests
             ctx.ApplyFilter(filter);
 
             var writer = _model.ResourceLocator.Get<ISelectStatementWriter>();
-            Console.WriteLine(writer.GetStatement(ctx.GetQueryContext()));
+            var builder = _model.ResourceLocator.Get<IQueryBuilder>();
+            Console.WriteLine(writer.GetStatement(builder.Build(ctx.GetQueryContext())));
 
             Console.WriteLine();
             ctx.ApplySelector(r => new { r.Id, OwnerId = r.Owner.Id });
-            Console.WriteLine(writer.GetStatement(ctx.GetQueryContext()));
+            Console.WriteLine(writer.GetStatement(builder.Build(ctx.GetQueryContext())));
         }
     }
 }

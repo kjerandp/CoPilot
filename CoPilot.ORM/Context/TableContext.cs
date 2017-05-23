@@ -170,7 +170,7 @@ namespace CoPilot.ORM.Context
 
             if (filter == null)
             {
-                filter = node.Context.GetFilter();
+                //filter = node.Context.GetFilter();
             }
 
             if (filter?.Root != null)

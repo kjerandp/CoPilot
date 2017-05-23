@@ -1,4 +1,5 @@
-﻿using CoPilot.ORM.Database.Commands.SqlWriters;
+﻿using CoPilot.ORM.Database.Commands.ContextQueryStrategies;
+using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
 using CoPilot.ORM.Model;
 
@@ -13,8 +14,11 @@ namespace CoPilot.ORM.Common.Config
             resourceLocator.Register<IInsertStatementWriter, SqlInsertStatementWriter>();
             resourceLocator.Register<IUpdateStatementWriter, SqlUpdateStatementWriter>();
             resourceLocator.Register<IDeleteStatementWriter, SqlDeleteStatementWriter>();
-            resourceLocator.Register<ISelectStatementWriter>(new SqlSelectStatementWriter(resourceLocator.Get<IFilterExpressionWriter>()));
+            resourceLocator.Register<ISelectStatementWriter>(new SqlSelectStatementWriter());
             resourceLocator.Register<IModelValidator, SimpleModelValidator>();
+            resourceLocator.Register<IContextQueryStrategySelector, SqlDefaultContextQuerySelector>();
+            resourceLocator.Register<IQueryBuilder>(new SqlQueryBuilder(resourceLocator.Get<IFilterExpressionWriter>()));
+            
         }
     }
 }

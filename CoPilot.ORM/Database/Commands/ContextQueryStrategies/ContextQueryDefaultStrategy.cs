@@ -16,16 +16,17 @@ namespace CoPilot.ORM.Database.Commands.ContextQueryStrategies
 
             var q = ctx.GetQueryContext(node, filter);
             var writer = ctx.Model.ResourceLocator.Get<ISelectStatementWriter>();
-            var stm = writer.GetStatement(q);
+            var builder = ctx.Model.ResourceLocator.Get<IQueryBuilder>();
+            var stm = writer.GetStatement(builder.Build(q));
             var baseRecords = ExecuteStatement(node, stm, reader);
             recordsets.Add(baseRecords);
 
-            ExecuteNodeQueries(node, baseRecords, filter, writer, reader, recordsets);
+            ExecuteNodeQueries(node, baseRecords, filter, builder, writer, reader, recordsets);
 
             return ContextMapper.MapAndMerge(ctx, recordsets);
         }
 
-        private static void ExecuteNodeQueries(ITableContextNode parentNode, DbRecordSet parentSet, FilterGraph filter, ISelectStatementWriter writer, DbReader reader, ICollection<DbRecordSet> rs)
+        private static void ExecuteNodeQueries(ITableContextNode parentNode, DbRecordSet parentSet, FilterGraph filter, IQueryBuilder builder, ISelectStatementWriter writer, DbReader reader, ICollection<DbRecordSet> rs)
         {
             foreach (var rel in parentNode.Nodes.Where(r => !r.Value.Relationship.IsLookupRelationship))
             {
@@ -46,12 +47,12 @@ namespace CoPilot.ORM.Database.Commands.ContextQueryStrategies
                     //    }
                     //}
                     var q = node.Context.GetQueryContext(node, filter);
-                    var stm = writer.GetStatement(q);
+                    var stm = writer.GetStatement(builder.Build(q));
                     var data = ExecuteStatement(node, stm, reader);
                     rs.Add(data);
                     set = data;
                 }
-                ExecuteNodeQueries(node, set, filter, writer, reader, rs);
+                ExecuteNodeQueries(node, set, filter, builder, writer, reader, rs);
             }
         }
 

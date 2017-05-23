@@ -4,9 +4,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters.Interfaces
 {
     public interface ISelectStatementWriter
     {
-        SqlStatement GetStatement(QueryContext ctx);
-
-        SqlStatement GetSelectIntoStatement(QueryContext ctx);
+        SqlStatement GetStatement(QuerySegments segments);
 
     }
 }

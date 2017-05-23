@@ -45,10 +45,14 @@
     <Compile Include="Config\Naming\DbColumnNamingConvention.cs" />
     <Compile Include="Config\Naming\SnakeOrKebabCaseConverter.cs" />
     <Compile Include="Database\Commands\ContextQueryStrategies\ContextQueryDefaultStrategy.cs" />
+    <Compile Include="Database\Commands\ContextQueryStrategies\ContextQueryTempTableJoinStrategy.cs" />
     <Compile Include="Database\Commands\ContextQueryStrategies\IContextQueryStrategy.cs" />
     <Compile Include="Database\Commands\ContextQueryStrategies\ContextQueryTempTableStrategy.cs" />
+    <Compile Include="Database\Commands\ContextQueryStrategies\IContextQueryStrategySelector.cs" />
     <Compile Include="Database\Commands\DbRecordSet.cs" />
     <Compile Include="Database\Commands\IContextDbReader.cs" />
+    <Compile Include="Database\Commands\SqlWriters\Interfaces\IQueryBuilder.cs" />
+    <Compile Include="Database\Commands\SqlWriters\SqlQueryBuilder.cs" />
     <Compile Include="Filtering\Decoders\BinaryExpressionDecoder.cs" />
     <Compile Include="Filtering\Decoders\ConstantExpressionDecoder.cs" />
     <Compile Include="Filtering\Decoders\ExpressionTypeResolver.cs" />
