@@ -8,6 +8,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C7A22BB8-497F-464E-9070-0015E4E2236E}"
 	ProjectSection(SolutionItems) = preProject
 		global.json = global.json
+		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CoPilot.ORM", "src\CoPilot.ORM\CoPilot.ORM.xproj", "{518E8021-D79E-4119-A5F5-5173EB0913F1}"

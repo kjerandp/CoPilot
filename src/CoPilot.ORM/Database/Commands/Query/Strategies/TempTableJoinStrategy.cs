@@ -44,7 +44,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
                 var tn = node as TableContextNode;
                 if (tn != null)
                 {
-                    var join = $"INNER JOIN #{parantNode.Path.Replace(".", "_")} T0 ON T{node.Index}.{tn.GetTargetKey.ColumnName} = T0.{tn.GetSourceKey.ColumnName}";
+                    var join = $"INNER JOIN #{parantNode.Path.Replace(".", "_")} T{parantNode.Index} ON T{node.Index}.{tn.GetTargetKey.ColumnName} = T{parantNode.Index}.{tn.GetSourceKey.ColumnName}";
                     segments.AddToSegment(QuerySegment.PostBaseTable, join);
                 }
                 

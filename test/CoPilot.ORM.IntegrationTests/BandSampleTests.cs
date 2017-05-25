@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using CoPilot.ORM.Common;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database;
 using CoPilot.ORM.IntegrationTests.Config;
@@ -25,7 +26,7 @@ namespace CoPilot.ORM.IntegrationTests
         [ClassInitialize]
         public static void BandSampleTestsInitialize(TestContext testContext)
         {
-            //CoPilotGlobalResources.LoggingLevel = LoggingLevel.Verbose;
+            CoPilotGlobalResources.LoggingLevel = LoggingLevel.Verbose;
             var model = BandSampleConfig.CreateModel();
 
             //BandSampleDatabase.DropCreateDatabase(model);
@@ -60,7 +61,7 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanQueryForRecordings()
         {
-            var recordings = _db.All<Recording>(new Predicates { Top = 3000 }, "Genre", "Band", "AlbumTracks").ToList();
+            var recordings = _db.All<Recording>(new Predicates { Top = 1000 }, "Genre", "Band", "AlbumTracks").ToList();
 
             Assert.IsTrue(recordings.Any());
             Assert.IsTrue(recordings.Any(r => r.Genre != null));
