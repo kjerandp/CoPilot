@@ -1,30 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Query;
-using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Database.Commands.Query.Interfaces;
 
-namespace CoPilot.ORM.Database.Commands.SqlWriters
+namespace CoPilot.ORM.Database.Commands.Query
 {
     public class SqlQueryBuilder : IQueryBuilder
     {
-        private readonly IFilterExpressionWriter _filterWriter;
         
-        public SqlQueryBuilder(IFilterExpressionWriter filterWriter)
-        {
-            _filterWriter = filterWriter;
-        }
-
         public QuerySegments Build(QueryContext queryContext)
         {
-            var qs = new QuerySegments
-            {
-                Segments = new Dictionary<QuerySegment, List<string>>(6),
-                Parameters = new List<DbParameter>(),
-                Arguments = new Dictionary<string, object>()
-            };
+            var qs = new QuerySegments();
 
             if (queryContext.BaseNode.Level == 0 && queryContext.Predicates != null)
             {
@@ -49,7 +37,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
             
             if (queryContext.Filter?.Root != null)
             {
-                qs.AddToSegment(QuerySegment.Filter, _filterWriter.GetExpression(queryContext.Filter, qs.Parameters, qs.Arguments));
+                qs.AddToSegment(QuerySegment.Filter, queryContext.Filter.Root.ToString());
             }
 
            
@@ -73,6 +61,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
             return qs;
         }
 
+        
         private static string GetFromItemText(TableJoinDescription join)
         {
             return $"{(join.JoinType == TableJoinType.InnerJoin ? "INNER" : "LEFT")} JOIN {SanitizeTableName(join.TargetKey.Table.TableName)} T{join.TargetTableIndex} ON T{join.TargetTableIndex}.{join.TargetKey.ColumnName}=T{join.SourceTableIndex}.{join.SourceKey.ColumnName}";

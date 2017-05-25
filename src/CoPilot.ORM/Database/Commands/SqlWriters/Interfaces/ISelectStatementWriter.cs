@@ -1,10 +1,11 @@
-using CoPilot.ORM.Context.Query;
+using CoPilot.ORM.Database.Commands.Query.Interfaces;
+using CoPilot.ORM.Scripting;
 
 namespace CoPilot.ORM.Database.Commands.SqlWriters.Interfaces
 {
     public interface ISelectStatementWriter
     {
-        SqlStatement GetStatement(QuerySegments segments);
+        ScriptBlock GetStatement(QuerySegments segments);
 
     }
 }

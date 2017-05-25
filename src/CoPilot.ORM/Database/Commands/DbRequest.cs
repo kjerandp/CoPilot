@@ -6,8 +6,11 @@ namespace CoPilot.ORM.Database.Commands
 {
     public abstract class DbRequest
     {
-        internal List<DbParameter> Parameters { get; set; }
-        internal Dictionary<string, object> Args { get; set; }
+       
+        internal List<DbParameter> Parameters { get; set; } = new List<DbParameter>();
+
+        internal Dictionary<string, object> Args { get; set; } = new Dictionary<string, object>();
+        
         public abstract CommandType CommandType { get; }
 
         public abstract void SetArguments(object args);

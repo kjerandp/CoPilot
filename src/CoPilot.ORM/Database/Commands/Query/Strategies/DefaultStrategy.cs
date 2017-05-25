@@ -10,24 +10,31 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
 {
     internal class DefaultStrategy : IQueryExecutionStrategy
     {
+        private readonly IQueryBuilder _builder;
+        private readonly ISelectStatementWriter _writer;
+
+        public DefaultStrategy(IQueryBuilder builder, ISelectStatementWriter writer)
+        {
+            _builder = builder;
+            _writer = writer;
+        }
         public IEnumerable<object> Execute(ITableContextNode node, FilterGraph filter, DbReader reader)
         {
             var ctx = node.Context;
             var recordsets = new List<DbRecordSet>();
 
             var q = ctx.GetQueryContext(node, filter);
-            var writer = ctx.Model.ResourceLocator.Get<ISelectStatementWriter>();
-            var builder = ctx.Model.ResourceLocator.Get<IQueryBuilder>();
-            var stm = writer.GetStatement(builder.Build(q));
+
+            var stm = q.GetStatement(_builder, _writer);
             var baseRecords = ExecuteStatement(node, stm, reader);
             recordsets.Add(baseRecords);
 
-            ExecuteNodeQueries(node, baseRecords, filter, builder, writer, reader, recordsets);
+            ExecuteNodeQueries(node, baseRecords, filter, reader, recordsets);
 
             return ContextMapper.MapAndMerge(ctx, recordsets);
         }
 
-        private static void ExecuteNodeQueries(ITableContextNode parentNode, DbRecordSet parentSet, FilterGraph filter, IQueryBuilder builder, ISelectStatementWriter writer, DbReader reader, ICollection<DbRecordSet> rs)
+        private void ExecuteNodeQueries(ITableContextNode parentNode, DbRecordSet parentSet, FilterGraph filter, DbReader reader, ICollection<DbRecordSet> rs)
         {
             foreach (var rel in parentNode.Nodes.Where(r => !r.Value.Relationship.IsLookupRelationship))
             {
@@ -48,12 +55,12 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
                     //    }
                     //}
                     var q = node.Context.GetQueryContext(node, filter);
-                    var stm = writer.GetStatement(builder.Build(q));
+                    var stm = q.GetStatement(_builder, _writer);
                     var data = ExecuteStatement(node, stm, reader);
                     rs.Add(data);
                     set = data;
                 }
-                ExecuteNodeQueries(node, set, filter, builder, writer, reader, rs);
+                ExecuteNodeQueries(node, set, filter, reader, rs);
             }
         }
 

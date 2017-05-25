@@ -1,17 +1,13 @@
-﻿using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+﻿using CoPilot.ORM.Database.Commands.Query.Interfaces;
+using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Scripting;
 
 namespace CoPilot.ORM.Database.Commands.SqlWriters
 {
     public class SqlSelectStatementWriter : ISelectStatementWriter
     {
-        public SqlStatement GetStatement(QuerySegments segments)
+        public ScriptBlock GetStatement(QuerySegments segments)
         {
-            var statement = new SqlStatement
-            {
-                Parameters = segments.Parameters,
-                Args = segments.Arguments
-            };
-
             var sql = "SELECT"
                       + segments.Print(QuerySegment.PreSelect, " ")
                       + segments.Print(QuerySegment.Select, "\n\t,", required: true)
@@ -36,10 +32,8 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
                     + segments.Print(QuerySegment.Ordering, "\n\t,")
                     + segments.Print(QuerySegment.PostOrdering, "\n", "\n");
             }
-
-            statement.Script.Add(sql);
-
-            return statement;
+            
+            return new ScriptBlock(sql);
         }
     }
 

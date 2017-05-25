@@ -1,69 +1,82 @@
 ﻿using System.Collections.Generic;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
+using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Filtering.Interfaces;
 using CoPilot.ORM.Filtering.Operands;
-using CoPilot.ORM.Model;
 
 namespace CoPilot.ORM.Filtering
 {
     public class FilterGraph
     {
         private Dictionary<string, object> _args;
+        private List<DbParameter> _parameters;
+        private List<ContextMemberOperand> _contextMembers;
         public BinaryOperand Root { get; set; }
-        
-        public ContextMemberOperand[] GetMemberExpressions()
-        {
-            var list = new List<ContextMemberOperand>();
-            GetAllMemberExpressions(Root, list);
-            return list.ToArray();
 
-        }
 
-        public Dictionary<string, object> GetParameters()
+        public ContextMemberOperand[] MemberExpressions
         {
-            if (_args == null)
+            get
             {
-                _args = new Dictionary<string, object>();
-                CollectParameters(Root, _args);
+                if (_contextMembers == null) Collect();
+                return _contextMembers?.ToArray();
+
             }
-            return _args;
+        }
+        public DbParameter[] Parameters
+        {
+            get
+            {
+                if (_parameters == null) Collect();
+                return _parameters?.ToArray();
+
+            }
         }
 
-        private static void CollectParameters(IExpressionOperand op, Dictionary<string, object> dict)
+        public Dictionary<string, object> Arguments
+        {
+            get
+            {
+                if (_args == null) Collect();
+                return _args;
+
+            }
+        }
+
+        private void Collect()
+        {
+            _contextMembers = new List<ContextMemberOperand>();
+            _parameters = new List<DbParameter>();
+            _args = new Dictionary<string, object>();
+
+            Collect(Root);
+        }
+
+        private void Collect(IExpressionOperand op)
         {
             var bop = op as BinaryOperand;
             if (bop != null)
             {
-                CollectParameters(bop.Left, dict);
-                CollectParameters(bop.Right, dict);
-            }
-
-            var vop = op as ValueOperand;
-            if (vop != null)
-            {
-                dict.Add(vop.ParamName, vop.Value);
-            }
-
-        }
-
-        private static void GetAllMemberExpressions(IExpressionOperand op, List<ContextMemberOperand> items)
-        {
-            var bop = op as BinaryOperand;
-            if (bop != null)
-            {
-                GetAllMemberExpressions(bop.Left, items);
-                GetAllMemberExpressions(bop.Right, items);
+                Collect(bop.Left);
+                Collect(bop.Right);
             }
 
             var mop = op as ContextMemberOperand;
             if (mop != null)
             {
-                items.Add(mop);
+                _contextMembers.Add(mop);
+            }
+
+            var vop = op as ValueOperand;
+            if (vop != null)
+            {
+                _parameters.Add(vop.GetParameter());
+                _args.Add(vop.ParamName, vop.Value);
             }
         }
 
-
+        
         public override string ToString()
         {
             return Root.ToString();
@@ -75,7 +88,7 @@ namespace CoPilot.ORM.Filtering
             var left = new ContextMemberOperand(null) { ContextColumn = new ContextColumn(node, node.GetTargetKey, null) };
             var right = new ValueListOperand("@id", keys);
             filter.Root = new BinaryOperand(left, right, "IN");
-
+            
             return filter;
         }
 
@@ -99,20 +112,6 @@ namespace CoPilot.ORM.Filtering
 
             return filter;
 
-        }
-    }
-
-    public class CustomOperand : IExpressionOperand
-    {
-        private readonly string _stm;
-        public CustomOperand(string s)
-        {
-            _stm = s;
-        }
-
-        public override string ToString()
-        {
-            return _stm;
         }
     }
 }

@@ -2,6 +2,8 @@
 using System.Linq;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Context.Interfaces;
+using CoPilot.ORM.Context.Query;
+using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
 
@@ -40,6 +42,11 @@ namespace CoPilot.ORM.Context
         public string Path => Origin.Path + "." + Origin.Nodes.Single(r => r.Value.Equals(this)).Key;
         public ITableContextNode Origin { get; set; }
         public TableContext Context => Origin.Context;
+        public QueryContext GetQueryContext(FilterGraph filter = null)
+        {
+            return Context.GetQueryContext(this, filter);
+        }
+
         public TableMapEntry MapEntry { get; }
         public DbTable Table => IsInverted ? Relationship.ForeignKeyColumn.Table : Relationship.PrimaryKeyColumn.Table;
         public DbColumn GetTargetKey => IsInverted ? Relationship.ForeignKeyColumn : Relationship.PrimaryKeyColumn;

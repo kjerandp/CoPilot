@@ -60,7 +60,7 @@ namespace CoPilot.ORM.Database.Commands
 
         public object FindByKey(ITableContextNode node, object key)
         {
-            var strategy = new DefaultStrategy();
+            var strategy = new DefaultStrategy(_builder, _writer);
             var filter = FilterGraph.CreateByPrimaryKeyFilter(node, key);
             var item = strategy.Execute(node, filter, this).SingleOrDefault();
             return item;
@@ -204,7 +204,7 @@ namespace CoPilot.ORM.Database.Commands
         private SqlStatement GetStatement(ITableContextNode node, FilterGraph filter)
         {
             var q = node.Context.GetQueryContext(node, filter);
-            return _writer.GetStatement(_builder.Build(q));
+            return q.GetStatement(_builder, _writer);
         }
 
         private TableContext<T> CreateContext<T>(Expression<Func<T, bool>> filter = null, params string[] include) where T : class

@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using CoPilot.ORM.Context.Query;
+using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
 
@@ -15,6 +17,7 @@ namespace CoPilot.ORM.Context.Interfaces
         int Order { get; }
         string Path { get; }
         TableContext Context { get; }
-        
+        QueryContext GetQueryContext(FilterGraph filter = null);
+
     }
 }

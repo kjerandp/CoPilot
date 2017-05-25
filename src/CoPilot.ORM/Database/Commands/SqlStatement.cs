@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Reflection;
 using CoPilot.ORM.Helpers;
@@ -9,11 +8,11 @@ namespace CoPilot.ORM.Database.Commands
 {
     public class SqlStatement : DbRequest
     {
-        public SqlStatement()
+        public SqlStatement():this(new ScriptBlock()){}
+
+        public SqlStatement(ScriptBlock script)
         {
-            Parameters = new List<DbParameter>();
-            Args = new Dictionary<string, object>();
-            Script = new ScriptBlock();
+            Script = script;
         }
         public ScriptBlock Script { get; internal set; }
         public override CommandType CommandType => CommandType.Text;

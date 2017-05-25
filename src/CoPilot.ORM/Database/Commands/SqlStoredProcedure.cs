@@ -1,8 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Data;
+﻿using System.Data;
 using System.Linq;
 using System.Reflection;
-using CoPilot.ORM.Config;
 using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
@@ -13,19 +11,17 @@ namespace CoPilot.ORM.Database.Commands
     {
         public SqlStoredProcedure(string procName)
         {
-            Parameters = new List<DbParameter>();
-            Args = new Dictionary<string, object>();
             ProcName = procName;
         }
         public string ProcName { get; }
         public override CommandType CommandType => CommandType.StoredProcedure;
 
-        private void SetArguments(DbParameter[] parameters, object args)
-        {
-            var props = args.GetType().GetTypeInfo().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        //private void SetArguments(DbParameter[] parameters, object args)
+        //{
+        //    var props = args.GetType().GetTypeInfo().GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
             
-        }
+        //}
 
         public override void SetArguments(object args)
         {

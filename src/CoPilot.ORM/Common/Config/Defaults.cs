@@ -10,16 +10,19 @@ namespace CoPilot.ORM.Common.Config
     {
         public static void RegisterDefaults(ResourceLocator resourceLocator)
         {
-            resourceLocator.Register<IFilterExpressionWriter, FilterExpressionWriter>();
             resourceLocator.Register<ICreateStatementWriter, SqlCreateStatementWriter>();
             resourceLocator.Register<IInsertStatementWriter, SqlInsertStatementWriter>();
             resourceLocator.Register<IUpdateStatementWriter, SqlUpdateStatementWriter>();
             resourceLocator.Register<IDeleteStatementWriter, SqlDeleteStatementWriter>();
             resourceLocator.Register<ISelectStatementWriter>(new SqlSelectStatementWriter());
             resourceLocator.Register<IModelValidator, SimpleModelValidator>();
-            resourceLocator.Register<IQueryStrategySelector, SqlQueryStrategySelector>();
-            resourceLocator.Register<IQueryBuilder>(new SqlQueryBuilder(resourceLocator.Get<IFilterExpressionWriter>()));
-            
+            resourceLocator.Register<IQueryBuilder, SqlQueryBuilder>();
+
+            resourceLocator.Register<IQueryStrategySelector>(new SqlQueryStrategySelector(
+                resourceLocator.Get<IQueryBuilder>(),
+                resourceLocator.Get<ISelectStatementWriter>()
+            ));
+
         }
     }
 }

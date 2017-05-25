@@ -1,4 +1,7 @@
-﻿using CoPilot.ORM.Filtering.Interfaces;
+﻿using System;
+using CoPilot.ORM.Database.Commands;
+using CoPilot.ORM.Filtering.Interfaces;
+using CoPilot.ORM.Helpers;
 
 namespace CoPilot.ORM.Filtering.Operands
 {
@@ -11,6 +14,11 @@ namespace CoPilot.ORM.Filtering.Operands
         }
         public object Value { get; internal set; }
         public string ParamName { get; set; }
+
+        public DbParameter GetParameter()
+        {
+            return new DbParameter(ParamName, DbConversionHelper.MapToDbDataType(Value?.GetType()));
+        }
 
         public override string ToString()
         {

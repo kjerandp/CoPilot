@@ -176,7 +176,7 @@ namespace CoPilot.ORM.Context
 
             if (filter?.Root != null)
             {
-                var memberExpressions = filter.GetMemberExpressions().ToArray();
+                var memberExpressions = filter.MemberExpressions;
                 var dependencies = memberExpressions.Select(r => r.ContextColumn.Node).Distinct().ToArray();
 
                 foreach (var depNode in dependencies)
@@ -295,7 +295,7 @@ namespace CoPilot.ORM.Context
 
             var filterGraph = new FilterGraph
             {
-                Root = BuildFilter(filter.Root) as BinaryOperand
+                Root = ProcessFilter(filter.Root) as BinaryOperand
             };
             RootFilter = filterGraph;
 
@@ -379,7 +379,7 @@ namespace CoPilot.ORM.Context
             return _nodeIndex.ContainsKey(idx) ? _nodeIndex[idx] : null;
         }
         
-        private IExpressionOperand BuildFilter(IExpressionOperand sourceOp)
+        private IExpressionOperand ProcessFilter(IExpressionOperand sourceOp)
         {
             if(sourceOp is UnsupportedOperand) throw new NotSupportedException(sourceOp.ToString());
 
@@ -387,8 +387,8 @@ namespace CoPilot.ORM.Context
             if (bop != null)
             {
                 var bin = new BinaryOperand(
-                    BuildFilter(bop.Left), 
-                    BuildFilter(bop.Right), 
+                    ProcessFilter(bop.Left), 
+                    ProcessFilter(bop.Right), 
                     bop.Operator
                 );
 

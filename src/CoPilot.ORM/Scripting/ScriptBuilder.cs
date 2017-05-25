@@ -8,6 +8,7 @@ using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
+using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
 using CoPilot.ORM.Filtering.Interfaces;
 using CoPilot.ORM.Filtering.Operands;
@@ -115,21 +116,27 @@ namespace CoPilot.ORM.Scripting
             var caseConverter = new SnakeOrKebabCaseConverter(r => r.ToLower());
             var script = new ScriptBlock();
 
-
             foreach (var sqlStatement in statements)
             {
                 var stm = sqlStatement.ToString();
+
                 foreach (var p in sqlStatement.Parameters)
                 {
                     var contextColumn = paramToColumnMap[p.Name];
-                    var newName = "@"+caseConverter.Convert(contextColumn.Node.MapEntry.GetMappedMember(contextColumn.Column).Name);
+                    var newName = "@" +
+                                    caseConverter.Convert(
+                                        contextColumn.Node.MapEntry.GetMappedMember(contextColumn.Column).Name);
                     if (!parameters.Any(r => r.Name.Equals(newName, StringComparison.Ordinal)))
                     {
                         var param = new DbParameter(newName, p.DataType, p.DefaultValue, p.CanBeNull, p.IsOutput);
                         if (DbConversionHelper.HasSize(contextColumn.Column.DataType))
                         {
-                            param.Size = contextColumn.Column.MaxSize == null || contextColumn.Column.MaxSize == "max" ? 0 : int.Parse(contextColumn.Column.MaxSize);
-                        } else if (contextColumn.Column.NumberPrecision != null)
+                            param.Size = contextColumn.Column.MaxSize == null ||
+                                            contextColumn.Column.MaxSize == "max"
+                                ? 0
+                                : int.Parse(contextColumn.Column.MaxSize);
+                        }
+                        else if (contextColumn.Column.NumberPrecision != null)
                         {
                             param.NumberPrecision = contextColumn.Column.NumberPrecision;
                         }
@@ -137,6 +144,7 @@ namespace CoPilot.ORM.Scripting
                     }
                     stm = stm.Replace(p.Name, newName);
                 }
+                
                 script.AddMultiLineText(stm);
                 script.Add("");
             }
@@ -188,7 +196,7 @@ namespace CoPilot.ORM.Scripting
         private static void GenerateNodeQueries(ITableContextNode parentNode, List<SqlStatement> statements, ISelectStatementWriter writer, IQueryBuilder builder)
         {
             var q = parentNode.Context.GetQueryContext(parentNode);
-            var stm = writer.GetStatement(builder.Build(q));
+            var stm = q.GetStatement(builder, writer);
 
             statements.Add(stm);
 

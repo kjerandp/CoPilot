@@ -3,41 +3,40 @@ using System.Collections.Generic;
 using System.Linq;
 using CoPilot.ORM.Context.Query;
 
-namespace CoPilot.ORM.Database.Commands.SqlWriters.Interfaces
+namespace CoPilot.ORM.Database.Commands.Query.Interfaces
 {
     public interface IQueryBuilder
     {
         QuerySegments Build(QueryContext ctx);
     }
 
-    public struct QuerySegments
+    public class QuerySegments
     {   
-        public Dictionary<QuerySegment, List<string>> Segments;
-        public List<DbParameter> Parameters;
-        public Dictionary<string, object> Arguments;
+        private readonly Dictionary<QuerySegment, List<string>> _segments = new Dictionary<QuerySegment, List<string>>(6);
 
+        
         public string[] Get(QuerySegment segment)
         {
-            return Segments.ContainsKey(segment) ? Segments[segment].ToArray() : null;
+            return _segments.ContainsKey(segment) ? _segments[segment].ToArray() : null;
         }
 
         public bool Exist(QuerySegment segment)
         {
-            return Segments.ContainsKey(segment) && Segments[segment].Any();
+            return _segments.ContainsKey(segment) && _segments[segment].Any();
         }
 
         public string Get(QuerySegment segment, int index)
         {
-            return Segments.ContainsKey(segment) ? null : Segments[segment][index];
+            return _segments.ContainsKey(segment) ? null : _segments[segment][index];
         }
 
         public void AddToSegment(QuerySegment segment, params string[] values)
         {
-            if (!Segments.ContainsKey(segment))
+            if (!_segments.ContainsKey(segment))
             {
-                Segments.Add(segment, new List<string>());
+                _segments.Add(segment, new List<string>());
             }
-            Segments[segment].AddRange(values);
+            _segments[segment].AddRange(values);
         }
 
         public string Print(QuerySegment segment, string joinWith = "\n\t", string prefixWith = "\n\t", bool required = false)
