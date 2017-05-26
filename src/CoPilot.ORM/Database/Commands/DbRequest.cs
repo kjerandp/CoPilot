@@ -9,9 +9,25 @@ namespace CoPilot.ORM.Database.Commands
        
         internal List<DbParameter> Parameters { get; set; } = new List<DbParameter>();
 
-        internal Dictionary<string, object> Args { get; set; } = new Dictionary<string, object>();
+        internal Dictionary<string, object> Args { get; set; }
         
         public abstract CommandType CommandType { get; }
+
+        public void AddArgument(string name, object value)
+        {
+            if (Args == null)
+            {
+                Args = new Dictionary<string, object>();
+            }
+            if (Args.ContainsKey(name))
+            {
+                Args[name] = value;
+            }
+            else
+            {
+                Args.Add(name, value);
+            }
+        }
 
         public abstract void SetArguments(object args);
         

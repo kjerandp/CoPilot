@@ -32,6 +32,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Interfaces
 
         public void AddToSegment(QuerySegment segment, params string[] values)
         {
+            if (values == null) return;
             if (!_segments.ContainsKey(segment))
             {
                 _segments.Add(segment, new List<string>());
@@ -50,6 +51,14 @@ namespace CoPilot.ORM.Database.Commands.Query.Interfaces
                 throw new ArgumentException($"{segment.ToString().ToUpper()} segment missing!");
             }
             return null;
+        }
+
+        public void Remove(QuerySegment segement)
+        {
+            if (_segments.ContainsKey(segement))
+            {
+                _segments.Remove(segement);
+            }
         }
     }
 

@@ -22,9 +22,8 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
         public IEnumerable<object> Execute(ITableContextNode node, FilterGraph filter, DbReader reader)
         {
             string[] names;
-
             var stm = CreateStatement(node, filter, out names);
-
+            
             var response = reader.Query(stm, names);
 
             return ContextMapper.MapAndMerge(node, response.RecordSets);
@@ -33,7 +32,6 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
         public SqlStatement CreateStatement(ITableContextNode node, FilterGraph filter, out string[] names)
         {
             var ctx = node.Context;
-            if (ctx.Predicates != null) throw new NotSupportedException("This query strategy cannot be used with predicates!");
             var q = ctx.GetQueryContext(node, filter);
             var stm = q.GetStatement(_builder, _writer);
             var namesList = new List<string> { node.Path };
@@ -47,6 +45,8 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
         {
             foreach (var rel in parentNode.Nodes.Where(r => !r.Value.Relationship.IsLookupRelationship))
             {
+                if (parentNode.Context.Predicates != null) throw new NotSupportedException("This query strategy cannot be used with predicates!");
+
                 var node = rel.Value;
                 if (node.IsInverted)
                 {

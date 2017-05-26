@@ -14,7 +14,6 @@ using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
-using CoPilot.ORM.Database.Commands.Query.Strategies;
 
 namespace CoPilot.ORM.Database.Commands
 {
@@ -91,7 +90,9 @@ namespace CoPilot.ORM.Database.Commands
                 request = new SqlStoredProcedure(commandText);
             }
             if (args != null)
-                request.SetArguments(args);
+            {
+                request.SetArguments(args);  
+            } 
             
             var response = CommandExecutor.ExecuteQuery(_sqlCommand, request, names);
             

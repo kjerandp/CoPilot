@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Reflection;
 using CoPilot.ORM.Extensions;
@@ -16,19 +17,13 @@ namespace CoPilot.ORM.Database.Commands
         public string ProcName { get; }
         public override CommandType CommandType => CommandType.StoredProcedure;
 
-        //private void SetArguments(DbParameter[] parameters, object args)
-        //{
-        //    var props = args.GetType().GetTypeInfo().GetProperties(BindingFlags.Public | BindingFlags.Instance);
-
-            
-        //}
-
         public override void SetArguments(object args)
         {
             var props = args.GetType().GetTypeInfo().GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
             if (!Parameters.Any()) //for Ad-hoc stored procedures
             {
+                Args = new Dictionary<string, object>();
                 foreach (var prop in props)
                 {
                     var name = "@" + prop.Name;
@@ -36,7 +31,8 @@ namespace CoPilot.ORM.Database.Commands
 
                     if (value != null)
                     {
-                        Parameters.Add(new DbParameter(name, DbConversionHelper.MapToDbDataType(value.GetType())));
+                        if (!Parameters.Any(r => r.Name.Equals(name)))
+                            Parameters.Add(new DbParameter(name, DbConversionHelper.MapToDbDataType(value.GetType())));
                         Args.Add(name, value);
                     }
                 }
@@ -50,7 +46,6 @@ namespace CoPilot.ORM.Database.Commands
                     Arg = a != null ? a.GetValue(args, null) : p.DefaultValue
                 }).ToArray();
 
-                Parameters.AddRange(prm.Select(r => r.Parameter));
                 Args = prm.ToDictionary(k => k.Parameter.Name, v => v.Arg);
             }
         }

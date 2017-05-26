@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Context.Operations;
@@ -59,7 +60,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
                 {
                     valueString = part.Replace("{value}", param.Name);
                     statement.Parameters.Add(param);
-                    statement.Args.Add(param.Name, value);
+                    statement.AddArgument(param.Name, value);
                 }
                 else
                 {

@@ -347,7 +347,7 @@ namespace CoPilot.ORM.Database.Commands
             if (keys.Length == 1 && keys[0].DefaultValue?.Expression == DbExpressionType.PrimaryKeySequence &&
                 Options.EnableIdentityInsert &&
                 (
-                    (Options.Parameterize && stm.Args.ContainsKey("@key")) ||
+                    (Options.Parameterize && stm.Args != null && stm.Args.ContainsKey("@key")) ||
                     (!Options.Parameterize && stm.Script.ToString().Contains(keys[0].ColumnName))
                 ))
             {
@@ -537,7 +537,7 @@ namespace CoPilot.ORM.Database.Commands
             var stm = new SqlStatement();
             stm.Script.Add(sql);
             stm.Parameters.Add(parameter);
-            stm.Args.Add(parameter.Name, pk);
+            stm.AddArgument(parameter.Name, pk);
             CommandExecutor.ExecuteNonQuery(SqlCommand, stm);
         }
         private object[] SelectKeysFromChildTable(TableContextNode node, object pk)

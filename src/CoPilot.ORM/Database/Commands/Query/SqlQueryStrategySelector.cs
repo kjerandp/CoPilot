@@ -15,6 +15,7 @@ namespace CoPilot.ORM.Database.Commands.Query
         {
             _default = new RepeatFilterStrategy(builder, writer);
             _secondary = new TempTableJoinStrategy(builder, writer);
+            //_secondary = new TableVariableJoinStrategy(builder, writer);
         }
         public IQueryExecutionStrategy Get(TableContext ctx)
         {
