@@ -61,7 +61,7 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanQueryForRecordings()
         {
-            var recordings = _db.All<Recording>(new Predicates { Top = 1000 }, "Genre", "Band", "AlbumTracks").ToList();
+            var recordings = _db.All<Recording>(new Predicates { Top = 2000 }, "Genre", "Band", "AlbumTracks").ToList();
 
             Assert.IsTrue(recordings.Any());
             Assert.IsTrue(recordings.Any(r => r.Genre != null));
@@ -73,7 +73,7 @@ namespace CoPilot.ORM.IntegrationTests
         public void CanCreateStoredProcedureFromQuery()
         {
             var builder = new ScriptBuilder(_db.Model);
-            var proc = builder.CreateStoredProcedureFromQuery<Recording>("Get_Recordings_CTE",r => r.Recorded > DateTime.MinValue, "Genre", "Band", "AlbumTracks").ToString();
+            var proc = builder.CreateStoredProcedureFromQuery<Recording>("Get_Recordings_CTE",r => r.Recorded > DateTime.MinValue, null, "Genre", "Band", "AlbumTracks").ToString();
 
             Console.WriteLine(proc);
         }

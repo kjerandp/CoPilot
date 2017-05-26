@@ -13,7 +13,7 @@ namespace CoPilot.ORM.Database.Commands.Query
 
         public SqlQueryStrategySelector(IQueryBuilder builder, ISelectStatementWriter writer)
         {
-            _default = new DefaultStrategy(builder, writer);
+            _default = new RepeatFilterStrategy(builder, writer);
             _secondary = new TempTableJoinStrategy(builder, writer);
         }
         public IQueryExecutionStrategy Get(TableContext ctx)

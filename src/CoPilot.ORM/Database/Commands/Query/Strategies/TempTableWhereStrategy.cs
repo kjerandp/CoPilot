@@ -11,7 +11,7 @@ using CoPilot.ORM.Scripting;
 
 namespace CoPilot.ORM.Database.Commands.Query.Strategies
 {
-    public class TempTableWhereStrategy : IQueryExecutionStrategy
+    public class TempTableWhereStrategy : IQueryExecutionStrategy, IQueryScriptCreator
     {
         private readonly IQueryBuilder _builder;
         private readonly ISelectStatementWriter _writer;
@@ -23,17 +23,8 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
         }
         public IEnumerable<object> Execute(ITableContextNode node, FilterGraph filter, DbReader reader)
         {
-            var ctx = node.Context;
-            var q = ctx.GetQueryContext(node, filter);
-            var stm = new SqlStatement(GetStatement(q));
-            if (q.Filter != null)
-            {
-                stm.Parameters.AddRange(q.Filter.Parameters);
-                stm.Args = q.Filter.Arguments;
-            }
-            var names = new List<string> { node.Path };
-
-            AddContextNodeQueries(node, stm, names);
+            string[] names;
+            var stm = CreateStatement(node, filter, out names);
 
             var response = reader.Query(stm, names.ToArray());
             Console.WriteLine($"Took: {response.ElapsedMs}ms");
@@ -41,7 +32,25 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
            
         }
 
-        private ScriptBlock GetStatement(QueryContext q)
+        public SqlStatement CreateStatement(ITableContextNode node, FilterGraph filter, out string[] names)
+        {
+            var ctx = node.Context;
+            var q = ctx.GetQueryContext(node, filter);
+            var stm = new SqlStatement(GetScript(q));
+            if (q.Filter != null)
+            {
+                stm.Parameters.AddRange(q.Filter.Parameters);
+                stm.Args = q.Filter.Arguments;
+            }
+            var namesList = new List<string> { node.Path };
+
+            AddContextNodeQueries(node, stm, namesList);
+
+            names = namesList.ToArray();
+            return stm;
+        }
+
+        private ScriptBlock GetScript(QueryContext q)
         {
             var segments = _builder.Build(q);
             var tempName = q.BaseNode.Path.Replace(".", "_");
@@ -68,7 +77,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
                 if (node.IsInverted)
                 {
                     var filter = FilterGraph.CreateChildFilterUsingTempTable(node, "#" + parentNode.Path.Replace(".", "_"));
-                    var cStm = GetStatement(node.GetQueryContext(filter));
+                    var cStm = GetScript(node.GetQueryContext(filter));
                     
                     stm.Script.Append(cStm);
                     names.Add(node.Path);

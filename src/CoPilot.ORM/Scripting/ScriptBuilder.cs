@@ -8,7 +8,10 @@ using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
+using CoPilot.ORM.Database.Commands.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
+using CoPilot.ORM.Database.Commands.Query.Strategies;
+using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
 using CoPilot.ORM.Filtering.Interfaces;
 using CoPilot.ORM.Filtering.Operands;
@@ -91,7 +94,8 @@ namespace CoPilot.ORM.Scripting
             return str;
         }
 
-        public ScriptBlock CreateStoredProcedureFromQuery<T>(string name, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
+
+        public ScriptBlock CreateStoredProcedureFromQuery<T>(string name, Expression<Func<T, bool>> filter = null, IQueryScriptCreator scriptCreator = null, params string[] include) where T : class
         {
             var ctx = _model.CreateContext<T>(include);
 
@@ -100,56 +104,53 @@ namespace CoPilot.ORM.Scripting
                 var expression = ExpressionHelper.DecodeExpression(filter);
                 ctx.ApplyFilter(expression);
             }
-            
+
+            return CreateStoredProcedureFromQuery(name, ctx, scriptCreator);
+        }
+        public ScriptBlock CreateStoredProcedureFromQuery(string name, TableContext ctx, IQueryScriptCreator scriptCreator = null) 
+        {
+            if(scriptCreator == null)
+                scriptCreator = new TempTableJoinStrategy(new SqlQueryBuilder(), new SqlSelectStatementWriter());
+
             var rootFilter = ctx.GetFilter();
             var paramToColumnMap = new Dictionary<string, ContextColumn>();
             var parameters = new List<DbParameter>();
 
-            var statements = new List<SqlStatement>();
-            GenerateNodeQueries(ctx, statements, _model.ResourceLocator.Get<ISelectStatementWriter>(), _model.ResourceLocator.Get<IQueryBuilder>());
-
+            string[] names;
+            var sqlStatement = scriptCreator.CreateStatement(ctx, rootFilter, out names);
             if (rootFilter != null)
             {
                 MapParametersToColumns(rootFilter.Root, paramToColumnMap);
             }
 
             var caseConverter = new SnakeOrKebabCaseConverter(r => r.ToLower());
-            var script = new ScriptBlock();
-
-            foreach (var sqlStatement in statements)
+            var script = sqlStatement.Script.ToString();
+            foreach (var p in sqlStatement.Parameters)
             {
-                var stm = sqlStatement.ToString();
-
-                foreach (var p in sqlStatement.Parameters)
+                var contextColumn = paramToColumnMap[p.Name];
+                var newName = "@" +
+                                caseConverter.Convert(
+                                    contextColumn.Node.MapEntry.GetMappedMember(contextColumn.Column).Name);
+                if (!parameters.Any(r => r.Name.Equals(newName, StringComparison.Ordinal)))
                 {
-                    var contextColumn = paramToColumnMap[p.Name];
-                    var newName = "@" +
-                                    caseConverter.Convert(
-                                        contextColumn.Node.MapEntry.GetMappedMember(contextColumn.Column).Name);
-                    if (!parameters.Any(r => r.Name.Equals(newName, StringComparison.Ordinal)))
+                    var param = new DbParameter(newName, p.DataType, p.DefaultValue, p.CanBeNull, p.IsOutput);
+                    if (DbConversionHelper.HasSize(contextColumn.Column.DataType))
                     {
-                        var param = new DbParameter(newName, p.DataType, p.DefaultValue, p.CanBeNull, p.IsOutput);
-                        if (DbConversionHelper.HasSize(contextColumn.Column.DataType))
-                        {
-                            param.Size = contextColumn.Column.MaxSize == null ||
-                                            contextColumn.Column.MaxSize == "max"
-                                ? 0
-                                : int.Parse(contextColumn.Column.MaxSize);
-                        }
-                        else if (contextColumn.Column.NumberPrecision != null)
-                        {
-                            param.NumberPrecision = contextColumn.Column.NumberPrecision;
-                        }
-                        parameters.Add(param);
+                        param.Size = contextColumn.Column.MaxSize == null ||
+                                        contextColumn.Column.MaxSize == "max"
+                            ? 0
+                            : int.Parse(contextColumn.Column.MaxSize);
                     }
-                    stm = stm.Replace(p.Name, newName);
+                    else if (contextColumn.Column.NumberPrecision != null)
+                    {
+                        param.NumberPrecision = contextColumn.Column.NumberPrecision;
+                    }
+                    parameters.Add(param);
                 }
-                
-                script.AddMultiLineText(stm);
-                script.Add("");
+                script = script.Replace(p.Name, newName);
             }
 
-            return CreateStoredProcedure(name, parameters.ToArray(), script);
+            return CreateStoredProcedure(name, parameters.ToArray(), new ScriptBlock(script));
         }
 
         private static void MapParametersToColumns(IExpressionOperand operand, Dictionary<string, ContextColumn> mappingDictionary)
@@ -190,24 +191,6 @@ namespace CoPilot.ORM.Scripting
                 {
                     MapParametersToColumns(bo.Right, mappingDictionary);
                 }
-            }
-        }
-
-        private static void GenerateNodeQueries(ITableContextNode parentNode, List<SqlStatement> statements, ISelectStatementWriter writer, IQueryBuilder builder)
-        {
-            var q = parentNode.Context.GetQueryContext(parentNode);
-            var stm = q.GetStatement(builder, writer);
-
-            statements.Add(stm);
-
-            foreach (var rel in parentNode.Nodes.Where(r => !r.Value.Relationship.IsLookupRelationship))
-            {
-                var node = rel.Value;
-                
-                if (node.IsInverted)
-                {
-                    GenerateNodeQueries(node, statements, writer, builder);
-                } 
             }
         }
 

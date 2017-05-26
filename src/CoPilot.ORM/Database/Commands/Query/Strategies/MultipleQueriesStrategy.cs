@@ -4,16 +4,17 @@ using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
 using CoPilot.ORM.Filtering;
+using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping.Mappers;
 
 namespace CoPilot.ORM.Database.Commands.Query.Strategies
 {
-    internal class DefaultStrategy : IQueryExecutionStrategy
+    internal class MultipleQueriesStrategy : IQueryExecutionStrategy
     {
         private readonly IQueryBuilder _builder;
         private readonly ISelectStatementWriter _writer;
 
-        public DefaultStrategy(IQueryBuilder builder, ISelectStatementWriter writer)
+        public MultipleQueriesStrategy(IQueryBuilder builder, ISelectStatementWriter writer)
         {
             _builder = builder;
             _writer = writer;
@@ -42,19 +43,19 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
                 var set = parentSet;
                 if (node.IsInverted)
                 {
-                    //var keyCol = node.Origin.Table.GetSingularKey();
-                    //var childFilter = filter;
-                    //if (keyCol != null && parentSet.Records.Length <= 10)
-                    //{
-                    //    var fieldName = PathHelper.MaskPath(parentNode.Path + "." + keyCol.ColumnName, parentSet.Name);
-                    //    var fieldIndex = parentSet.GetIndex(fieldName);
-                    //    if (fieldIndex >= 0)
-                    //    {
-                    //        var keyValues = parentSet.Vector(fieldIndex);
-                    //        childFilter = FilterGraph.CreateChildFilter(node, keyValues);
-                    //    }
-                    //}
-                    var q = node.Context.GetQueryContext(node, filter);
+                    var keyCol = node.Origin.Table.GetSingularKey();
+                    var childFilter = filter;
+                    if (keyCol != null)
+                    {
+                        var fieldName = PathHelper.MaskPath(parentNode.Path + "." + keyCol.ColumnName, parentSet.Name);
+                        var fieldIndex = parentSet.GetIndex(fieldName);
+                        if (fieldIndex >= 0)
+                        {
+                            var keyValues = parentSet.Vector(fieldIndex);
+                            childFilter = FilterGraph.CreateChildFilter(node, keyValues);
+                        }
+                    }
+                    var q = node.Context.GetQueryContext(node, childFilter);
                     var stm = q.GetStatement(_builder, _writer);
                     var data = ExecuteStatement(node, stm, reader);
                     rs.Add(data);

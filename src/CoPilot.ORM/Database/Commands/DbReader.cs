@@ -60,7 +60,7 @@ namespace CoPilot.ORM.Database.Commands
 
         public object FindByKey(ITableContextNode node, object key)
         {
-            var strategy = new DefaultStrategy(_builder, _writer);
+            var strategy = _strategySelector.Get(node.Context);
             var filter = FilterGraph.CreateByPrimaryKeyFilter(node, key);
             var item = strategy.Execute(node, filter, this).SingleOrDefault();
             return item;
