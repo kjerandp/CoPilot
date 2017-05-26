@@ -3,6 +3,8 @@ using System.Linq;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database;
+using CoPilot.ORM.Database.Commands;
+using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.IntegrationTests.Config;
 using CoPilot.ORM.IntegrationTests.Models.BandSample;
 using CoPilot.ORM.Scripting;
@@ -160,6 +162,30 @@ namespace CoPilot.ORM.IntegrationTests
             updatedBand = _db.Query<Band>("SELECT * FROM BAND WHERE BAND_ID=@Id", new { updatedBand.Id }).Single();
             Assert.AreEqual(dbBand.Id, updatedBand.Id);
             Assert.AreEqual(dbBand.Name, updatedBand.Name);
+        }
+
+        [TestMethod]
+        public void CanInsertWithIdentityInsertEnabled()
+        {
+            var options = new ScriptOptions
+            {
+                EnableIdentityInsert = true
+            };
+
+            using (var writer = new DbWriter(_db) {Options = options})
+            {
+                var maxId = writer.Scalar<int>("select max(band_id) from band");
+                var testBand = new Band
+                {
+                    Id = maxId + 1,
+                    Formed = DateTime.Today,
+                    Name = "Test Band",
+                    Based = writer.GetReader().FindByKey<City>(1)
+                };
+
+                writer.Save(testBand);
+                writer.Rollback();
+            }
         }
 
         [TestMethod]

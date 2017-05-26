@@ -6,17 +6,16 @@
   "copyright": "Copyright 2017",
   "packOptions": {
     "owners": [ "Kjerand Pedersen" ],
-    "summary": "Light weight object relational mapper (ORM) for MS SQL",
-    "releaseNotes": "Now targets netstandard1.6 for core applications and net46",
+    "summary": "Light weight object relational mapper (O/RM) for MS SQL",
+    "releaseNotes": "Now targets netstandard1.6 for core applications and net46.",
     "requireLicenseAcceptance": true,
     "licenseUrl": "https://raw.githubusercontent.com/kjerandp/CoPilot/master/LICENSE",
     "projectUrl": "https://github.com/kjerandp/CoPilot",
-    "tags": [ "CoPilot", "micro", "ORM", "O/RM", "core", "netstandard", "mapper", "sql", "data", "DAL" ]
+    "tags": [ "CoPilot", "micro", "ORM", "O/RM", "core", "netstandard", "mapper", "sql", "data", "DAL", "ado.net" ]
   },
   "dependencies": {
     "System.Data.SqlClient": "4.3.0"
   },
-
   "frameworks": {
     "netstandard1.6": {
       "dependencies": {

@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
 using CoPilot.ORM.Filtering;
+using CoPilot.ORM.Filtering.Operands;
 using CoPilot.ORM.Mapping.Mappers;
 using CoPilot.ORM.Scripting;
 
@@ -76,7 +78,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
                 var node = rel.Value;
                 if (node.IsInverted)
                 {
-                    var filter = FilterGraph.CreateChildFilterUsingTempTable(node, "#" + parentNode.Path.Replace(".", "_"));
+                    var filter = CreateChildFilterUsingTempTable(node, "#" + parentNode.Path.Replace(".", "_"));
                     var cStm = GetScript(node.GetQueryContext(filter));
                     
                     stm.Script.Append(cStm);
@@ -86,6 +88,17 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
 
                 AddContextNodeQueries(node, stm, names);
             }
+        }
+
+        private static FilterGraph CreateChildFilterUsingTempTable(TableContextNode node, string tempTableName)
+        {
+            var filter = new FilterGraph();
+            var left = new ContextMemberOperand(null) { ContextColumn = new ContextColumn(node, node.GetTargetKey, null) };
+            var right = new CustomOperand($"(Select [{node.GetSourceKey.ColumnName}] from {tempTableName})");
+            filter.Root = new BinaryOperand(left, right, "IN");
+
+            return filter;
+
         }
     }
 }

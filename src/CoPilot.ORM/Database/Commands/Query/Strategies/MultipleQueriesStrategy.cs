@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
+using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
 using CoPilot.ORM.Filtering;
+using CoPilot.ORM.Filtering.Operands;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping.Mappers;
 
@@ -52,7 +54,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
                         if (fieldIndex >= 0)
                         {
                             var keyValues = parentSet.Vector(fieldIndex);
-                            childFilter = FilterGraph.CreateChildFilter(node, keyValues);
+                            childFilter = CreateChildFilter(node, keyValues);
                         }
                     }
                     var q = node.Context.GetQueryContext(node, childFilter);
@@ -73,6 +75,14 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
             return data;
         }
 
-        
+        private static FilterGraph CreateChildFilter(TableContextNode node, object[] keys)
+        {
+            var filter = new FilterGraph();
+            var left = new ContextMemberOperand(null) { ContextColumn = new ContextColumn(node, node.GetTargetKey, null) };
+            var right = new ValueListOperand("@id", keys);
+            filter.Root = new BinaryOperand(left, right, "IN");
+
+            return filter;
+        }
     }
 }

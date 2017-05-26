@@ -77,7 +77,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
             if (identityInsertUsed && !options.EnableIdentityInsert && options.SelectScopeIdentity)
             {
                 statement.Script.Add("SELECT SCOPE_IDENTITY()");
-            }
+            } 
             return statement;
         }
 

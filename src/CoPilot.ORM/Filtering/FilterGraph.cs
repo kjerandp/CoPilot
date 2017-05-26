@@ -82,17 +82,7 @@ namespace CoPilot.ORM.Filtering
             return Root.ToString();
         }
 
-        internal static FilterGraph CreateChildFilter(TableContextNode node, object[] keys)
-        {
-            var filter = new FilterGraph();
-            var left = new ContextMemberOperand(null) { ContextColumn = new ContextColumn(node, node.GetTargetKey, null) };
-            var right = new ValueListOperand("@id", keys);
-            filter.Root = new BinaryOperand(left, right, "IN");
-            
-            return filter;
-        }
-
-
+        
         public static FilterGraph CreateByPrimaryKeyFilter(ITableContextNode node, object key)
         {
             var filter = new FilterGraph();
@@ -103,15 +93,6 @@ namespace CoPilot.ORM.Filtering
             return filter;
         }
 
-        public static FilterGraph CreateChildFilterUsingTempTable(TableContextNode node, string tempTableName)
-        {
-            var filter = new FilterGraph();
-            var left = new ContextMemberOperand(null) { ContextColumn = new ContextColumn(node, node.GetTargetKey, null) };
-            var right = new CustomOperand($"(Select [{node.GetSourceKey.ColumnName}] from {tempTableName})");
-            filter.Root = new BinaryOperand(left, right, "IN");
-
-            return filter;
-
-        }
+        
     }
 }
