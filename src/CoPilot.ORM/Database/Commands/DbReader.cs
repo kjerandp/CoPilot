@@ -78,22 +78,7 @@ namespace CoPilot.ORM.Database.Commands
 
         public DbResponse Query(string commandText, object args, params string[] names)
         {
-            DbRequest request;
-            if (commandText.Split(' ', '\n').Length > 1)
-            {
-                var stm = new SqlStatement();
-                stm.Script.Add(commandText);
-                request = stm;
-            }
-            else
-            {
-                request = new SqlStoredProcedure(commandText);
-            }
-            if (args != null)
-            {
-                request.SetArguments(args);  
-            } 
-            
+            var request = DbRequest.CreateRequest(_model, commandText, args);
             var response = CommandExecutor.ExecuteQuery(_sqlCommand, request, names);
             
             return response;
