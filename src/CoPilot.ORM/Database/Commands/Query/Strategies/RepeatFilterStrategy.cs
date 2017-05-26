@@ -26,7 +26,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
             var stm = CreateStatement(node, filter, out names);
 
             var response = reader.Query(stm, names);
-            Console.WriteLine($"Took: {response.ElapsedMs}ms");
+
             return ContextMapper.MapAndMerge(node, response.RecordSets);
         }
 

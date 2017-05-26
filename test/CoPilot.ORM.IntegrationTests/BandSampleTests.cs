@@ -26,10 +26,10 @@ namespace CoPilot.ORM.IntegrationTests
         [ClassInitialize]
         public static void BandSampleTestsInitialize(TestContext testContext)
         {
-            CoPilotGlobalResources.LoggingLevel = LoggingLevel.Verbose;
+            //CoPilotGlobalResources.LoggingLevel = LoggingLevel.Verbose;
             var model = BandSampleConfig.CreateModel();
 
-            //BandSampleDatabase.DropCreateDatabase(model);
+            BandSampleDatabase.DropCreateDatabase(model);
 
             _db = model.CreateDb(ConnectionString);
             
@@ -73,9 +73,11 @@ namespace CoPilot.ORM.IntegrationTests
         public void CanCreateStoredProcedureFromQuery()
         {
             var builder = new ScriptBuilder(_db.Model);
-            var proc = builder.CreateStoredProcedureFromQuery<Recording>("Get_Recordings_CTE",r => r.Recorded > DateTime.MinValue, null, "Genre", "Band", "AlbumTracks").ToString();
+            
+            var proc = builder.CreateStoredProcedureFromQuery<Recording>("Get_Recordings_CTE", r => r.Recorded > DateTime.MinValue, null, "Genre", "Band", "AlbumTracks").ToString();
 
             Console.WriteLine(proc);
+
         }
 
         [TestMethod]
