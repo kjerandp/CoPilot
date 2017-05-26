@@ -16,8 +16,14 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{D5001A35-622A-4C80-8F1A-63442CEBE894}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoPilot.ORM.Tests", "test\CoPilot.ORM.Tests\CoPilot.ORM.Tests.csproj", "{C80C4019-929C-4D33-A532-136BAD10C7AF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{518E8021-D79E-4119-A5F5-5173EB0913F1} = {518E8021-D79E-4119-A5F5-5173EB0913F1}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoPilot.ORM.IntegrationTests", "test\CoPilot.ORM.IntegrationTests\CoPilot.ORM.IntegrationTests.csproj", "{9CA569AC-157A-4AB0-9C3E-7CA92595A7FE}"
+	ProjectSection(ProjectDependencies) = postProject
+		{518E8021-D79E-4119-A5F5-5173EB0913F1} = {518E8021-D79E-4119-A5F5-5173EB0913F1}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
