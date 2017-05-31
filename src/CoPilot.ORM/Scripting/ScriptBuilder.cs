@@ -26,10 +26,17 @@ namespace CoPilot.ORM.Scripting
     public class ScriptBuilder
     {
         private readonly DbModel _model;
+        private readonly IInsertStatementWriter _insertWriter;
+        private readonly ICreateStatementWriter _createWriter;
+        private readonly ICommonScriptingTasks _commonScriptingTasks;
 
         public ScriptBuilder(DbModel model)
         {
             _model = model;
+            _insertWriter = _model.ResourceLocator.Get<IInsertStatementWriter>();
+            _createWriter = _model.ResourceLocator.Get<ICreateStatementWriter>();
+            _commonScriptingTasks = _model.ResourceLocator.Get<ICommonScriptingTasks>();
+
         }
 
         public ScriptBlock CreateTable<T>(CreateOptions options = null) where T : class
@@ -57,6 +64,14 @@ namespace CoPilot.ORM.Scripting
             var createScript = CreateTable<T>(options);
             var block = If().NotExists().Table(table.TableName).Then(createScript).End();
             return block;
+        }
+
+        public ScriptBlock CreateOrReplaceStoredProcedure(string name, DbParameter[] parameters, ScriptBlock body)
+        {
+            var script = If().Exists().StoredProcedure(name).Then(DropStoredProcedure(name)).End();
+            script.Append(Go());
+            script.Append(CreateStoredProcedure(name, parameters, body));
+            return script;
         }
 
         public ScriptBlock CreateStoredProcedure(string name, DbParameter[] parameters, ScriptBlock body)
@@ -108,6 +123,7 @@ namespace CoPilot.ORM.Scripting
 
             return CreateStoredProcedureFromQuery(name, ctx, scriptCreator);
         }
+
         public ScriptBlock CreateStoredProcedureFromQuery(string name, TableContext ctx, IQueryScriptCreator scriptCreator = null) 
         {
             if(scriptCreator == null)
@@ -157,7 +173,7 @@ namespace CoPilot.ORM.Scripting
             }
             var scriptBlock = MultiLineComment(comment);
             scriptBlock.AddMultiLineText(script, false);
-            return CreateStoredProcedure(name, parameters.ToArray(), scriptBlock);
+            return CreateOrReplaceStoredProcedure(name, parameters.ToArray(), scriptBlock);
         }
 
         private static void MapParametersToColumns(IExpressionOperand operand, Dictionary<string, ContextColumn> mappingDictionary)
@@ -213,8 +229,7 @@ namespace CoPilot.ORM.Scripting
             var map = new TableMapEntry(template.GetType(), tableDefinition, OperationType.Insert);
             var ctx = new TableContext(_model, map);
             var opCtx = ctx.InsertUsingTemplate(ctx, template);
-            var insertWriter = _model.ResourceLocator.Get<IInsertStatementWriter>();
-            return insertWriter.GetStatement(opCtx, options).Script;
+            return _insertWriter.GetStatement(opCtx, options).Script;
         }
         
         public ScriptBlock InsertIntoTableIfEmpty<T>(ScriptOptions options = null, params T[] entities) where T : class
@@ -223,18 +238,16 @@ namespace CoPilot.ORM.Scripting
 
             var table = _model.GetTableMap<T>().Table;
             var insertBlock = new ScriptBlock();
-            if (options.EnableIdentityInsert)
-            {
-                insertBlock.Add($"SET IDENTITY_INSERT {table} ON");
-            }
+
             foreach (var entity in entities)
             {
                 insertBlock.Append(InsertTable(entity, options));
             }
             if (options.EnableIdentityInsert)
             {
-                insertBlock.Add($"SET IDENTITY_INSERT {table} OFF");
+                _commonScriptingTasks.WrapInsideIdentityInsertScript(table.ToString(), insertBlock);
             }
+            
             var block = If().NotExists().TableData(table.TableName).Then(insertBlock).End();
             return block;
         }
@@ -245,14 +258,11 @@ namespace CoPilot.ORM.Scripting
 
             var insertBlock = new ScriptBlock();
             var table = _model.GetTableMap<T>().Table;
-            if (options.EnableIdentityInsert)
-            {
-                insertBlock.Add($"SET IDENTITY_INSERT {table} ON");
-            }
+            
             insertBlock.Append(InsertTable(obj, options));
             if (options.EnableIdentityInsert)
             {
-                insertBlock.Add($"SET IDENTITY_INSERT {table} OFF");
+                _commonScriptingTasks.WrapInsideIdentityInsertScript(table.ToString(), insertBlock);
             }
             var block = If().NotExists().TableData(table.TableName).Then(insertBlock).End();
             return block;
@@ -263,17 +273,13 @@ namespace CoPilot.ORM.Scripting
             options = options ?? ScriptOptions.Default();
 
             var insertBlock = new ScriptBlock();
-            if (options.EnableIdentityInsert)
-            {
-                insertBlock.Add($"SET IDENTITY_INSERT {tableDefinition} ON");
-            }
             foreach (var entity in templateObjects)
             {
                 insertBlock.Append(InsertTable(tableDefinition, entity, options));
             }
             if (options.EnableIdentityInsert)
             {
-                insertBlock.Add($"SET IDENTITY_INSERT {tableDefinition} OFF");
+                _commonScriptingTasks.WrapInsideIdentityInsertScript(tableDefinition.ToString(), insertBlock);
             }
             var block = If().NotExists().TableData(tableDefinition.TableName).Then(insertBlock).End();
             return block;
@@ -325,6 +331,11 @@ namespace CoPilot.ORM.Scripting
             block.Add($"DROP DATABASE {databaseName}");
 
             return block;
+        }
+
+        public ScriptBlock DropStoredProcedure(string name)
+        {
+            return new ScriptBlock($"DROP PROCEDURE {name}");
         }
 
         public ScriptBlock Go(int times = 0)
@@ -465,6 +476,14 @@ namespace CoPilot.ORM.Scripting
 
                     return new ThenBlock(_scriptBuilder, _block);
                 }
+
+                public ThenBlock StoredProcedure(string name)
+                {
+                    _currentTextLine += $"(SELECT top 1 * FROM sys.objects WHERE object_id = OBJECT_ID(N'{name}'))";
+                    _block.Add(_currentTextLine);
+
+                    return new ThenBlock(_scriptBuilder, _block);
+                }
             }
 
             public class ThenBlock
@@ -567,11 +586,6 @@ namespace CoPilot.ORM.Scripting
 
 
         #endregion
-
-        //private DbTable GetTable(string tableName)
-        //{
-        //    return _model.GetTable(tableName);
-        //}
         
         private void CreateTableAndDependantTables(ScriptBlock block, DbTable table, List<DbTable> created, CreateOptions options)
         {
@@ -591,33 +605,10 @@ namespace CoPilot.ORM.Scripting
             options = options ?? ScriptOptions.Default();
             var ctx = new TableContext(_model, entity.GetType());
             var opCtx = ctx.Insert(ctx, entity);
-            var writer = _model.ResourceLocator.Get<IInsertStatementWriter>();
-            return writer.GetStatement(opCtx, options);
-        }
-        /*
-        private SqlStatement GetUpdateStatement(object entity, ScriptOptions options = null)
-        {
-            options = options ?? ScriptOptions.Default();
-            var ctx = new TableContext(_model, entity.GetType());
-            var opCtx = ctx.Update(ctx, entity);
-            var writer = _model.ResourceLocator.Get<IUpdateStatementWriter>();
-            return writer.GetStatement(opCtx, options);
-        }
 
-        private SqlStatement GetDeletetStatement(object entity, ScriptOptions options = null)
-        {
-            options = options ?? ScriptOptions.Default();
-            var ctx = new TableContext(_model, entity.GetType());
-            var opCtx = ctx.Delete(ctx, entity);
-            var writer = _model.ResourceLocator.Get<IDeleteStatementWriter>();
-            return writer.GetStatement(opCtx, options);
+            return _insertWriter.GetStatement(opCtx, options);
         }
         
-        private SqlStatement GetCreateStatement<T>(CreateOptions options = null)
-        {
-            return GetCreateStatement(typeof(T), options);
-        }
-        */
         private SqlStatement GetCreateStatement(Type entityType, CreateOptions options = null)
         {
             var table = _model.GetTableMap(entityType).Table;
@@ -627,8 +618,10 @@ namespace CoPilot.ORM.Scripting
         private SqlStatement GetCreateStatement(DbTable table, CreateOptions options)
         {
             options = options ?? CreateOptions.Default();
-            var writer = _model.ResourceLocator.Get<ICreateStatementWriter>();
-            return writer.GetStatement(table, options);
+            
+            return _createWriter.GetStatement(table, options);
         }
+
+    
     }
 }

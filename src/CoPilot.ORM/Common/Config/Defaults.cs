@@ -17,7 +17,7 @@ namespace CoPilot.ORM.Common.Config
             resourceLocator.Register<ISelectStatementWriter>(new SqlSelectStatementWriter());
             resourceLocator.Register<IModelValidator, SimpleModelValidator>();
             resourceLocator.Register<IQueryBuilder, SqlQueryBuilder>();
-
+            resourceLocator.Register<ICommonScriptingTasks, SqlCommonScriptingTasks>();
             resourceLocator.Register<IQueryStrategySelector>(new SqlQueryStrategySelector(
                 resourceLocator.Get<IQueryBuilder>(),
                 resourceLocator.Get<ISelectStatementWriter>()

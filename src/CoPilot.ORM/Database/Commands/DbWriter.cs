@@ -36,19 +36,16 @@ namespace CoPilot.ORM.Database.Commands
         /// </summary>
         public ScriptOptions Options;
 
+        private readonly IInsertStatementWriter _insertWriter;
+        private readonly IDeleteStatementWriter _deleteWriter;
+        private readonly IUpdateStatementWriter _updateWriter;
+        private readonly ICommonScriptingTasks _commonScriptingTasks;
+
         /// <summary>
         /// Create an instance of the DbWriter with default behaviours
         /// </summary>
         /// <param name="db">CoPilot interface implementation</param>
-        public DbWriter(IDb db) : base(db.Connection)
-        {
-            _model = db.Model;
-            Options = ScriptOptions.Default();
-
-            Operations = (OperationType.Insert | OperationType.Update | OperationType.Delete);
-
-            SqlCommand.CommandType = CommandType.Text;
-        }
+        public DbWriter(IDb db) : this(db.Model, db.Connection, ScriptOptions.Default()) {}
 
         /// <summary>
         /// Internal use only
@@ -59,11 +56,18 @@ namespace CoPilot.ORM.Database.Commands
         internal DbWriter(DbModel model, SqlConnection connection, ScriptOptions options = null) : base(connection)
         {
             _model = model;
+
+            _insertWriter = _model.ResourceLocator.Get<IInsertStatementWriter>();
+            _deleteWriter = _model.ResourceLocator.Get<IDeleteStatementWriter>();
+            _updateWriter = _model.ResourceLocator.Get<IUpdateStatementWriter>();
+            _commonScriptingTasks = _model.ResourceLocator.Get<ICommonScriptingTasks>();
+
             Options = options ?? ScriptOptions.Default();
 
             Operations = (OperationType.Insert | OperationType.Update | OperationType.Delete);
 
             SqlCommand.CommandType = CommandType.Text;
+            
         }
 
         /// <summary>
@@ -341,8 +345,8 @@ namespace CoPilot.ORM.Database.Commands
             var keys = table.GetKeys();
             object pk;
 
-            var insertWriter = _model.ResourceLocator.Get<IInsertStatementWriter>();
-            var stm = insertWriter.GetStatement(opCtx, Options);
+            
+            var stm = _insertWriter.GetStatement(opCtx, Options);
 
             if (keys.Length == 1 && keys[0].DefaultValue?.Expression == DbExpressionType.PrimaryKeySequence &&
                 Options.EnableIdentityInsert &&
@@ -351,12 +355,9 @@ namespace CoPilot.ORM.Database.Commands
                     (!Options.Parameterize && stm.Script.ToString().Contains(keys[0].ColumnName))
                 ))
             {
-                //TODO: Abstract behind interface
-                stm.Script.WrapInside(
-                    $"SET IDENTITY_INSERT {table} ON",
-                    $"SET IDENTITY_INSERT {table} OFF",
-                    false);
-
+                
+                stm.Script = _commonScriptingTasks.WrapInsideIdentityInsertScript(table.ToString(), stm.Script);
+                
                 CommandExecutor.ExecuteNonQuery(SqlCommand, stm);
                 pk = opCtx.Args["@key"];
             }
@@ -381,9 +382,9 @@ namespace CoPilot.ORM.Database.Commands
             
             if ((Operations & OperationType.Update) != 0)
             {
-                var writer = _model.ResourceLocator.Get<IUpdateStatementWriter>();
+                
                 var opCtx = node.Context.Update(node, instance, unmappedValues);
-                var stm = writer.GetStatement(opCtx, Options);
+                var stm = _updateWriter.GetStatement(opCtx, Options);
                 CommandExecutor.ExecuteNonQuery(SqlCommand, stm);
             }
             if (node.Table.HasKey && !node.Table.HasCompositeKey)
@@ -407,9 +408,9 @@ namespace CoPilot.ORM.Database.Commands
             }
             if ((Operations & OperationType.Delete) != 0)
             {
-                var writer = _model.ResourceLocator.Get<IDeleteStatementWriter>();
+                
                 var opCtx = node.Context.Delete(node, instance);
-                var stm = writer.GetStatement(opCtx, Options);
+                var stm = _deleteWriter.GetStatement(opCtx, Options);
                 CommandExecutor.ExecuteNonQuery(SqlCommand, stm);
             }
         }
@@ -418,9 +419,9 @@ namespace CoPilot.ORM.Database.Commands
         {
             if ((Operations & OperationType.Update) != 0)
             {
-                var writer = _model.ResourceLocator.Get<IUpdateStatementWriter>();
+
                 var opCtx = node.Context.Patch(node, instance);
-                var stm = writer.GetStatement(opCtx, Options);
+                var stm = _updateWriter.GetStatement(opCtx, Options);
                 CommandExecutor.ExecuteNonQuery(SqlCommand, stm);
             }
         }
@@ -527,30 +528,24 @@ namespace CoPilot.ORM.Database.Commands
            
         }
 
-        //TODO: This must be abstracted and moved to Database folder
         private void SetForeignkeyToNull(TableContextNode node, object pk)
         {
             var fkCol = node.Relationship.ForeignKeyColumn;
             var pkCol = node.Table.GetSingularKey();
             var parameter = new DbParameter("@key", pkCol.DataType, null, false);
-            var sql = $"UPDATE {node.Table} SET [{fkCol.ColumnName}]=NULL WHERE [{pkCol.ColumnName}] = {parameter.Name}";
-            var stm = new SqlStatement();
-            stm.Script.Add(sql);
+            var stm = new SqlStatement(_commonScriptingTasks.SetForeignKeyValueToNullScript(node.Table.ToString(), fkCol.ColumnName, pkCol.ColumnName));
             stm.Parameters.Add(parameter);
             stm.AddArgument(parameter.Name, pk);
             CommandExecutor.ExecuteNonQuery(SqlCommand, stm);
         }
+
         private object[] SelectKeysFromChildTable(TableContextNode node, object pk)
         {
             var fkCol = node.Relationship.ForeignKeyColumn;
             var pkCol = node.Table.GetSingularKey();
 
             var parameter = new DbParameter("@key", pkCol.DataType, null, false);
-            //TODO: Abstract behind interface
-            var sql = $"SELECT {pkCol.ColumnName} FROM {node.Table} WHERE {fkCol.ColumnName} = @key";
-            var stm = new SqlStatement();
-            stm.Script.Add(sql);
-
+            var stm = new SqlStatement(_commonScriptingTasks.GetSelectKeysFromChildTableScript(node.Table.ToString(), pkCol.ColumnName, fkCol.ColumnName));
             stm.Parameters.Add(parameter);
             stm.Args.Add(parameter.Name, pk);
 
@@ -558,8 +553,5 @@ namespace CoPilot.ORM.Database.Commands
 
             return res.RecordSets.Single().Vector(0);
         }
-
-        
-        
     }
 }
