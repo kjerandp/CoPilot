@@ -9,16 +9,16 @@ Note: This is still an early version and only works with MSSQL.
 * Mapping of data from queries or stored procedures to dynamic objects or POCO classes
 * Solves the "1+N"-problem by fetching child records in a single query and then merging the data with the parent records when mapped
 * Support for limiting queries to only include specified columns when all you need is a subset of data from one or more tables. This will allow the database server to tweak its execution plans to reduce unnecessary table access. This is particularly useful if you only need data from columns that are indexed. 
-* Perform mulitple write operations as a unit-of-work (database transaction)
+* Perform mulitple write operations, including bulk commands, as a unit-of-work (database transaction)
 * Transform values from and to the database by associating a `ValueAdapter` to relevant POCO properties. Examples of use cases is to serialize/deserialize to and from json, joining/splitting collections of primitive values, converting from/to enums etc.
 * Use lookup tables - meaning that the value of a property can be used to lookup a key value in another table, and then pass that value to the mapped table and then do the same in reverse. Can be handy if you for instance want to use enums in your POCOs, but you want to enforce a foreign key constraint to another table for the mapped column.
 * Generate scripts to build database from model configurations
 * Validate configuration against database schema
 
 ## Install
-CoPilot is available as a [Nuget package](https://www.nuget.org/packages/CoPilot.ORM). Note that it is flagged as a pre-release. 
+CoPilot is available as a [Nuget package](https://www.nuget.org/packages/CoPilot.ORM). 
 ```
-Install-Package CoPilot.ORM -Pre
+Install-Package CoPilot.ORM
 ```
 ## How to use
 CoPilot aims to be as simple and intuitive as possible to use and most features are available from a single interface called `IDb`. Here's an illustration of a typical CoPilot statement:
@@ -41,7 +41,7 @@ Most operations supports working with a _context_, which in essence make up a ba
 Some basic examples can be found in the following sections, but many more examples can (and will in time) be found in the integration tests project. Also, a Wiki is planned for proper documentation.  
 
 ### Basic usage
-First part of these examples will work against the Northwind database, which I have restored in my SqlExpress instance after downloading it from <https://northwinddatabase.codeplex.com/>
+These examples will work against the Northwind database, which I have restored in my SqlExpress instance after downloading it from <https://northwinddatabase.codeplex.com/>. It is recommended to check out the [Band Sample Tests](/CoPilot/test/CoPilot.ORM.IntegrationTests/BandSampleTests.cs) for some more and better (greenfield) examples.
 
 #### Connecting to the database
 I have created a simple helper class here that uses the `DbMapper` class to obtain an instance of the `IDb` interface that CoPilot works with. We will use this class later when we map our POCO models to database tables, but for now we will just have it create the simplest possible representation of the database, by handing it the connection string.
