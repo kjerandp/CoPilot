@@ -109,26 +109,18 @@ namespace CoPilot.ORM.Database.Commands
         public static int ExecuteNonQuery(SqlCommand command, DbRequest cmd)
         {
             var logger = CoPilotGlobalResources.Locator.Get<ILogger>();
-            var result = 0;
+            int result;
 
             try
             {
                 lock (LockObj)
                 {
-                    var statements = SplitSqlStatements(cmd.ToString());
-                    foreach (var commandText in statements)
-                    {
-                        var timer = Stopwatch.StartNew();
-                        command.CommandText = commandText;
-                        command.CommandType = cmd.CommandType;
-                        command.AddArgsToCommand(cmd.Parameters, cmd.Args);
-                        logger.LogVerbose("Executing Non Query", command.CommandText);
-                        var r = command.ExecuteNonQuery();
-                        if (result >= 0 && r > -1) result += r;
-                        if (r < 0) result = r;
-                        var time = timer.ElapsedMilliseconds;
-                        logger.LogVerbose($"^ Affected {r} rows in {time}ms");
-                    }
+                    var timer = Stopwatch.StartNew();
+                    PrepareNonQuery(command, cmd);
+                    logger.LogVerbose("Executing Non Query", command.CommandText);
+                    result = command.ExecuteNonQuery();
+                    var time = timer.ElapsedMilliseconds;
+                    logger.LogVerbose($"^ Affected {result} rows in {time}ms");
                 }
             }
             catch (Exception ex)
@@ -136,6 +128,40 @@ namespace CoPilot.ORM.Database.Commands
                 throw new CoPilotDataException("Unable to execute command!", ex);
             }
             
+            return result;
+
+        }
+
+        public static void PrepareNonQuery(SqlCommand command, DbRequest cmd)
+        {
+            command.CommandText = string.Join(";\n", SplitSqlStatements(cmd.ToString()));
+            command.CommandType = cmd.CommandType;
+            command.AddArgsToCommand(cmd.Parameters, cmd.Args);
+        }
+
+        public static int ReRunCommand(SqlCommand command, object args)
+        {
+            var logger = CoPilotGlobalResources.Locator.Get<ILogger>();
+            int result;
+            var props = args.GetType().GetClassMembers().ToDictionary(k => "@"+k.Name, v => v.GetValue(args));
+            try
+            {
+                lock (LockObj)
+                {
+                    var timer = Stopwatch.StartNew();
+
+                    command.ReplaceArgsInCommand(props);
+                    logger.LogVerbose("Executing Non Query", command.CommandText);
+                    result = command.ExecuteNonQuery();
+                    var time = timer.ElapsedMilliseconds;
+                    logger.LogVerbose($"^ Affected {result} rows in {time}ms");
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new CoPilotDataException("Unable to execute command!", ex);
+            }
+
             return result;
 
         }

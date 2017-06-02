@@ -83,6 +83,36 @@ namespace CoPilot.ORM.Database.Commands
             return CommandExecutor.ExecuteNonQuery(SqlCommand, request);
         }
 
+        public void PrepareCommand(string commandText, object template)
+        {
+            var request = DbRequest.CreateRequest(_model, commandText, template);
+            CommandExecutor.PrepareNonQuery(SqlCommand, request);
+        }
+
+        public int Command(object args)
+        {
+            if(SqlCommand.Parameters == null || string.IsNullOrEmpty(SqlCommand.CommandText))
+                throw new CoPilotUnsupportedException("Cannot re-run a command without parameters and/or statement set!");
+
+            return CommandExecutor.ReRunCommand(SqlCommand, args);
+        }
+
+        public int BulkCommand(string commandText, IList<object> args)
+        {
+            if (args == null || !args.Any())
+                throw new CoPilotUnsupportedException("Can't execute bulk command without any arguments!");
+
+            var request = DbRequest.CreateRequest(_model, commandText, args[0]);
+            var result = CommandExecutor.ExecuteNonQuery(SqlCommand, request);
+            for (var i = 1; i < args.Count; i++)
+            {
+                var r = CommandExecutor.ReRunCommand(SqlCommand, args[i]);
+                if (result >= 0 && r > -1) result += r;
+                if (r < 0) result = r;
+            }
+            return result; 
+        }
+
         /// <summary>
         /// Same as Scalar-method in the IDb interface <seealso cref="IDb.Scalar"/>
         /// </summary>

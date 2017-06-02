@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Context.Query;
@@ -186,6 +188,52 @@ namespace CoPilot.ORM.IntegrationTests
                 writer.Save(testBand);
                 writer.Rollback();
             }
+        }
+
+        [TestMethod]
+        public void CanDoBulkInserts()
+        {
+            const int insertCount = 10000;
+            
+            var bands = new List<object>();
+            var dt = new DateTime(1980, 1, 1);
+
+            for (var i = 0; i < insertCount; i++)
+            {
+                bands.Add(new { cityId = 1, bandName = "Bulk Band " + i, formed = dt.AddDays(i) });
+            }
+
+            var sw = Stopwatch.StartNew();
+            using (var writer = new DbWriter(_db))
+            {
+                writer.BulkCommand(
+                    "insert into dbo.BAND (city_id,band_name,band_formed) values (@cityId, @bandName, @formed)", bands);
+
+                writer.Commit();
+            }
+            sw.Stop();
+            Console.WriteLine(sw.ElapsedMilliseconds);
+        }
+
+        [TestMethod]
+        public void CanDoLazyBulkInserts()
+        {
+            const int insertCount = 10000;
+            var sw = Stopwatch.StartNew();
+            using (var writer = new DbWriter(_db))
+            {
+                var dt = new DateTime(1980,1,1);
+                writer.PrepareCommand("insert into dbo.BAND (city_id,band_name,band_formed) values (@cityId, @bandName, @formed)", new {cityId=0, bandName=string.Empty, formed=dt});
+
+                for (var i = 0; i < insertCount; i++)
+                {
+                    writer.Command(new {cityId = 1, bandName = "Lazy Band " + i, formed = dt.AddDays(i)});
+                }
+
+                writer.Commit();
+            }
+            sw.Stop();
+            Console.WriteLine(sw.ElapsedMilliseconds);
         }
 
         [TestMethod]

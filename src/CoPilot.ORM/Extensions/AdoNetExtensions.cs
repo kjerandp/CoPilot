@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using CoPilot.ORM.Database.Commands;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Helpers;
 
 namespace CoPilot.ORM.Extensions
@@ -52,7 +53,27 @@ namespace CoPilot.ORM.Extensions
 
             }
         }
+        public static void ReplaceArgsInCommand(this SqlCommand command, Dictionary<string, object> args)
+        {
+            if(command.Parameters == null || command.Parameters.Count == 0) throw new CoPilotUnsupportedException("Command doesn't have any parameters defined!");
 
+            for (var i=0; i<command.Parameters.Count;i++)
+            {
+                var param = command.Parameters[i];
+                if (param.Direction == ParameterDirection.Output) continue;
+                
+                if (!args.ContainsKey(param.ParameterName)) param.Value = DBNull.Value;
+
+                var enumerable = args[param.ParameterName] as ICollection<object>;
+                if (enumerable != null)
+                {
+                    throw new CoPilotUnsupportedException("Collections are not supported for this operation!");
+                }
+                
+                 param.Value = args[param.ParameterName] ?? DBNull.Value;
+
+            }
+        }
 
     }
 }
