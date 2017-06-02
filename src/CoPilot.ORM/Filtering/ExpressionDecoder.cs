@@ -84,7 +84,7 @@ namespace CoPilot.ORM.Filtering
                     }
                     else
                     {
-                        throw new ArgumentException(
+                        throw new CoPilotUnsupportedException(
                             $"Unsupported member access on referenced type! ({refNode.ReferencedTypeMemberAccess})");
                     }
                 }
@@ -153,7 +153,7 @@ namespace CoPilot.ORM.Filtering
                 case ExpressionType.LessThanOrEqual: return "<=";
                 case ExpressionType.Add: return "+";
                 case ExpressionType.Subtract: return "-";
-                default: throw new NotSupportedException(expressionType.ToString());
+                default: throw new CoPilotUnsupportedException(expressionType.ToString());
             }
         }
 

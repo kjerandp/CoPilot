@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
 
@@ -83,7 +84,7 @@ namespace CoPilot.ORM.Config.Builders
             var map = Model.GetTableMap<TTo>();
             var col = map.GetColumnByMember(prop);
             
-            if(col == null || !col.Unique) throw new ArgumentException("Selected column does not exist or is not configured to be unique!");
+            if(col == null || !col.Unique) throw new CoPilotConfigurationException("Selected column does not exist or is not configured to be unique!");
             _relationship.ChangePrimaryKeyTo(col);
             return this;
         }

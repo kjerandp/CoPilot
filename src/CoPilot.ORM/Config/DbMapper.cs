@@ -9,6 +9,7 @@ using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
@@ -94,9 +95,7 @@ namespace CoPilot.ORM.Config
             if (!string.IsNullOrEmpty(keyMemberName))
             {
                 var keyMember = typeof(T).GetTypeInfo().GetMember(keyMemberName).FirstOrDefault();
-                //if (keyMember == null)
-                //    throw new ArgumentException(
-                //        $"Looking for field named '{keyMemberName}', but it was not found!");
+                
                 if (keyMember != null)
                 {
                     var cb = builder.Column(ClassMemberInfo.Create(keyMember), keyColumnName);
@@ -145,7 +144,7 @@ namespace CoPilot.ORM.Config
         /// <returns>Instance of DbModel</returns>
         public DbModel CreateModel()
         {
-            if(IsInitialized) throw new InvalidOperationException("Model is already created!");
+            if(IsInitialized) throw new CoPilotRuntimeException("Model is already created!");
 
             foreach (var map in _model.GetAllTableMaps())
             {

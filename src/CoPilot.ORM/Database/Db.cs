@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
 
@@ -114,10 +115,10 @@ namespace CoPilot.ORM.Database
                     writer.Save(entity, include);
                     writer.Commit();
                 }
-                catch
+                catch(Exception ex)
                 {
                     writer.Rollback();
-                    throw;
+                    throw new CoPilotDataException("Unable to save entity!", ex);
                 }        
             }
 
@@ -132,10 +133,10 @@ namespace CoPilot.ORM.Database
                     writer.Save(entities, include);
                     writer.Commit();
                 }
-                catch
+                catch (Exception ex)
                 {
                     writer.Rollback();
-                    throw;
+                    throw new CoPilotDataException("Unable to save entity!", ex);
                 }
             }
         }
@@ -149,10 +150,10 @@ namespace CoPilot.ORM.Database
                     writer.Delete(entity, include);
                     writer.Commit();
                 }
-                catch
+                catch (Exception ex)
                 {
                     writer.Rollback();
-                    throw;
+                    throw new CoPilotDataException("Unable to delete entity!", ex);
                 }
             }
         }
@@ -166,10 +167,10 @@ namespace CoPilot.ORM.Database
                     writer.Delete(entities, include);
                     writer.Commit();
                 }
-                catch
+                catch (Exception ex)
                 {
                     writer.Rollback();
-                    throw;
+                    throw new CoPilotDataException("Unable to delete entity!", ex);
                 }
             }
         }
@@ -183,10 +184,10 @@ namespace CoPilot.ORM.Database
                     writer.Patch<T>(dto);
                     writer.Commit();
                 }
-                catch
+                catch (Exception ex)
                 {
                     writer.Rollback();
-                    throw;
+                    throw new CoPilotDataException("Unable to patch entity!", ex);
                 }
             }
         }

@@ -2,6 +2,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using CoPilot.ORM.Config.DataTypes;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Filtering;
 
 namespace CoPilot.ORM.Helpers
@@ -23,7 +24,7 @@ namespace CoPilot.ORM.Helpers
             }
             if (memberExpression == null)
             {
-                throw new ArgumentException("Not a valid property reference");
+                throw new CoPilotUnsupportedException("Not a valid property reference");
             }
             return PathHelper.RemoveFirstElementFromPathString(memberExpression.ToString());
         }
@@ -38,7 +39,7 @@ namespace CoPilot.ORM.Helpers
                 {
                     return GetPropertyFromMemberExpression<T1>(memberExpr);
                 }
-                throw new ArgumentException("Not a valid property reference");
+                throw new CoPilotUnsupportedException("Not a valid property reference");
             }
 
             return GetPropertyFromMemberExpression<T1>(memberExpression);
@@ -50,7 +51,7 @@ namespace CoPilot.ORM.Helpers
 
             if (prop?.DeclaringType == null || !prop.DeclaringType.GetTypeInfo().IsAssignableFrom(typeof(T)))
             {
-                throw new ArgumentException($"Property is not a property of '{typeof(T).Name}'");
+                throw new CoPilotUnsupportedException($"Property is not a property of '{typeof(T).Name}'");
             }
             return prop;
         }
@@ -85,7 +86,7 @@ namespace CoPilot.ORM.Helpers
 
         internal static Type FindUnderlyingTypeFromExpression(MemberExpression expression)
         {
-            if (expression == null) throw new InvalidOperationException("Expression is null!");
+            if (expression == null) throw new CoPilotRuntimeException("Expression is null!");
             var exp = expression;
             while (true)
             {
@@ -95,7 +96,7 @@ namespace CoPilot.ORM.Helpers
                     if (memberExp == null)
                     {
                         var paramExp = exp.Expression as ParameterExpression;
-                        if(paramExp == null) throw new ArgumentException("Unable to find underlying type from expression!");
+                        if(paramExp == null) throw new CoPilotRuntimeException("Unable to find underlying type from expression!");
                         return paramExp.Type;
                     }
                     exp = memberExp;

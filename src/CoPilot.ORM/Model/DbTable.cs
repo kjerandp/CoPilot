@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using CoPilot.ORM.Config.DataTypes;
+using CoPilot.ORM.Exceptions;
 
 namespace CoPilot.ORM.Model
 {
@@ -29,7 +30,7 @@ namespace CoPilot.ORM.Model
             }
             else
             {
-                throw new ArgumentException($"'{tableName}' is an invalid table name.");
+                throw new CoPilotConfigurationException($"'{tableName}' is an invalid table name.");
             }
             //if (tableName.Contains(" ")) tableName = "[" + tableName + "]";
             return new Tuple<string, string>(schema, tableName);
@@ -52,13 +53,13 @@ namespace CoPilot.ORM.Model
         {
             if (alias != null && _columns.Any(r => r.AliasName.Equals(alias, StringComparison.OrdinalIgnoreCase)))
             {
-                throw new ArgumentException("Column alias already used for a column in this table!");
+                throw new CoPilotConfigurationException("Column alias already used for a column in this table!");
             }
             var col = new DbColumn(this, columnName, alias) {DataType = dataType};
 
             if (!_columns.Add(col))
             {
-                throw new ArgumentException("Column already exist!");
+                throw new CoPilotConfigurationException("Column already exist!");
             }
             return col;
         }
@@ -103,7 +104,7 @@ namespace CoPilot.ORM.Model
         public DbColumn GetSingularKey()
         {
             var keys = GetKeys();
-            if(keys.Length > 1) throw new NotSupportedException("This operation is not supported for entities with composite primary key!");
+            if(keys.Length > 1) throw new CoPilotUnsupportedException("This operation is not supported for entities with composite primary key!");
             return keys.SingleOrDefault();
         }
 

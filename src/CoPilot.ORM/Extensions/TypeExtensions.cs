@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using CoPilot.ORM.Config.DataTypes;
+using CoPilot.ORM.Exceptions;
 
 namespace CoPilot.ORM.Extensions
 {
@@ -43,7 +44,7 @@ namespace CoPilot.ORM.Extensions
             {
                 return type.GetElementType();
             }
-            throw new ArgumentException($"Type '{type.Name}' not recognized as a collection");
+            throw new CoPilotRuntimeException($"Type '{type.Name}' not recognized as a collection");
         }
         public static bool IsInstanceOfType(this Type type, object obj)
         {

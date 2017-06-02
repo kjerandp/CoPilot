@@ -12,6 +12,7 @@ using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Context.Operations;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping;
@@ -109,7 +110,9 @@ namespace CoPilot.ORM.Database.Commands
         }
 
         /// <summary>
-        /// Same as Save method in IDb interface <see cref="IDb.Save{T}(T,string[])"/>
+        /// Same as Save method in IDb interface <see>
+        ///         <cref>CoPilotExtensions.Save{T}(T,string[])</cref>
+        ///     </see>
         /// </summary>
         /// <typeparam name="T">POCO class for context</typeparam>
         /// <param name="entity">Instance of POCO</param>
@@ -118,14 +121,16 @@ namespace CoPilot.ORM.Database.Commands
         {
             if (typeof(T).IsCollection())
             {
-                throw new ArgumentException("To save all entities in a collection you need to explicitly provide the entity type as a generic argument to the save method.");
+                throw new CoPilotUnsupportedException("To save all entities in a collection you need to explicitly provide the entity type as a generic argument to the save method.");
             }
             var context = _model.CreateContext<T>(include);
             SaveNode(context, entity);
         }
 
         /// <summary>
-        /// Same as batch Save method in IDb interface <see cref="IDb.Save{T}(IEnumerable{T},string[])"/>
+        /// Same as batch Save method in IDb interface <see>
+        ///         <cref>IDb.Save{T}(IEnumerable{T},string[])</cref>
+        ///     </see>
         /// </summary>
         /// <typeparam name="T">POCO class for context</typeparam>
         /// <param name="entities">Collection of instances</param>
@@ -150,7 +155,7 @@ namespace CoPilot.ORM.Database.Commands
         {
             if (typeof(T).IsCollection())
             {
-                throw new ArgumentException("To insert all entities in a collection you need to explicitly provide the entity type as a generic argument to the insert method.");
+                throw new CoPilotUnsupportedException("To insert all entities in a collection you need to explicitly provide the entity type as a generic argument to the insert method.");
             }
             var context = _model.CreateContext<T>(include);
             InsertNode(context, entity);
@@ -181,7 +186,7 @@ namespace CoPilot.ORM.Database.Commands
         {
             if (typeof(T).IsCollection())
             {
-                throw new ArgumentException("To update all entities in a collection you need to explicitly provide the entity type as a generic argument to the update method.");
+                throw new CoPilotUnsupportedException("To update all entities in a collection you need to explicitly provide the entity type as a generic argument to the update method.");
             }
             var context = _model.CreateContext<T>(include);
             UpdateNode(context, entity);
@@ -230,7 +235,7 @@ namespace CoPilot.ORM.Database.Commands
         {
             if (typeof(T).IsCollection())
             {
-                throw new ArgumentException("To delete all entities in a collection you need to explicitly provide the entity type as a generic argument to the delete method.");
+                throw new CoPilotUnsupportedException("To delete all entities in a collection you need to explicitly provide the entity type as a generic argument to the delete method.");
             }
             var context = _model.CreateContext<T>(include);
             if (include != null && include.Any())
@@ -287,7 +292,7 @@ namespace CoPilot.ORM.Database.Commands
             var keys = node.Table.GetKeys();
             if (keys.Length > 1)
             {
-                throw new NotSupportedException($"You need to use specific insert or update methods for entities with composite primary key (table: {node.Table}).");
+                throw new CoPilotUnsupportedException($"You need to use specific insert or update methods for entities with composite primary key (table: {node.Table}).");
             }
             var keyColumn = keys.SingleOrDefault();
             if (instance != null)
@@ -309,7 +314,7 @@ namespace CoPilot.ORM.Database.Commands
         {
             if ((node.MapEntry.Operations & OperationType.Insert) == 0)
             {
-                throw new InvalidOperationException($"Entity is not allowed to perform inserts on the table '{node.Table.TableName}'");
+                throw new CoPilotRuntimeException($"Entity is not allowed to perform inserts on the table '{node.Table.TableName}'");
             }
 
             ProcessDependencies(node, instance);
@@ -373,7 +378,7 @@ namespace CoPilot.ORM.Database.Commands
         {
             if ((node.MapEntry.Operations & OperationType.Update) == 0)
             {
-                throw new InvalidOperationException($"Entity is not allowed to perform updates on the table '{node.Table.TableName}'");
+                throw new CoPilotRuntimeException($"Entity is not allowed to perform updates on the table '{node.Table.TableName}'");
             }
 
             ProcessDependencies(node, instance);
@@ -398,7 +403,7 @@ namespace CoPilot.ORM.Database.Commands
         {
             if ((node.MapEntry.Operations & OperationType.Delete) == 0)
             {
-                throw new InvalidOperationException($"Entity is not allowed to perform deletes on the table '{node.Table.TableName}'");
+                throw new CoPilotRuntimeException($"Entity is not allowed to perform deletes on the table '{node.Table.TableName}'");
             }
             if (node.Table.HasKey && !node.Table.HasCompositeKey)
             {
@@ -458,7 +463,7 @@ namespace CoPilot.ORM.Database.Commands
                 var key = item.Value.MapEntry.GetValueForColumn(depInstance, item.Value.GetTargetKey);
                 if (!node.MapEntry.SetValueForColumn(instance, item.Value.GetSourceKey, key))
                 {
-                    throw new InvalidOperationException("What to do?");
+                    throw new CoPilotRuntimeException("Unable to set value for column while processing dependencies.");
                 }
 
             }
@@ -506,7 +511,7 @@ namespace CoPilot.ORM.Database.Commands
                     }
                     else
                     {
-                        throw new InvalidOperationException($"Invalid operation type: {context}!");
+                        throw new CoPilotUnsupportedException($"Invalid operation type: {context}!");
                     }
 
                 }

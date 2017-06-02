@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using CoPilot.ORM.Config.DataTypes;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Extensions;
 
 namespace CoPilot.ORM.Helpers
@@ -67,7 +68,7 @@ namespace CoPilot.ORM.Helpers
                 foreach (var part in parts)
                 {
                     var member = currentType.GetTypeInfo().GetMember(part, MemberTypes.Property | MemberTypes.Field, BindingFlags.Public | BindingFlags.Instance).SingleOrDefault();
-                    if (member == null) throw new ArgumentException($"The path '{path}' is not valid for type '{baseType}'!");
+                    if (member == null) throw new CoPilotRuntimeException($"The path '{path}' is not valid for type '{baseType}'!");
                     var memberType = member.GetMemberType();
                     if (memberType.IsSimpleValueType())
                     {
@@ -97,7 +98,7 @@ namespace CoPilot.ORM.Helpers
             foreach (var part in paths)
             {
                 var member = currentType.GetTypeInfo().GetMember(part, MemberTypes.Property|MemberTypes.Field, BindingFlags.Public|BindingFlags.Instance).SingleOrDefault();
-                if(member == null) throw new ArgumentException($"The path '{path}' is not valid for type '{baseType}'!");
+                if(member == null) throw new CoPilotRuntimeException($"The path '{path}' is not valid for type '{baseType}'!");
                 var memberType = member.GetMemberType();
                 if(!excludeSimpleTypes || !memberType.IsSimpleValueType())
                     types.Add(part, memberType);
@@ -160,7 +161,7 @@ namespace CoPilot.ORM.Helpers
             foreach (var part in paths)
             {
                 var member = currentType.GetTypeInfo().GetMember(part, MemberTypes.Property | MemberTypes.Field, BindingFlags.Public | BindingFlags.Instance).SingleOrDefault();
-                if (member == null) throw new ArgumentException($"The path '{path}' is not valid for type '{baseInstance.GetType()}'!");
+                if (member == null) throw new CoPilotRuntimeException($"The path '{path}' is not valid for type '{baseInstance.GetType()}'!");
                 if (part.Equals(memberName, StringComparison.Ordinal))
                 {
                     return new Tuple<object, MemberInfo>(currentInstance, member);
@@ -171,11 +172,11 @@ namespace CoPilot.ORM.Helpers
 
                 if (memberType.IsCollection())
                 {
-                    throw new ArgumentException("Cannot resolve path if path includes a collection reference");
+                    throw new CoPilotRuntimeException("Cannot resolve path if path includes a collection reference");
                 }
                 currentType = memberType;
             }
-            throw new ArgumentException($"Unable to get a reference from path '{path}' on type '{baseInstance.GetType().Name}'");
+            throw new CoPilotRuntimeException($"Unable to get a reference from path '{path}' on type '{baseInstance.GetType().Name}'");
         }
 
         public static MemberInfo GetMemberFromPath(Type baseType, string path, bool ignoreCase = false, bool throwOnError = true)
@@ -193,7 +194,7 @@ namespace CoPilot.ORM.Helpers
                 var member = currentType.GetTypeInfo().GetMember(part, MemberTypes.Property | MemberTypes.Field, bindingFlags).SingleOrDefault();
                 if (member == null)
                 {
-                    if(throwOnError) throw new ArgumentException($"The path '{path}' is not valid for type '{baseType}'!");
+                    if(throwOnError) throw new CoPilotRuntimeException($"The path '{path}' is not valid for type '{baseType}'!");
                     return null;
                 }
                 if (part.Equals(memberName, StringComparison.Ordinal))
@@ -208,7 +209,7 @@ namespace CoPilot.ORM.Helpers
                 }
                 currentType = memberType;
             }
-            throw new ArgumentException($"Member not found from path '{path}' on type '{baseType.Name}'");
+            throw new CoPilotRuntimeException($"Member not found from path '{path}' on type '{baseType.Name}'");
         }
 
 

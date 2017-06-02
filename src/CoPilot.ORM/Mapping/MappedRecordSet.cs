@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CoPilot.ORM.Helpers;
 using System.Reflection;
+using CoPilot.ORM.Exceptions;
 
 namespace CoPilot.ORM.Mapping
 {
@@ -34,7 +35,7 @@ namespace CoPilot.ORM.Mapping
                     while (!dict.TryAdd(key, r))
                     {
                         tries++;
-                        if(tries >= 2) throw new LockRecursionException("Unable to add to concurrent dictionary after 3 attempts!");
+                        if(tries >= 2) throw new CoPilotRuntimeException("Unable to add to concurrent dictionary after 3 attempts!");
                     }
                 }
             });
@@ -52,7 +53,7 @@ namespace CoPilot.ORM.Mapping
 
             if (IndexedByKey == null || !IndexedByKey.Any())
             {
-                throw new InvalidOperationException("Target set must have a key set!");
+                throw new CoPilotUnsupportedException("Target set must have a key set!");
             }
 
             var parentType = IndexedByKey.First().Key.GetType();

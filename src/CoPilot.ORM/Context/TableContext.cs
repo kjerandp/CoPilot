@@ -17,6 +17,7 @@ using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
 using System.Reflection;
+using CoPilot.ORM.Exceptions;
 
 namespace CoPilot.ORM.Context
 {
@@ -43,7 +44,7 @@ namespace CoPilot.ORM.Context
 
             MapEntry = Model.GetTableMap(baseType);
             if(MapEntry == null)
-                throw new ArgumentException($"'{baseType.Name}' is not mapped!");
+                throw new CoPilotConfigurationException($"'{baseType.Name}' is not mapped!");
             Index = _index;
             Nodes = new Dictionary<string, TableContextNode>();
             CreateLookupNodesIfNotExist(this);
@@ -92,7 +93,7 @@ namespace CoPilot.ORM.Context
             {
                 var member = currentNode.MapEntry.GetMemberByName(part);
                 var rel = currentNode.MapEntry.GetRelationshipByMember(member);
-                if (rel == null) throw new ArgumentException($"There are no relationships that corresponds to the path '{path}' for type '{currentNode.MapEntry.EntityType.Name}'.");
+                if (rel == null) throw new CoPilotConfigurationException($"There are no relationships that corresponds to the path '{path}' for type '{currentNode.MapEntry.EntityType.Name}'.");
                 var isInverse = rel.PrimaryKeyColumn.Table == currentNode.Table;
                 if (currentNode.Nodes.ContainsKey(part))
                 {
@@ -106,7 +107,7 @@ namespace CoPilot.ORM.Context
                         memberType = memberType.GetCollectionType();
                     }
                     var mapEntry = Model.GetTableMap(memberType);
-                    if(mapEntry == null) throw new NotSupportedException("Can only create context node from mapped entities!");
+                    if(mapEntry == null) throw new CoPilotUnsupportedException("Can only create context node from mapped entities!");
                     var newNode = new TableContextNode(currentNode, rel, isInverse, ++_index, mapEntry);
                     _nodeIndex.Add(_index, newNode);
 
@@ -313,9 +314,9 @@ namespace CoPilot.ORM.Context
             {
                 var splitPath = PathHelper.SplitLastInPathString(item.Key);
                 var node = FindByPath(splitPath.Item1);
-                if (node == null) throw new ArgumentException("No context found!");
+                if (node == null) throw new CoPilotConfigurationException("No context found!");
                 var member = node.MapEntry.GetMemberByName(splitPath.Item2);
-                if (member == null) throw new ArgumentException("No member found!");
+                if (member == null) throw new CoPilotConfigurationException("No member found!");
                 var col = node.MapEntry.GetColumnByMember(member);
                 if (col != null)
                 {
@@ -381,7 +382,7 @@ namespace CoPilot.ORM.Context
         
         private IExpressionOperand ProcessFilter(IExpressionOperand sourceOp)
         {
-            if(sourceOp is UnsupportedOperand) throw new NotSupportedException(sourceOp.ToString());
+            if(sourceOp is UnsupportedOperand) throw new CoPilotUnsupportedException(sourceOp.ToString());
 
             var bop = sourceOp as BinaryOperand;
             if (bop != null)
@@ -468,7 +469,7 @@ namespace CoPilot.ORM.Context
                 }
                 
             }
-            if (col == null) throw new ArgumentException("Cannot map expression to a column!");
+            if (col == null) throw new CoPilotRuntimeException("Cannot map expression to a column!");
             if (col.ForeignkeyRelationship != null && col.ForeignkeyRelationship.IsLookupRelationship)
             {
                 node = GetOrCreateLookupNode(node, col);
@@ -481,7 +482,7 @@ namespace CoPilot.ORM.Context
                 col = newCol;
             }
 
-            if(col == null) throw new InvalidOperationException("Column was not found!");
+            if(col == null) throw new CoPilotRuntimeException("Column could not found!");
 
             target.ContextColumn = new ContextColumn(node, col, adapter);
         }
@@ -594,7 +595,7 @@ namespace CoPilot.ORM.Context
                     }
                     else
                     {
-                        throw new ArgumentException($"No value specified for required column '{col.ColumnName}'.");
+                        throw new CoPilotDataException($"No value specified for required column '{col.ColumnName}'.");
                     }
                 }
 
@@ -654,13 +655,13 @@ namespace CoPilot.ORM.Context
                 {
                     if (!col.IsNullable && col.DefaultValue == null)
                     {
-                        throw new ArgumentException($"No value specified for required non nullable column '{col.ColumnName}'!");
+                        throw new CoPilotDataException($"No value specified for required non nullable column '{col.ColumnName}'!");
                     }
                 }
 
                 if (value == null && !col.IsNullable && col.DefaultValue == null)
                 {
-                    throw new ArgumentException($"No value specified for required column '{col.ColumnName}'.");
+                    throw new CoPilotDataException($"No value specified for required column '{col.ColumnName}'.");
                 }
 
                 if (value != null || col.DefaultValue != null)
@@ -693,7 +694,7 @@ namespace CoPilot.ORM.Context
         {
             var keyIndex = 0;
             var keys = node.Table.GetKeys();
-            if (!keys.Any()) throw new InvalidOperationException("Can only delete a record by key!");
+            if (!keys.Any()) throw new CoPilotUnsupportedException("Can only delete a record by key!");
 
             var ctx = new OperationContext { Node = node };
             foreach (var keyCol in keys)
@@ -701,7 +702,7 @@ namespace CoPilot.ORM.Context
                 var keyMember = node.MapEntry.GetMappedMember(keyCol);
                 var keyValue = keyMember.GetValue(entity);
 
-                if (keyValue == null) throw new ArgumentException($"Cannot delete a record that has no key value! (column: {keyCol.ColumnName})");
+                if (keyValue == null) throw new CoPilotUnsupportedException($"Cannot delete a record that has no key value! (column: {keyCol.ColumnName})");
                 var name = "@id";
                 keyIndex++;
                 if (keyIndex > 1)
@@ -726,7 +727,7 @@ namespace CoPilot.ORM.Context
             var keys = node.Table.GetKeys();
             var keyIndex = 0;
 
-            if (!keys.Any()) throw new InvalidOperationException("Can only update a record by id!");
+            if (!keys.Any()) throw new CoPilotUnsupportedException("Can only update a record by id!");
 
             var mappedColumns = node.MapEntry.GetMappedColumns();
             var context = new OperationContext { Node = node };
@@ -765,7 +766,7 @@ namespace CoPilot.ORM.Context
                     else
                     {
                         if(!col.IsNullable && col.DefaultValue == null)
-                            throw new ArgumentException($"No value specified for required column '{col.ColumnName}'.");
+                            throw new CoPilotDataException($"No value specified for required column '{col.ColumnName}'.");
                     }
                 }
 
@@ -778,7 +779,7 @@ namespace CoPilot.ORM.Context
                         var keyValue = keyMember.GetValue(entity);
 
                         if (keyValue == null)
-                            throw new ArgumentException("Cannot update a record that has no key value!");
+                            throw new CoPilotUnsupportedException("Cannot update a record that has no key value!");
 
                         paramName = "@key";
                         keyIndex++;
@@ -799,7 +800,7 @@ namespace CoPilot.ORM.Context
             }
             if (keyIndex != keys.Length)
             {
-                throw new ArgumentException("Cannot update a record that has no key value!");
+                throw new CoPilotUnsupportedException("Cannot update a record that has no key value!");
             }
             return context;
         }
@@ -815,7 +816,7 @@ namespace CoPilot.ORM.Context
 
             if (matchedProps.Length != props.Length)
             {
-                throw new ArgumentException("Unable to match all members of the dto object with members of the entity type!");
+                throw new CoPilotDataException("Unable to match all members of the dto object with members of the entity type!");
             }
 
             var context = new OperationContext { Node = node };
@@ -823,7 +824,7 @@ namespace CoPilot.ORM.Context
             foreach (var member in matchedProps)
             {
                 var col = node.MapEntry.GetColumnByMember(member.entityMember);
-                if(col == null) throw new ArgumentException($"There's not column mapped to member '{member.entityMember.Name}'");
+                if(col == null) throw new CoPilotConfigurationException($"There's no column mapped to member '{member.entityMember.Name}'");
 
                 var value = member.dtoMember.GetValue(entity);
                 
@@ -845,7 +846,7 @@ namespace CoPilot.ORM.Context
                 {
                     if (value == null || value.Equals(ReflectionHelper.GetDefaultValue(value.GetType())))
                     {
-                        throw new ArgumentException("You have to provide a key value in order to patch an object!");
+                        throw new CoPilotDataException("You have to provide a key value in order to patch an object!");
                     }
                     paramName = "@key";
                 }
@@ -853,7 +854,7 @@ namespace CoPilot.ORM.Context
                 {
                     if (value == null && !col.IsNullable)
                     {
-                        throw new ArgumentException("A null value was provided for a non-nullable column!");
+                        throw new CoPilotDataException("A null value was provided for a non-nullable column!");
                     }
                     paramName = $"@param{(index++)}";
                 }
@@ -864,7 +865,7 @@ namespace CoPilot.ORM.Context
             }
             if (!context.Columns.Any(r => r.Key.IsPrimaryKey))
             {
-                throw new ArgumentException("You have to provide a key value in order to patch an object!");
+                throw new CoPilotDataException("You have to provide a key value in order to patch an object!");
             }
             
             return context;
@@ -890,7 +891,7 @@ namespace CoPilot.ORM.Context
                 if (!path.Contains("."))
                 {
                     var classMemberInfo = ClassMemberInfo.Create(ExpressionHelper.GetPropertyFromMemberExpression<T>(memberExpression));
-                    if (classMemberInfo.MemberType.IsCollection()) throw new NotSupportedException("The selector cannot return a collection type!");
+                    if (classMemberInfo.MemberType.IsCollection()) throw new CoPilotUnsupportedException("The selector cannot return a collection type!");
                     if (classMemberInfo.MemberType.IsReference())
                     {
                         var dtoMembers = classMemberInfo.MemberType.GetClassMembers();
@@ -913,7 +914,7 @@ namespace CoPilot.ORM.Context
             
             var templateExpression = selector.Body as NewExpression;
             
-            if (templateExpression == null) throw new NotSupportedException("Only a new anonymous object with named member references are supported!");
+            if (templateExpression == null) throw new CoPilotUnsupportedException("Only a new anonymous object with named member references are supported!");
 
             var members = new Dictionary<string, MemberExpression>();
 
@@ -922,7 +923,7 @@ namespace CoPilot.ORM.Context
                 memberExpression = templateExpression.Arguments[i] as MemberExpression;
                 if (memberExpression == null)
                 {
-                    throw new NotSupportedException("Selector object can only contain direct member access!");
+                    throw new CoPilotUnsupportedException("Selector object can only contain direct member access!");
                 }
                 members.Add(templateExpression.Members[i].Name, memberExpression);
             }

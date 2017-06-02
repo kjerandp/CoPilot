@@ -5,6 +5,7 @@ using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Context.Operations;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
@@ -49,7 +50,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
                     {
                         value = col.DefaultValue.CreateDefaultValue();
                         if (value == null && !col.IsPrimaryKey || options.EnableIdentityInsert) { 
-                            throw new ArgumentException($"No value specified for the non-nullable column '{col.ColumnName}'.");
+                            throw new CoPilotDataException($"No value specified for the non-nullable column '{col.ColumnName}'.");
                         }
                     }
                 }

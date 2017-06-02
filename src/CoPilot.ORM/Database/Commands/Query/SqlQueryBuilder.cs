@@ -4,6 +4,7 @@ using CoPilot.ORM.Common;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
+using CoPilot.ORM.Exceptions;
 
 namespace CoPilot.ORM.Database.Commands.Query
 {
@@ -18,7 +19,7 @@ namespace CoPilot.ORM.Database.Commands.Query
             {
                 if ((queryContext.OrderByClause == null || !queryContext.OrderByClause.Any()) && (queryContext.Predicates.Skip.HasValue || queryContext.Predicates.Take.HasValue))
                 {
-                    throw new ArgumentException("Need to specify an orderby-clause to use SKIP/TAKE");
+                    throw new CoPilotUnsupportedException("Need to specify an orderby-clause to use SKIP/TAKE");
                 }
                 if (queryContext.Predicates.Distinct)
                 {

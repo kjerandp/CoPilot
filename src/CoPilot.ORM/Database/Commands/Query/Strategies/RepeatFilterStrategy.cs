@@ -4,6 +4,7 @@ using System.Linq;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Mapping.Mappers;
 
@@ -45,7 +46,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
         {
             foreach (var rel in parentNode.Nodes.Where(r => !r.Value.Relationship.IsLookupRelationship))
             {
-                if (parentNode.Context.Predicates != null) throw new NotSupportedException("This query strategy cannot be used with predicates!");
+                if (parentNode.Context.Predicates != null) throw new CoPilotUnsupportedException("This query strategy cannot be used with predicates!");
 
                 var node = rel.Value;
                 if (node.IsInverted)

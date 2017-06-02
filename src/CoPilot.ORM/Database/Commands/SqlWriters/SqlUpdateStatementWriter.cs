@@ -5,6 +5,7 @@ using CoPilot.ORM.Common;
 using CoPilot.ORM.Context.Operations;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
@@ -58,11 +59,11 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
                 }
                 else
                 {
-                     throw new ArgumentException($"No argument specified for the parameter '{param.Name}'.");  
+                     throw new CoPilotDataException($"No argument specified for the parameter '{param.Name}'.");  
                 }
             }
             if (!qualifications.Any())
-                throw new ArgumentException("Key column not found among the columns provided by the operation context!");
+                throw new CoPilotUnsupportedException("Key column not found among the columns provided by the operation context!");
 
             statement.Script.Add($"UPDATE {ctx.Node.Table} SET");
             statement.Script.Add(colBlock);

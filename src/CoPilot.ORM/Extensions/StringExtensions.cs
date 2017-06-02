@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using CoPilot.ORM.Exceptions;
 
 namespace CoPilot.ORM.Extensions
 {
@@ -9,7 +10,7 @@ namespace CoPilot.ORM.Extensions
         public static string[] Tokenize(this string text)
         {
             if(string.IsNullOrEmpty(text))
-                throw new ArgumentException("String cannot be empty!");
+                throw new CoPilotRuntimeException("String cannot be empty!");
 
             const string strRegex = @"((?<=[a-z])[A-Z]|[A-Z](?=[a-z]))";
             const string strReplace = @" $1";

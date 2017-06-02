@@ -1,5 +1,6 @@
 using System;
 using CoPilot.ORM.Common;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Model;
 
 namespace CoPilot.ORM.Context
@@ -9,7 +10,7 @@ namespace CoPilot.ORM.Context
         internal TableJoinDescription(FromListItem item)
         {
             var join = item.Node as TableContextNode;
-            if(join == null) throw new InvalidOperationException("Root node cannot be part of the joined tables list!");
+            if(join == null) throw new CoPilotUnsupportedException("Root node cannot be part of the joined tables list!");
             TargetTableIndex = join.Index;
             SourceTableIndex = join.Origin.Index;
             if (join.IsInverted)

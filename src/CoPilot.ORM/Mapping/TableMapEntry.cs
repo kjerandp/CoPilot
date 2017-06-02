@@ -8,6 +8,7 @@ using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
 using System.Reflection;
+using CoPilot.ORM.Exceptions;
 
 namespace CoPilot.ORM.Mapping
 {
@@ -37,7 +38,7 @@ namespace CoPilot.ORM.Mapping
         {
             if (MemberToRelationshipMappings.ContainsKey(member))
             {
-                throw new ArgumentException("Member is already mapped to a relationship!");
+                throw new CoPilotConfigurationException("Member is already mapped to a relationship!");
             }
             MemberToRelationshipMappings.Add(member, relationship);
         }
@@ -55,7 +56,7 @@ namespace CoPilot.ORM.Mapping
 
             if (m.Value == null)
             {
-                throw new ArgumentException("Oh dear!");
+                throw new CoPilotConfigurationException($"No relationship found associated with {member.Name}!");
             }
 
             return m.Value;

@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using CoPilot.ORM.Config.DataTypes;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
@@ -118,7 +119,7 @@ namespace CoPilot.ORM.Config.Builders
 
         protected DbColumn AddColumnIfNotExist(string columnName, string alias = null)
         {
-            if(string.IsNullOrEmpty(columnName)) throw new ArgumentException("Column name can't be null!");
+            if(string.IsNullOrEmpty(columnName)) throw new CoPilotConfigurationException("Column name can't be null!");
             columnName = TransformColumnName(columnName);
             var col = Table.GetColumnByName(columnName);
 
@@ -133,22 +134,22 @@ namespace CoPilot.ORM.Config.Builders
         {
             if (!Model.IsMapped(toEntityType))
             {
-                throw new ArgumentException($"The target type '{toEntityType.Name}' is not mapped to a table.");
+                throw new CoPilotConfigurationException($"The target type '{toEntityType.Name}' is not mapped to a table.");
             }
 
             var toTableMap = Model.GetTableMap(toEntityType);
-            if(toTableMap == null) throw new ArgumentException("The entity type to create the relationship to is not mapped!");
+            if(toTableMap == null) throw new CoPilotConfigurationException("The entity type to create the relationship to is not mapped!");
 
             var keys = toTableMap.Table.GetKeys();
 
-            if (keys.Length > 1) throw new NotSupportedException("Relationships to an entity with composite primary key is not supported!");
+            if (keys.Length > 1) throw new CoPilotUnsupportedException("Relationships to an entity with composite primary key is not supported!");
             
             var pkCol = keys.SingleOrDefault();
             
             if (pkCol == null)
-                throw new ArgumentException($"Table '{toTableMap.Table.TableName}' does not have a key defined.");
+                throw new CoPilotConfigurationException($"Table '{toTableMap.Table.TableName}' does not have a key defined.");
 
-            if (!foreignKeyMember.MemberType.IsSimpleValueType()) throw new ArgumentException("Weird!");
+            if (!foreignKeyMember.MemberType.IsSimpleValueType()) throw new CoPilotUnsupportedException("Key members must be of a simple data type!");
             if (string.IsNullOrEmpty(foreignKeyName))
             {
                 foreignKeyName = pkCol.ColumnName;

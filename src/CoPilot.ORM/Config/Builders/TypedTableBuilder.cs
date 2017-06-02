@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Config.DataTypes;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping;
@@ -38,7 +39,7 @@ namespace CoPilot.ORM.Config.Builders
 
             if (!member.MemberType.IsSimpleValueType())
             {
-                throw new ArgumentException("Invalid property type. Only simple data types may be used as primary key!");
+                throw new CoPilotUnsupportedException("Invalid property type. Only simple data types may be used as primary key!");
             }
             
             var pk = AddColumnIfNotExist(member, columnName);
@@ -128,7 +129,7 @@ namespace CoPilot.ORM.Config.Builders
         /// <returns>Column builder for chaining column specific configurations</returns>
         public ColumnBuilder Column(Expression<Func<T, object>> property, string columnName, string lookupTable, string lookupColumn = null)
         {
-            if (Model.Tables.All(r => r.TableName != lookupTable)) throw new ArgumentException("Lookup table not defined!");
+            if (Model.Tables.All(r => r.TableName != lookupTable)) throw new CoPilotConfigurationException("Lookup table not defined!");
             var lTable = Model.Tables.Single(r => r.TableName == lookupTable);
             var builder = Column(property, columnName);
             builder.DataType(lTable.GetSingularKey().DataType);
@@ -181,18 +182,18 @@ namespace CoPilot.ORM.Config.Builders
         {
             if (!Model.IsMapped<TTo>())
             {
-                throw new ArgumentException($"The target type '{typeof(TTo).Name}' is not mapped to a table.");
+                throw new CoPilotConfigurationException($"The target type '{typeof(TTo).Name}' is not mapped to a table.");
             }
 
             var toTableMap = Model.GetTableMap<TTo>();
             var keys = toTableMap.Table.GetKeys();
 
-            if (keys.Length != 1) throw new NotSupportedException("Relationships to an entity with composite primary key or no key is not supported!");
+            if (keys.Length != 1) throw new CoPilotUnsupportedException("Relationships to an entity with composite primary key or no key is not supported!");
             var pkCol = keys.Single();
 
 
             if (pkCol == null)
-                throw new ArgumentException($"Table '{toTableMap.Table.TableName}' does not have a key defined.");
+                throw new CoPilotConfigurationException($"Table '{toTableMap.Table.TableName}' does not have a key defined.");
 
             var keyMemberInfo = ExpressionHelper.GetMemberInfoFromExpression(foreignKeyMember);
 
@@ -315,19 +316,19 @@ namespace CoPilot.ORM.Config.Builders
         {
             if (!Model.IsMapped<TFrom>())
             {
-                throw new ArgumentException($"The source type '{typeof(TFrom).Name}' is not mapped to a table.");
+                throw new CoPilotConfigurationException($"The source type '{typeof(TFrom).Name}' is not mapped to a table.");
             }
             if (collection == null)
             {
-                throw new ArgumentException("A One-To-Many relationship must be mapped to a collection in the declaring entity!");
+                throw new CoPilotConfigurationException("A One-To-Many relationship must be mapped to a collection in the declaring entity!");
             }
 
             var keys = Table.GetKeys();
-            if (keys.Length != 1) throw new NotSupportedException("Relationships to an entity with composite primary key or no key is not supported!");
+            if (keys.Length != 1) throw new CoPilotUnsupportedException("Relationships to an entity with composite primary key or no key is not supported!");
             var pkCol = keys.Single();
 
             if (pkCol == null)
-                throw new ArgumentException($"Table '{Table.TableName}' does not have a key defined.");
+                throw new CoPilotConfigurationException($"Table '{Table.TableName}' does not have a key defined.");
 
             if (string.IsNullOrEmpty(foreignKeyName))
             {

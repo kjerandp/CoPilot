@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq.Expressions;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Filtering.Decoders.DecodedNodeTypes;
 using CoPilot.ORM.Filtering.Decoders.Interfaces;
 using CoPilot.ORM.Helpers;
@@ -46,15 +47,15 @@ namespace CoPilot.ORM.Filtering.Decoders
                             var nullValue = new DecodedNullValue();
                             return new DecodedExpression(ExpressionType.Equal, transformedRef, nullValue);
                         }
-                        throw new ArgumentException($"Member type not supported for the NOT operator! {refResult.Path}");
+                        throw new CoPilotUnsupportedException($"Member type not supported for the NOT operator! {refResult.Path}");
                     }
                     case ExpressionType.Convert: return refResult;
                             
                         
-                    default: throw new ArgumentException($"Unary expression operator '{_expression.NodeType}' not supported for this node type! ({result.GetType().Name})");
+                    default: throw new CoPilotUnsupportedException($"Unary expression operator '{_expression.NodeType}' not supported for this node type! ({result.GetType().Name})");
                 }
             }
-            throw new ArgumentException($"Node not supported as part of unary expression! {result.GetType().Name}");
+            throw new CoPilotUnsupportedException($"Node not supported as part of unary expression! {result.GetType().Name}");
         }
 
         

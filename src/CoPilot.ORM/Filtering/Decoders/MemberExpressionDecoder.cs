@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq.Expressions;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Filtering.Decoders.DecodedNodeTypes;
 using CoPilot.ORM.Filtering.Decoders.Interfaces;
 using CoPilot.ORM.Helpers;
@@ -37,7 +38,6 @@ namespace CoPilot.ORM.Filtering.Decoders
                         if (param != null)
                         {
                             var memberPath = PathHelper.RemoveFirstElementFromPathString(_expression.ToString());
-                            //if (string.IsNullOrEmpty(memberPath)) throw new ArgumentException("Invalid member expression!");
                             return new DecodedReference(param.Type, memberPath);
                         }
                     }
@@ -45,7 +45,7 @@ namespace CoPilot.ORM.Filtering.Decoders
                     member = member.Expression as MemberExpression;
                 }
             }
-            throw new ArgumentException("Unable to decode member expression!");
+            throw new CoPilotUnsupportedException("Unable to decode member expression!");
         }
     }
 }

@@ -8,6 +8,7 @@ using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Database;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Mapping;
 
 namespace CoPilot.ORM.Model
@@ -44,7 +45,7 @@ namespace CoPilot.ORM.Model
             var t = new DbTable(tableName, schema);
             if (Tables.Add(t)) return t;
 
-            throw new ArgumentException("Unable to add table to collection!");
+            throw new CoPilotRuntimeException("Unable to add table to collection!");
         }
 
         public DbTable GetTable(string tableName, string schemaName = null)
@@ -61,7 +62,7 @@ namespace CoPilot.ORM.Model
             var p = new DbStoredProcedure(procName);
             if (StoredProcedures.Add(p)) return p;
 
-            throw new ArgumentException("Unable to add stored procedure to collection!");
+            throw new CoPilotRuntimeException("Unable to add stored procedure to collection!");
         }
 
         public TableMapEntry GetTableMap(Type entityType)
@@ -92,7 +93,7 @@ namespace CoPilot.ORM.Model
         {
             if (_tableMappings.ContainsKey(entityType))
             {
-                throw new ArgumentException($"Type '{entityType.Name}' is already mapped to a table!");
+                throw new CoPilotConfigurationException($"Type '{entityType.Name}' is already mapped to a table!");
             }
             var map =  new TableMapEntry(entityType, table, operations);
             _tableMappings.Add(entityType, map);
@@ -129,7 +130,7 @@ namespace CoPilot.ORM.Model
             {
                 var member = currentMap.GetMemberByName(part);
                 var rel = currentMap.GetRelationshipByMember(member);
-                if (rel == null) throw new ArgumentException($"There are no relationships that corresponds to the path '{path}' for type '{entityType.Name}'.");
+                if (rel == null) throw new CoPilotConfigurationException($"There are no relationships that corresponds to the path '{path}' for type '{entityType.Name}'.");
                 relationships.Add(rel);
                 currentMap = GetTableMap(member.MemberType);
             }

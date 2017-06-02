@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using CoPilot.ORM.Common;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Logging;
 
@@ -27,64 +28,71 @@ namespace CoPilot.ORM.Database.Commands
             var resultSets = new List<DbRecordSet>();
             var timer = Stopwatch.StartNew();
 
-            lock (LockObj)
+            try
             {
-                if (command.Connection.State != ConnectionState.Open)
-                    command.Connection.Open();
-
-                command.CommandText = cmd.ToString();
-                command.CommandType = cmd.CommandType;
-                command.AddArgsToCommand(cmd.Parameters, cmd.Args);
-
-                logger.LogVerbose("Executing Query", command.CommandText);
-
-                var rsIdx = 0;
-                using (var reader = command.ExecuteReader())
+                lock (LockObj)
                 {
-                    var hasResult = true;
-                    while (hasResult)
+                    if (command.Connection.State != ConnectionState.Open)
+                        command.Connection.Open();
+
+                    command.CommandText = cmd.ToString();
+                    command.CommandType = cmd.CommandType;
+                    command.AddArgsToCommand(cmd.Parameters, cmd.Args);
+
+                    logger.LogVerbose("Executing Query", command.CommandText);
+
+                    var rsIdx = 0;
+                    using (var reader = command.ExecuteReader())
                     {
-                        var set = new DbRecordSet
+                        var hasResult = true;
+                        while (hasResult)
                         {
-                            Name = names != null && rsIdx < names.Length ? names[rsIdx] : null
-                        };
-                        if (!reader.HasRows)
-                        {
-                            set.FieldNames = new string[0];
-                            set.FieldTypes = new Type[0];
-                            set.Records = new object[0][];
-                        }
-                        else
-                        {
-                            var fieldNames = new string[reader.FieldCount];
-                            var fieldTypes = new Type[reader.FieldCount];
-
-                            for (var i = 0; i < reader.FieldCount; i++)
+                            var set = new DbRecordSet
                             {
-                                fieldNames[i] = reader.GetName(i);
-                                fieldTypes[i] = reader.GetFieldType(i);
+                                Name = names != null && rsIdx < names.Length ? names[rsIdx] : null
+                            };
+                            if (!reader.HasRows)
+                            {
+                                set.FieldNames = new string[0];
+                                set.FieldTypes = new Type[0];
+                                set.Records = new object[0][];
                             }
-                            var valueset = new List<object[]>();
-                            while (reader.Read())
+                            else
                             {
-                                var values = new object[fieldNames.Length];
-                                for (var i = 0; i < fieldNames.Length; i++)
+                                var fieldNames = new string[reader.FieldCount];
+                                var fieldTypes = new Type[reader.FieldCount];
+
+                                for (var i = 0; i < reader.FieldCount; i++)
                                 {
-                                    values[i] = reader.GetValue(i);
+                                    fieldNames[i] = reader.GetName(i);
+                                    fieldTypes[i] = reader.GetFieldType(i);
                                 }
-                                valueset.Add(values);
+                                var valueset = new List<object[]>();
+                                while (reader.Read())
+                                {
+                                    var values = new object[fieldNames.Length];
+                                    for (var i = 0; i < fieldNames.Length; i++)
+                                    {
+                                        values[i] = reader.GetValue(i);
+                                    }
+                                    valueset.Add(values);
+                                }
+                                set.FieldNames = fieldNames;
+                                set.FieldTypes = fieldTypes;
+                                set.Records = valueset.ToArray();
                             }
-                            set.FieldNames = fieldNames;
-                            set.FieldTypes = fieldTypes;
-                            set.Records = valueset.ToArray();
+                            resultSets.Add(set);
+                            hasResult = reader.NextResult();
+                            rsIdx++;
                         }
-                        resultSets.Add(set);
-                        hasResult = reader.NextResult();
-                        rsIdx++;
-                    }
 
-                    //reader.Close();
+                        //reader.Close();
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                throw new CoPilotDataException("Unable to execute command!", ex);
             }
 
             var time = timer.ElapsedMilliseconds;
@@ -103,22 +111,29 @@ namespace CoPilot.ORM.Database.Commands
             var logger = CoPilotGlobalResources.Locator.Get<ILogger>();
             var result = 0;
 
-            lock (LockObj)
+            try
             {
-                var statements = SplitSqlStatements(cmd.ToString());
-                foreach (var commandText in statements)
+                lock (LockObj)
                 {
-                    var timer = Stopwatch.StartNew();
-                    command.CommandText = commandText;
-                    command.CommandType = cmd.CommandType;
-                    command.AddArgsToCommand(cmd.Parameters, cmd.Args);
-                    logger.LogVerbose("Executing Non Query", command.CommandText);
-                    var r = command.ExecuteNonQuery();
-                    if (result >= 0 && r > -1) result += r;
-                    if (r < 0) result = r;
-                    var time = timer.ElapsedMilliseconds;
-                    logger.LogVerbose($"^ Affected {r} rows in {time}ms");
+                    var statements = SplitSqlStatements(cmd.ToString());
+                    foreach (var commandText in statements)
+                    {
+                        var timer = Stopwatch.StartNew();
+                        command.CommandText = commandText;
+                        command.CommandType = cmd.CommandType;
+                        command.AddArgsToCommand(cmd.Parameters, cmd.Args);
+                        logger.LogVerbose("Executing Non Query", command.CommandText);
+                        var r = command.ExecuteNonQuery();
+                        if (result >= 0 && r > -1) result += r;
+                        if (r < 0) result = r;
+                        var time = timer.ElapsedMilliseconds;
+                        logger.LogVerbose($"^ Affected {r} rows in {time}ms");
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                throw new CoPilotDataException("Unable to execute command!", ex);
             }
             
             return result;
@@ -135,15 +150,21 @@ namespace CoPilot.ORM.Database.Commands
             var logger = CoPilotGlobalResources.Locator.Get<ILogger>();
             var timer = Stopwatch.StartNew();
             object result;
-            lock (LockObj)
+            try { 
+                lock (LockObj)
+                {
+                    command.CommandText = cmd.ToString();
+                    command.CommandType = cmd.CommandType;
+                    command.AddArgsToCommand(cmd.Parameters, cmd.Args);
+                    logger.LogVerbose("Executing Scalar", command.CommandText);
+                    var time = timer.ElapsedMilliseconds;
+                    logger.LogVerbose($"^ Finished in {time}ms");
+                    result = command.ExecuteScalar();
+                }
+            }
+            catch (Exception ex)
             {
-                command.CommandText = cmd.ToString();
-                command.CommandType = cmd.CommandType;
-                command.AddArgsToCommand(cmd.Parameters, cmd.Args);
-                logger.LogVerbose("Executing Scalar", command.CommandText);
-                var time = timer.ElapsedMilliseconds;
-                logger.LogVerbose($"^ Finished in {time}ms");
-                result = command.ExecuteScalar();
+                throw new CoPilotDataException("Unable to execute command!", ex);
             }
             return result;
         }

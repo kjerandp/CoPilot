@@ -3,6 +3,7 @@ using System.Data;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Extensions;
 using System.Reflection;
+using CoPilot.ORM.Exceptions;
 
 
 namespace CoPilot.ORM.Helpers
@@ -187,7 +188,7 @@ namespace CoPilot.ORM.Helpers
 
             }
 
-            throw new ArgumentException($"Unable to convert {dataType} to a string.");
+            throw new CoPilotUnsupportedException($"Unable to convert {dataType} to a string.");
         }
 
         public static bool IsNumeric(DbDataType dataType)

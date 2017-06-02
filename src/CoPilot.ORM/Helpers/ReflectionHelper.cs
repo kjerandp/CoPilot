@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Linq;
 using System.Reflection;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Extensions;
 
 namespace CoPilot.ORM.Helpers
@@ -34,7 +35,7 @@ namespace CoPilot.ORM.Helpers
                     output = null;
                     return true;
                 }
-                throw new ArgumentException($"Input value cannot be null for type {targetType.Name}!");
+                throw new CoPilotUnsupportedException($"Input value cannot be null for type {targetType.Name}!");
             }
             try
             {
@@ -42,7 +43,7 @@ namespace CoPilot.ORM.Helpers
                 {
                     if (throwOnError)
                     {
-                        throw new ArgumentException(
+                        throw new CoPilotUnsupportedException(
                             $"Cannot convert '{input.GetType().Name}' to target type '{targetType.Name}'");
                     }
                     output = null;
@@ -59,9 +60,9 @@ namespace CoPilot.ORM.Helpers
                 }
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                if (throwOnError) throw;
+                if (throwOnError) throw new CoPilotRuntimeException($"Unable to convert value to type {targetType.Name}", ex);
                 
                 output = null;
                 return false;
@@ -92,9 +93,9 @@ namespace CoPilot.ORM.Helpers
                     }
                 }
             }
-            catch (ArgumentException)
+            catch (ArgumentException ex)
             {
-                if (throwOnError) throw;
+                if (throwOnError) throw new CoPilotRuntimeException($"Unable to set value on member {member.Name}", ex);
             }
         }
 
@@ -127,9 +128,9 @@ namespace CoPilot.ORM.Helpers
                     }
                     collection?.Add(item);
                 }
-                catch (ArgumentException)
+                catch (ArgumentException ex)
                 {
-                    if (throwOnError) throw;
+                    if (throwOnError) throw new CoPilotRuntimeException($"Unable to add value to collection {member.Name}", ex);
                 }
             }
         }

@@ -12,6 +12,7 @@ using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.Query.Strategies;
 using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Filtering.Interfaces;
 using CoPilot.ORM.Filtering.Operands;
 using CoPilot.ORM.Helpers;
@@ -76,7 +77,7 @@ namespace CoPilot.ORM.Scripting
 
         public ScriptBlock CreateStoredProcedure(string name, DbParameter[] parameters, ScriptBlock body)
         {
-            if (string.IsNullOrEmpty(name)) throw new ArgumentException("You need to provide a name for the stored procedure");
+            if (string.IsNullOrEmpty(name)) throw new CoPilotUnsupportedException("You need to provide a name for the stored procedure");
 
             var paramsString = string.Join(", ",
                 parameters.Select(GetParameterAsString));

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using CoPilot.ORM.Context.Query;
+using CoPilot.ORM.Exceptions;
 
 namespace CoPilot.ORM.Database.Commands.Query.Interfaces
 {
@@ -48,7 +49,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Interfaces
             }
             if (required)
             {
-                throw new ArgumentException($"{segment.ToString().ToUpper()} segment missing!");
+                throw new CoPilotRuntimeException($"{segment.ToString().ToUpper()} segment missing!");
             }
             return null;
         }

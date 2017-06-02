@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Filtering.Decoders.DecodedNodeTypes;
 using CoPilot.ORM.Filtering.Decoders.Interfaces;
 using CoPilot.ORM.Helpers;
@@ -23,7 +24,7 @@ namespace CoPilot.ORM.Filtering.Decoders
 
             if (args.OfType<DecodedReference>().Any())
             {
-                throw new ArgumentException($"Not supported method call: {_expression.Method.Name}. Reference node part of arguments!");
+                throw new CoPilotUnsupportedException($"Not supported method call: {_expression.Method.Name}. Reference node part of arguments!");
             }
 
             var refNode = obj as DecodedReference;
@@ -51,7 +52,7 @@ namespace CoPilot.ORM.Filtering.Decoders
                 return new DecodedValue(value.GetType(), value);
             }
             
-            throw new NotImplementedException("DANG!");
+            throw new CoPilotUnsupportedException("Expression not supported!");
         }
     }
 }

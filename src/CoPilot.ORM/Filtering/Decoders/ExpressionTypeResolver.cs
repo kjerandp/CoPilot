@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq.Expressions;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Filtering.Decoders.Interfaces;
 
 namespace CoPilot.ORM.Filtering.Decoders
@@ -19,7 +20,7 @@ namespace CoPilot.ORM.Filtering.Decoders
             var methodCallExpression = expression as MethodCallExpression;
             if (methodCallExpression != null) return new MethodCallExpressionDecoder(methodCallExpression);
 
-            throw new ArgumentException($"Expression not recognized! {expression.GetType().AssemblyQualifiedName}");
+            throw new CoPilotUnsupportedException($"Expression not recognized! {expression.GetType().AssemblyQualifiedName}");
         }
     }
 }

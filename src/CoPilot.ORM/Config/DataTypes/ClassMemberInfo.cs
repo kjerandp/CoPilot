@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Helpers;
 
 namespace CoPilot.ORM.Config.DataTypes
@@ -35,7 +36,7 @@ namespace CoPilot.ORM.Config.DataTypes
 
         public object GetValue(object obj)
         {
-            if (obj == null) throw new ArgumentException("Can't get value without an instance of the declaring object!");
+            if (obj == null) throw new CoPilotRuntimeException("Can't get value without an instance of the declaring object!");
             if (Type == MemberTypes.Field)
             {
                 return DeclaringClassType.GetTypeInfo().GetField(Name).GetValue(obj);

@@ -1,4 +1,5 @@
 using System;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Filtering.Decoders.Interfaces;
 
 namespace CoPilot.ORM.Filtering.Decoders.DecodedNodeTypes
@@ -7,7 +8,7 @@ namespace CoPilot.ORM.Filtering.Decoders.DecodedNodeTypes
     {
         public DecodedValue(Type valueType, object value)
         {
-            if(value == null) throw new ArgumentException("Value cannot be NULL - use DecodedNullValue");
+            if(value == null) throw new CoPilotUnsupportedException("Value cannot be NULL - use DecodedNullValue");
             ValueType = valueType;
             Value = value;
         }

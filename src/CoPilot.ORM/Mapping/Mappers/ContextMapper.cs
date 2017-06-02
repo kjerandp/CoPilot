@@ -9,6 +9,7 @@ using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
 using System.Reflection;
+using CoPilot.ORM.Exceptions;
 
 namespace CoPilot.ORM.Mapping.Mappers
 {
@@ -86,7 +87,7 @@ namespace CoPilot.ORM.Mapping.Mappers
                 }
                 else
                 {
-                    throw new ArgumentException($"Unable to match a single member with name '{rKey}' on object '{node.MapEntry.EntityType.Name}'");
+                    throw new CoPilotConfigurationException($"Unable to match a single member with name '{rKey}' on object '{node.MapEntry.EntityType.Name}'");
                 }
             }
 

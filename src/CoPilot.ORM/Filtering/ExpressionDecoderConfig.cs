@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using CoPilot.ORM.Filtering.Operands;
 using System.Reflection;
+using CoPilot.ORM.Exceptions;
 
 namespace CoPilot.ORM.Filtering
 {
@@ -103,7 +104,7 @@ namespace CoPilot.ORM.Filtering
             {
                 return Converters[methodName];
             }
-            throw new NotSupportedException($"Member method call '{methodName}' not supported!");
+            throw new CoPilotUnsupportedException($"Member method call '{methodName}' not supported!");
         }
 
     }

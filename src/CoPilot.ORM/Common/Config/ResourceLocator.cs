@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CoPilot.ORM.Exceptions;
 
 namespace CoPilot.ORM.Common.Config
 {
@@ -64,7 +65,7 @@ namespace CoPilot.ORM.Common.Config
 
             lock (LockObject)
             {
-                if (!_typeMapping.ContainsKey(typeof(TInterface))) throw new ArgumentException($"'{typeof(TInterface).Name}' is not a registered type!");
+                if (!_typeMapping.ContainsKey(typeof(TInterface))) throw new CoPilotConfigurationException($"'{typeof(TInterface).Name}' is not a registered type!");
 
                 if (!_instances.ContainsKey(typeof(TInterface)))
                 {

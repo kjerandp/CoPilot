@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using CoPilot.ORM.Config.DataTypes;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Model;
 
 namespace CoPilot.ORM.Config.Builders
@@ -135,7 +136,7 @@ namespace CoPilot.ORM.Config.Builders
         {
             if (_column.Table.Columns.Any(r => r.AliasName.Equals(aliasName, StringComparison.OrdinalIgnoreCase)))
             {
-                throw new ArgumentException("Alias already used for another column!");
+                throw new CoPilotConfigurationException("Alias already used for another column!");
             }
             _column.AliasName = aliasName;
             return this;
@@ -152,7 +153,7 @@ namespace CoPilot.ORM.Config.Builders
             var lookupColumn = string.IsNullOrEmpty(lookupColumnName)
                 ? lookupTable.Columns.FirstOrDefault(r => !r.IsPrimaryKey)
                 : lookupTable.GetColumnByName(lookupColumnName, StringComparison.OrdinalIgnoreCase);
-            if (lookupColumn == null) throw new ArgumentException("No lookup column configured");
+            if (lookupColumn == null) throw new CoPilotConfigurationException("No lookup column configured");
 
             var relationship = new DbRelationship(_column, lookupTable.GetSingularKey()) {LookupColumn = lookupColumn};
             _column.ForeignkeyRelationship = relationship;
