@@ -41,7 +41,7 @@ Most operations supports working with a _context_, which in essence make up a ba
 Some basic examples can be found in the following sections, but many more examples can (and will in time) be found in the integration tests project. Also, a Wiki is planned for proper documentation.  
 
 ### Basic usage
-These examples will work against the Northwind database, which I have restored in my SqlExpress instance after downloading it from <https://northwinddatabase.codeplex.com/>. It is recommended to check out the [Band Sample Tests](/CoPilot/test/CoPilot.ORM.IntegrationTests/BandSampleTests.cs) for some more and better (greenfield) examples.
+These examples will work against the Northwind database, which I have restored in my SqlExpress instance after downloading it from <https://northwinddatabase.codeplex.com/>. It is recommended to check out the [Band Sample Tests](https://github.com/kjerandp/CoPilot/blob/master/test/CoPilot.ORM.IntegrationTests/BandSampleTests.cs) for some more and better (greenfield) examples.
 
 #### Connecting to the database
 I have created a simple helper class here that uses the `DbMapper` class to obtain an instance of the `IDb` interface that CoPilot works with. We will use this class later when we map our POCO models to database tables, but for now we will just have it create the simplest possible representation of the database, by handing it the connection string.
