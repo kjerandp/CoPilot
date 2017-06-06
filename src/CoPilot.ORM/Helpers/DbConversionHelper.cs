@@ -74,8 +74,29 @@ namespace CoPilot.ORM.Helpers
                 default: return typeof(object);
             }
         }
-        
-        
-        
+
+        public static bool IsNumeric(DbDataType dataType)
+        {
+            return (dataType == DbDataType.Int16 || dataType == DbDataType.Int32 || dataType == DbDataType.Int64 ||
+                    dataType == DbDataType.Byte);
+        }
+
+        public static bool IsText(DbDataType dataType)
+        {
+            return (
+                dataType == DbDataType.Char ||
+                dataType == DbDataType.Text ||
+                dataType == DbDataType.String
+            );
+        }
+
+        public static bool DataTypeHasSize(DbDataType dataType)
+        {
+            return (
+                IsText(dataType) ||
+                dataType == DbDataType.Varbinary ||
+                dataType == DbDataType.Binary
+            );
+        }
     }
 }

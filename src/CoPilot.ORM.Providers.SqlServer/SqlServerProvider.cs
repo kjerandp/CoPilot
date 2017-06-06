@@ -17,6 +17,7 @@ using CoPilot.ORM.Extensions;
 using System.Reflection;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Database;
+using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Providers.SqlServer.Writers;
 
@@ -222,85 +223,7 @@ namespace CoPilot.ORM.Providers.SqlServer
             return result;
         }
 
-        private static IEnumerable<string> SplitSqlStatements(string sqlScript)
-        {
-            // Split by "GO" statements
-            var statements = Regex.Split(
-                    sqlScript,
-                    @"^\s*GO\s*\d*\s*($|\-\-.*$)",
-                    RegexOptions.Multiline |
-                    RegexOptions.IgnorePatternWhitespace |
-                    RegexOptions.IgnoreCase);
-
-            // Remove empties, trim, and return
-            return statements
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Select(x => x.Trim(' ', '\r', '\n'));
-        }
         
-        private void AddArgsToCommand(SqlCommand command, IReadOnlyCollection<DbParameter> parameters, IReadOnlyDictionary<string, object> args)
-        {
-            if (command.Parameters.Count > 0) command.Parameters.Clear();
-
-            if (parameters == null) return;
-            foreach (var param in parameters)
-            {
-                if (param.IsOutput)
-                {
-                    command.Parameters.Add(param.Name, ToDbType(param.DataType), param.Size).Direction = ParameterDirection.Output;
-                }
-                else
-                {
-                    if (!args.ContainsKey(param.Name)) continue;
-
-                    var enumerable = args[param.Name] as ICollection<object>;
-                    if (enumerable != null)
-                    {
-                        AddArrayParameters(command, param.Name, enumerable);
-                    }
-                    else
-                    {
-                        command.Parameters.AddWithValue(param.Name, args[param.Name] ?? DBNull.Value);
-                    }
-                }
-
-            }
-        }
-
-        private static void ReplaceArgsInCommand(SqlCommand command, Dictionary<string, object> args)
-        {
-            if (command.Parameters == null || command.Parameters.Count == 0) throw new CoPilotUnsupportedException("Command doesn't have any parameters defined!");
-
-            for (var i = 0; i < command.Parameters.Count; i++)
-            {
-                var param = command.Parameters[i];
-                if (param.Direction == ParameterDirection.Output) continue;
-
-                if (!args.ContainsKey(param.ParameterName)) param.Value = DBNull.Value;
-
-                var enumerable = args[param.ParameterName] as ICollection<object>;
-                if (enumerable != null)
-                {
-                    throw new CoPilotUnsupportedException("Collections are not supported for this operation!");
-                }
-
-                param.Value = args[param.ParameterName] ?? DBNull.Value;
-
-            }
-        }
-
-        private static void AddArrayParameters<T>(SqlCommand cmd, string name, IEnumerable<T> values)
-            where T : class
-        {
-            name = name.StartsWith("@") ? name : "@" + name;
-            var names = string.Join(", ", values.Select((value, i) =>
-            {
-                var paramName = name + i;
-                cmd.Parameters.AddWithValue(paramName, value);
-                return paramName;
-            }));
-            cmd.CommandText = cmd.CommandText.Replace(name, names);
-        }
 
         public ICreateStatementWriter CreateStatementWriter { get; }
 
@@ -345,7 +268,7 @@ namespace CoPilot.ORM.Providers.SqlServer
         public string GetDataTypeAsString(DbDataType dataType, int size = 0)
         {
             var str = ToDbType(dataType).ToString().ToLowerInvariant();
-            if (DataTypeHasSize(dataType))
+            if (DbConversionHelper.DataTypeHasSize(dataType))
             {
                 var maxSize = size <= 0 || size > 8000 ? "max" : size.ToString();
                 str += $"({maxSize})";
@@ -372,7 +295,7 @@ namespace CoPilot.ORM.Providers.SqlServer
                 var date = (DateTime)value;
                 return $"'{date:yyyy-MM-dd HH:mm}'";
             }
-            if (IsText(dataType))
+            if (DbConversionHelper.IsText(dataType))
             {
                 var str = value.ToString().Replace("'", "''");
 
@@ -385,7 +308,7 @@ namespace CoPilot.ORM.Providers.SqlServer
                 return (_useNvar ? "N'" : "'") + str + "'";
             }
 
-            if (IsNumeric(dataType))
+            if (DbConversionHelper.IsNumeric(dataType))
             {
 
                 if (value.GetType().GetTypeInfo().IsEnum)
@@ -407,33 +330,7 @@ namespace CoPilot.ORM.Providers.SqlServer
             throw new CoPilotUnsupportedException($"Unable to convert {dataType} to a string.");
         }
 
-        public bool IsNumeric(DbDataType dataType)
-        {
-            return (dataType == DbDataType.Int16 || dataType == DbDataType.Int32 || dataType == DbDataType.Int64 ||
-                    dataType == DbDataType.Byte);
-        }
-
-        public bool IsText(DbDataType dataType)
-        {
-
-
-            return (
-                dataType == DbDataType.Char ||
-                dataType == DbDataType.Text ||
-                dataType == DbDataType.String
-            );
-        }
-
-        public bool DataTypeHasSize(DbDataType dataType)
-        {
-            return (
-                IsText(dataType) ||
-                dataType == DbDataType.Varbinary ||
-                dataType == DbDataType.Binary
-            );
-        }
-
-        public SqlDbType ToDbType(DbDataType type)
+        private SqlDbType ToDbType(DbDataType type)
         {
             switch (type)
             {
@@ -463,6 +360,86 @@ namespace CoPilot.ORM.Providers.SqlServer
                 default:
                     return SqlDbType.Char;
             }
+        }
+
+        private static IEnumerable<string> SplitSqlStatements(string sqlScript)
+        {
+            // Split by "GO" statements
+            var statements = Regex.Split(
+                    sqlScript,
+                    @"^\s*GO\s*\d*\s*($|\-\-.*$)",
+                    RegexOptions.Multiline |
+                    RegexOptions.IgnorePatternWhitespace |
+                    RegexOptions.IgnoreCase);
+
+            // Remove empties, trim, and return
+            return statements
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x.Trim(' ', '\r', '\n'));
+        }
+
+        private void AddArgsToCommand(SqlCommand command, IReadOnlyCollection<DbParameter> parameters, IReadOnlyDictionary<string, object> args)
+        {
+            if (command.Parameters.Count > 0) command.Parameters.Clear();
+
+            if (parameters == null) return;
+            foreach (var param in parameters)
+            {
+                if (param.IsOutput)
+                {
+                    command.Parameters.Add(param.Name, ToDbType(param.DataType), param.Size).Direction = ParameterDirection.Output;
+                }
+                else
+                {
+                    if (!args.ContainsKey(param.Name)) continue;
+
+                    var enumerable = args[param.Name] as ICollection<object>;
+                    if (enumerable != null)
+                    {
+                        AddArrayParameters(command, param.Name, enumerable);
+                    }
+                    else
+                    {
+                        command.Parameters.AddWithValue(param.Name, args[param.Name] ?? DBNull.Value);
+                    }
+                }
+
+            }
+        }
+
+        private static void ReplaceArgsInCommand(SqlCommand command, IReadOnlyDictionary<string, object> args)
+        {
+            if (command.Parameters == null || command.Parameters.Count == 0) throw new CoPilotUnsupportedException("Command doesn't have any parameters defined!");
+
+            for (var i = 0; i < command.Parameters.Count; i++)
+            {
+                var param = command.Parameters[i];
+                if (param.Direction == ParameterDirection.Output) continue;
+
+                if (!args.ContainsKey(param.ParameterName)) param.Value = DBNull.Value;
+
+                var enumerable = args[param.ParameterName] as ICollection<object>;
+                if (enumerable != null)
+                {
+                    throw new CoPilotUnsupportedException("Collections are not supported for this operation!");
+                }
+
+                param.Value = args[param.ParameterName] ?? DBNull.Value;
+
+            }
+        }
+
+        private static void AddArrayParameters<T>(SqlCommand cmd, string name, IEnumerable<T> values)
+            where T : class
+        {
+            name = name.StartsWith("@") ? name : "@" + name;
+            var names = string.Join(", ", values.Select((value, i) =>
+            {
+                var paramName = name + i;
+                cmd.Parameters.AddWithValue(paramName, value);
+                return paramName;
+            }));
+            cmd.CommandText = cmd.CommandText.Replace(name, names);
         }
     }
 }
