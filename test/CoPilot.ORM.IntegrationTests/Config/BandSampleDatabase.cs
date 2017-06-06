@@ -63,13 +63,9 @@ namespace CoPilot.ORM.IntegrationTests.Config
 
         private static void Seed(IDb db, ScriptBuilder builder)
         {
-            
-
             //var options = new ScriptOptions { EnableIdentityInsert = false, SelectScopeIdentity = true, UseNvar = true, Parameterize = true };
             using (var writer = new DbWriter(db) { Operations = OperationType.All })
             {
-                var currentLoggingLevel = CoPilotGlobalResources.LoggingLevel;
-                CoPilotGlobalResources.LoggingLevel = LoggingLevel.None; //suppress logging during seeding
                 try
                 {
                     var script = builder.UseDatabase(DbName);
@@ -87,10 +83,7 @@ namespace CoPilot.ORM.IntegrationTests.Config
                     writer.Rollback();
                     Assert.Fail(ex.Message);
                 }
-                finally
-                {
-                    CoPilotGlobalResources.LoggingLevel = currentLoggingLevel;
-                }
+               
             }
 
             

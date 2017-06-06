@@ -2,7 +2,7 @@
 using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Scripting;
 
-namespace CoPilot.ORM.Providers.SqlServer
+namespace CoPilot.ORM.Providers.SqlServer.Writers
 {
     public class SqlSelectStatementWriter : ISelectStatementWriter
     {

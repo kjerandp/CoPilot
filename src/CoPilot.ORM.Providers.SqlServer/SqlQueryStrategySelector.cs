@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace CoPilot.ORM.Providers.SqlServer
 {
-    public class SqlQueryStrategySelector : IQueryStrategySelector
+    public class SqlQueryStrategySelector
     {
         private readonly IQueryExecutionStrategy _default;
         private readonly IQueryExecutionStrategy _secondary;

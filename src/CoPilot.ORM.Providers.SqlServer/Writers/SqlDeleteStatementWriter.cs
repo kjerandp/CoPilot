@@ -4,7 +4,7 @@ using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.Database.Commands.SqlWriters;
 
-namespace CoPilot.ORM.Providers.SqlServer
+namespace CoPilot.ORM.Providers.SqlServer.Writers
 {
     public class SqlDeleteStatementWriter : IDeleteStatementWriter
     {

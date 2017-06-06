@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
@@ -6,9 +7,8 @@ using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
-using System.Linq;
 
-namespace CoPilot.ORM.Providers.SqlServer
+namespace CoPilot.ORM.Providers.SqlServer.Writers
 {
     public class SqlCreateStatementWriter : ICreateStatementWriter
     {
@@ -123,7 +123,7 @@ namespace CoPilot.ORM.Providers.SqlServer
                     }
                     else
                     {
-                        defaultValue = _provider.GetDbExpressionAsString(column.DefaultValue.Expression);
+                        defaultValue = GetDbExpressionAsString(column.DefaultValue.Expression);
                     }
                 }
                 if (!string.IsNullOrEmpty(defaultValue))
@@ -132,6 +132,26 @@ namespace CoPilot.ORM.Providers.SqlServer
                 }
             }
             return str;
+        }
+
+        private static string GetDbExpressionAsString(DbExpressionType expression)
+        {
+            switch (expression)
+            {
+                case DbExpressionType.Timestamp:
+                    return "GETDATE()";
+                case DbExpressionType.CurrentDate:
+                    return "GETDATE()";
+                case DbExpressionType.CurrentDateTime:
+                    return "GETDATE()";
+                case DbExpressionType.Guid:
+                    return "NEWID()";
+                case DbExpressionType.SequencialGuid:
+                    return "NEWSEQUENTIALID()";
+                case DbExpressionType.PrimaryKeySequence:
+                    return "IDENTITY(1,1)";
+                default: return null;
+            }
         }
     }
 }

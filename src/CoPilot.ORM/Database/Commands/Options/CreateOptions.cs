@@ -13,8 +13,7 @@
                 Parameterize = true,
                 UseSequenceForPrimaryKeys = true,
                 KeySequenceStartAt = 1,
-                KeySequenceIncrementBy = 1,
-                UseNvar = true
+                KeySequenceIncrementBy = 1
             };
             return options;
         }

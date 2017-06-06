@@ -3,7 +3,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using CoPilot.ORM.Common;
-using CoPilot.ORM.Common.Config;
 using CoPilot.ORM.Config.Builders;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Config.Naming;
@@ -28,9 +27,7 @@ namespace CoPilot.ORM.Config
 
         public DbMapper()
         {
-            var resourceLocator = new ResourceLocator();
-            Defaults.RegisterDefaults(resourceLocator);
-            _model = new DbModel(resourceLocator);
+            _model = new DbModel();
             DefaultAllowedOperations = OperationType.Select | OperationType.Update | OperationType.Insert;
         }
         /// <summary>

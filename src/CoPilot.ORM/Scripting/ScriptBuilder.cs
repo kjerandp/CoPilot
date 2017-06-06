@@ -572,7 +572,6 @@ namespace CoPilot.ORM.Scripting
             }
         }
 
-
         #endregion
         
         private void CreateTableAndDependantTables(ScriptBlock block, DbTable table, List<DbTable> created, CreateOptions options)

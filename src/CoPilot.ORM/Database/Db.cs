@@ -16,7 +16,7 @@ namespace CoPilot.ORM.Database
     {
         private readonly string _connectionString;
  
-        internal Db(DbModel model, string connectionString, IDbProvider provider)
+        internal Db(IDbProvider provider, string connectionString, DbModel model)
         {
             DbProvider = provider;
             Model = model;
@@ -191,8 +191,7 @@ namespace CoPilot.ORM.Database
 
         public bool ValidateModel()
         {
-            var validator = Model.ResourceLocator.Get<IModelValidator>();
-            return validator.Validate(this);
+            return DbProvider.ValidateModel(this);
         }     
     } 
 }

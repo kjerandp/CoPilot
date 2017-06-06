@@ -4,7 +4,6 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
-using CoPilot.ORM.Common;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
@@ -16,15 +15,25 @@ using CoPilot.ORM.Logging;
 using System.Linq;
 using CoPilot.ORM.Extensions;
 using System.Reflection;
+using CoPilot.ORM.Common;
+using CoPilot.ORM.Database;
+using CoPilot.ORM.Model;
+using CoPilot.ORM.Providers.SqlServer.Writers;
 
 namespace CoPilot.ORM.Providers.SqlServer
 {
     public class SqlServerProvider : IDbProvider
     {
         private readonly object _lockObj = new object();
-        private readonly bool _useNvar = true;
-        public SqlServerProvider()
+        private readonly bool _useNvar;
+
+        public ILogger Logger { get; set; }
+        public IModelValidator ModelValidator { get; set; }
+
+        public SqlServerProvider(LoggingLevel loggingLevel = LoggingLevel.None, bool useNvar = true)
         {
+            _useNvar = useNvar;
+
             CreateStatementWriter = new SqlCreateStatementWriter(this);
             InsertStatementWriter = new SqlInsertStatementWriter(this);
             UpdateStatementWriter = new SqlUpdateStatementWriter(this);
@@ -34,19 +43,13 @@ namespace CoPilot.ORM.Providers.SqlServer
             QueryBuilder = new SqlQueryBuilder();
             QueryStrategySelector = new SqlQueryStrategySelector(QueryBuilder, SelectStatementWriter).Get();
 
+            Logger = new ConsoleLogger {LoggingLevel = loggingLevel};
+            ModelValidator = new SimpleModelValidator();
         }
         
-        public DbResponse ExecuteQuery(IDbConnection connection, DbRequest cmd, params string[] names)
-        {
-            var con = connection as SqlConnection;
-            cmd.Command = new SqlCommand("", con);
-            return ExecuteQuery(cmd, names);
-            
-        }
-
         public DbResponse ExecuteQuery(DbRequest cmd, params string[] names)
         {
-            var logger = CoPilotGlobalResources.Locator.Get<ILogger>();
+
             var resultSets = new List<DbRecordSet>();
             var timer = Stopwatch.StartNew();
             
@@ -63,7 +66,7 @@ namespace CoPilot.ORM.Providers.SqlServer
                     command.CommandType = cmd.CommandType;
                     AddArgsToCommand(command, cmd.Parameters, cmd.Args);
 
-                    logger.LogVerbose("Executing Query", command.CommandText);
+                    Logger?.LogVerbose("Executing Query", command.CommandText);
 
                     var rsIdx = 0;
                     using (var reader = command.ExecuteReader())
@@ -120,20 +123,13 @@ namespace CoPilot.ORM.Providers.SqlServer
             }
 
             var time = timer.ElapsedMilliseconds;
-            logger.LogVerbose($"^ Executed in {time}ms (selected {resultSets.Sum(r => r.Records.Length)} rows)");
+            Logger?.LogVerbose($"^ Executed in {time}ms (selected {resultSets.Sum(r => r.Records.Length)} rows)");
             return new DbResponse(resultSets.ToArray(), time);
 
         }
         
-        public int ExecuteNonQuery(IDbConnection connection, DbRequest cmd)
-        {
-            cmd.Command = new SqlCommand("", (SqlConnection) connection);
-            return ExecuteNonQuery(cmd);
-        }
-
         public int ExecuteNonQuery(DbRequest cmd)
         {
-            var logger = CoPilotGlobalResources.Locator.Get<ILogger>();
             var result = 0;
             var command = (SqlCommand) cmd.Command;
             try
@@ -147,11 +143,11 @@ namespace CoPilot.ORM.Providers.SqlServer
                     foreach (var statement in statements)
                     {
                         command.CommandText = statement;
-                        logger.LogVerbose("Executing Non Query", command.CommandText);
+                        Logger?.LogVerbose("Executing Non Query", command.CommandText);
                         var timer = Stopwatch.StartNew();
                         var r = command.ExecuteNonQuery();
                         var time = timer.ElapsedMilliseconds;
-                        logger.LogVerbose($"^ Affected {r} rows in {time}ms");
+                        Logger?.LogVerbose($"^ Affected {r} rows in {time}ms");
                         result = r < 0 ? r : result + r;
                     }
 
@@ -176,7 +172,6 @@ namespace CoPilot.ORM.Providers.SqlServer
 
         public int ReRunCommand(IDbCommand command, object args)
         {
-            var logger = CoPilotGlobalResources.Locator.Get<ILogger>();
             int result;
             var cmd = (SqlCommand) command;
 
@@ -188,10 +183,10 @@ namespace CoPilot.ORM.Providers.SqlServer
                     var timer = Stopwatch.StartNew();
 
                     ReplaceArgsInCommand(cmd, props);
-                    logger.LogVerbose("Executing Non Query", command.CommandText);
+                    Logger?.LogVerbose("Executing Non Query", command.CommandText);
                     result = command.ExecuteNonQuery();
                     var time = timer.ElapsedMilliseconds;
-                    logger.LogVerbose($"^ Affected {result} rows in {time}ms");
+                    Logger?.LogVerbose($"^ Affected {result} rows in {time}ms");
                 }
             }
             catch (Exception ex)
@@ -202,17 +197,9 @@ namespace CoPilot.ORM.Providers.SqlServer
             return result;
 
         }
-
         
-        public object ExecuteScalar(IDbConnection connection, DbRequest cmd)
-        {
-            cmd.Command = new SqlCommand("", (SqlConnection)connection);
-            return ExecuteScalar(cmd);
-        }
-
         public object ExecuteScalar(DbRequest cmd)
         {
-            var logger = CoPilotGlobalResources.Locator.Get<ILogger>();
             var timer = Stopwatch.StartNew();
             var command = (SqlCommand) cmd.Command;
             object result;
@@ -222,9 +209,9 @@ namespace CoPilot.ORM.Providers.SqlServer
                     command.CommandText = cmd.ToString();
                     command.CommandType = cmd.CommandType;
                     AddArgsToCommand(command, cmd.Parameters, cmd.Args);
-                    logger.LogVerbose("Executing Scalar", command.CommandText);
+                    Logger?.LogVerbose("Executing Scalar", command.CommandText);
                     var time = timer.ElapsedMilliseconds;
-                    logger.LogVerbose($"^ Finished in {time}ms");
+                    Logger?.LogVerbose($"^ Finished in {time}ms");
                     result = command.ExecuteScalar();
                 }
             }
@@ -251,7 +238,7 @@ namespace CoPilot.ORM.Providers.SqlServer
                 .Select(x => x.Trim(' ', '\r', '\n'));
         }
         
-        private void AddArgsToCommand(SqlCommand command, List<DbParameter> parameters, Dictionary<string, object> args)
+        private void AddArgsToCommand(SqlCommand command, IReadOnlyCollection<DbParameter> parameters, IReadOnlyDictionary<string, object> args)
         {
             if (command.Parameters.Count > 0) command.Parameters.Clear();
 
@@ -280,7 +267,7 @@ namespace CoPilot.ORM.Providers.SqlServer
             }
         }
 
-        public void ReplaceArgsInCommand(SqlCommand command, Dictionary<string, object> args)
+        private static void ReplaceArgsInCommand(SqlCommand command, Dictionary<string, object> args)
         {
             if (command.Parameters == null || command.Parameters.Count == 0) throw new CoPilotUnsupportedException("Command doesn't have any parameters defined!");
 
@@ -302,7 +289,7 @@ namespace CoPilot.ORM.Providers.SqlServer
             }
         }
 
-        public void AddArrayParameters<T>(SqlCommand cmd, string name, IEnumerable<T> values)
+        private static void AddArrayParameters<T>(SqlCommand cmd, string name, IEnumerable<T> values)
             where T : class
         {
             name = name.StartsWith("@") ? name : "@" + name;
@@ -336,11 +323,6 @@ namespace CoPilot.ORM.Providers.SqlServer
             return new SqlConnection(connectionString);
         }
 
-        public IDbCommand CreateCommand(string connectionString, int timeout = 0)
-        {
-            return new SqlCommand("", new SqlConnection(connectionString)){CommandTimeout = timeout};
-        }
-
         public IDbCommand CreateCommand(IDbConnection connection = null, int timeout = 0)
         {
             var cmd = new SqlCommand(""){CommandTimeout = timeout};
@@ -355,6 +337,11 @@ namespace CoPilot.ORM.Providers.SqlServer
             return cmd;
         }
 
+        public bool ValidateModel(IDb db)
+        {
+            return ModelValidator.Validate(db);
+        }
+
         public string GetDataTypeAsString(DbDataType dataType, int size = 0)
         {
             var str = ToDbType(dataType).ToString().ToLowerInvariant();
@@ -365,27 +352,7 @@ namespace CoPilot.ORM.Providers.SqlServer
             }
             return str;
         }
-
-        public string GetDbExpressionAsString(DbExpressionType expression)
-        {
-            switch (expression)
-            {
-                case DbExpressionType.Timestamp:
-                    return "GETDATE()";
-                case DbExpressionType.CurrentDate:
-                    return "GETDATE()";
-                case DbExpressionType.CurrentDateTime:
-                    return "GETDATE()";
-                case DbExpressionType.Guid:
-                    return "NEWID()";
-                case DbExpressionType.SequencialGuid:
-                    return "NEWSEQUENTIALID()";
-                case DbExpressionType.PrimaryKeySequence:
-                    return "IDENTITY(1,1)";
-                default: return null;
-            }
-        }
-
+        
         public string GetValueAsString(DbDataType dataType, object value)
         {
             if (value == null) return "NULL";

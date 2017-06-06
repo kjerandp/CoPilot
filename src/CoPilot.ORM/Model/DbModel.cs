@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using CoPilot.ORM.Common;
-using CoPilot.ORM.Common.Config;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Context;
@@ -19,17 +18,14 @@ namespace CoPilot.ORM.Model
         private readonly Dictionary<Type, TableMapEntry> _tableMappings;
 
         internal HashSet<ClassMemberInfo> Ignored = new HashSet<ClassMemberInfo>();
-        internal readonly HashSet<DbTable> Tables = new HashSet<DbTable>();
+        public readonly HashSet<DbTable> Tables = new HashSet<DbTable>();
         internal readonly HashSet<DbStoredProcedure> StoredProcedures = new HashSet<DbStoredProcedure>();
 
         internal DbColumnNamingConvention ColumnNamingConvention { get; set; }
         internal string DefaultSchemaName { get; set; }
 
-        public ResourceLocator ResourceLocator { get; }
-        
-        public DbModel(ResourceLocator resourceLocator)
+        public DbModel()
         {
-            ResourceLocator = resourceLocator;
             DefaultSchemaName = "dbo";
             _tableMappings = new Dictionary<Type, TableMapEntry>();
 
@@ -158,7 +154,7 @@ namespace CoPilot.ORM.Model
 
         public IDb CreateDb(string connectionString, IDbProvider dbProvider)
         {
-            return new Db(this, connectionString, dbProvider);
+            return new Db(dbProvider, connectionString, this);
         }
     }
 }

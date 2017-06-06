@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using CoPilot.ORM.Context.Operations;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
@@ -6,9 +7,8 @@ using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
-using System.Linq;
 
-namespace CoPilot.ORM.Providers.SqlServer
+namespace CoPilot.ORM.Providers.SqlServer.Writers
 {
     public class SqlUpdateStatementWriter : IUpdateStatementWriter
     {
