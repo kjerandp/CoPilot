@@ -2,6 +2,7 @@
 using CoPilot.ORM.Database;
 using CoPilot.ORM.IntegrationTests.Models.BandSample;
 using CoPilot.ORM.Model;
+using CoPilot.ORM.Providers.SqlServer;
 
 namespace CoPilot.ORM.IntegrationTests.Config
 {
@@ -16,7 +17,7 @@ namespace CoPilot.ORM.IntegrationTests.Config
 
         public static IDb CreateFromConfig(string connectionString)
         {
-            return CreateModel().CreateDb(connectionString ?? DefaultConnectionString);
+            return CreateModel().CreateDb(connectionString ?? DefaultConnectionString, new SqlServerProvider());
         }
 
         public static DbModel CreateModel()

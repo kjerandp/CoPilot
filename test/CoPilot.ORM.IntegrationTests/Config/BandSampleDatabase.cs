@@ -5,6 +5,7 @@ using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.IntegrationTests.Models.BandSample;
 using CoPilot.ORM.Model;
+using CoPilot.ORM.Providers.SqlServer;
 using CoPilot.ORM.Scripting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -21,8 +22,8 @@ namespace CoPilot.ORM.IntegrationTests.Config
                 initial catalog=master; 
                 Integrated Security=true;
                 MultipleActiveResultSets=True; 
-                App=CoPilotIntegrationTest;");
-            var scriptBuilder = new ScriptBuilder(db.Model);
+                App=CoPilotIntegrationTest;", new SqlServerProvider());
+            var scriptBuilder = new ScriptBuilder(db.DbProvider, db.Model);
             
             db.Command(CreateDatabaseScript(scriptBuilder));
 

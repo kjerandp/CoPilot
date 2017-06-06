@@ -3,6 +3,7 @@ using CoPilot.ORM.Config;
 using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Database;
 using CoPilot.ORM.IntegrationTests.Models.Northwind;
+using CoPilot.ORM.Providers.SqlServer;
 
 namespace CoPilot.ORM.IntegrationTests.Config
 {
@@ -16,7 +17,7 @@ namespace CoPilot.ORM.IntegrationTests.Config
                 App=CoPilotIntegrationTest;";
         public static IDb Create(string connectionString = null)
         {
-            return DbMapper.Create(connectionString ?? DefaultConnectionString);
+            return DbMapper.Create(connectionString ?? DefaultConnectionString, new SqlServerProvider());
         }
 
         public static IDb CreateFromConfig(string connectionString = null)
@@ -85,7 +86,7 @@ namespace CoPilot.ORM.IntegrationTests.Config
             detailsMap.HasOne<Product>(r => r.ProductId, "ProductID").KeyForMember(r => r.Product);
 
             // Creates the IDb reference with the configurations applied
-            return mapper.CreateDb(connectionString ?? DefaultConnectionString);
+            return mapper.CreateDb(connectionString ?? DefaultConnectionString, new SqlServerProvider());
         }
     }
 }

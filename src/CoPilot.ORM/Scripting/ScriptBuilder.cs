@@ -7,11 +7,9 @@ using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
-using CoPilot.ORM.Database.Commands.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.Query.Strategies;
-using CoPilot.ORM.Database.Commands.SqlWriters;
-using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Filtering.Interfaces;
 using CoPilot.ORM.Filtering.Operands;
@@ -27,17 +25,12 @@ namespace CoPilot.ORM.Scripting
     public class ScriptBuilder
     {
         private readonly DbModel _model;
-        private readonly IInsertStatementWriter _insertWriter;
-        private readonly ICreateStatementWriter _createWriter;
-        private readonly ICommonScriptingTasks _commonScriptingTasks;
+        private readonly IDbProvider _provider;
 
-        public ScriptBuilder(DbModel model)
+        public ScriptBuilder(IDbProvider provider, DbModel model)
         {
             _model = model;
-            _insertWriter = _model.ResourceLocator.Get<IInsertStatementWriter>();
-            _createWriter = _model.ResourceLocator.Get<ICreateStatementWriter>();
-            _commonScriptingTasks = _model.ResourceLocator.Get<ICommonScriptingTasks>();
-
+            _provider = provider;
         }
 
         public ScriptBlock CreateTable<T>(CreateOptions options = null) where T : class
@@ -93,13 +86,10 @@ namespace CoPilot.ORM.Scripting
             return script;
         }
 
-        public static string GetParameterAsString(DbParameter prm)
+        public string GetParameterAsString(DbParameter prm)
         {
-            var str = prm.Name + " " + DbConversionHelper.GetAsString(prm.DataType);
-            if (DbConversionHelper.HasSize(prm.DataType))
-            {
-                str += $"({(prm.Size == 0?"max":prm.Size.ToString())})";
-            } else if (prm.NumberPrecision != null)
+            var str = prm.Name + " " + _provider.GetDataTypeAsString(prm.DataType, prm.Size);
+            if (prm.NumberPrecision != null)
             {
                 str += $"({prm.NumberPrecision.Scale},{prm.NumberPrecision.Precision})";
             }
@@ -128,7 +118,7 @@ namespace CoPilot.ORM.Scripting
         public ScriptBlock CreateStoredProcedureFromQuery(string name, TableContext ctx, IQueryScriptCreator scriptCreator = null) 
         {
             if(scriptCreator == null)
-                scriptCreator = new TempTableJoinStrategy(new SqlQueryBuilder(), new SqlSelectStatementWriter());
+                scriptCreator = new TempTableJoinStrategy(_provider.QueryBuilder, _provider.SelectStatementWriter);
 
             var rootFilter = ctx.GetFilter();
             var paramToColumnMap = new Dictionary<string, ContextColumn>();
@@ -152,12 +142,9 @@ namespace CoPilot.ORM.Scripting
                 if (!parameters.Any(r => r.Name.Equals(newName, StringComparison.Ordinal)))
                 {
                     var param = new DbParameter(newName, p.DataType, p.DefaultValue, p.CanBeNull, p.IsOutput);
-                    if (DbConversionHelper.HasSize(contextColumn.Column.DataType))
+                    if (_provider.DataTypeHasSize(contextColumn.Column.DataType))
                     {
-                        param.Size = contextColumn.Column.MaxSize == null ||
-                                        contextColumn.Column.MaxSize == "max"
-                            ? 0
-                            : int.Parse(contextColumn.Column.MaxSize);
+                        param.Size = contextColumn.Column.MaxSize;
                     }
                     else if (contextColumn.Column.NumberPrecision != null)
                     {
@@ -230,7 +217,7 @@ namespace CoPilot.ORM.Scripting
             var map = new TableMapEntry(template.GetType(), tableDefinition, OperationType.Insert);
             var ctx = new TableContext(_model, map);
             var opCtx = ctx.InsertUsingTemplate(ctx, template);
-            return _insertWriter.GetStatement(opCtx, options).Script;
+            return _provider.InsertStatementWriter.GetStatement(opCtx, options).Script;
         }
         
         public ScriptBlock InsertIntoTableIfEmpty<T>(ScriptOptions options = null, params T[] entities) where T : class
@@ -246,7 +233,7 @@ namespace CoPilot.ORM.Scripting
             }
             if (options.EnableIdentityInsert)
             {
-                _commonScriptingTasks.WrapInsideIdentityInsertScript(table.ToString(), insertBlock);
+                _provider.CommonScriptingTasks.WrapInsideIdentityInsertScript(table.ToString(), insertBlock);
             }
             
             var block = If().NotExists().TableData(table.TableName).Then(insertBlock).End();
@@ -263,7 +250,7 @@ namespace CoPilot.ORM.Scripting
             insertBlock.Append(InsertTable(obj, options));
             if (options.EnableIdentityInsert)
             {
-                _commonScriptingTasks.WrapInsideIdentityInsertScript(table.ToString(), insertBlock);
+                _provider.CommonScriptingTasks.WrapInsideIdentityInsertScript(table.ToString(), insertBlock);
             }
             var block = If().NotExists().TableData(table.TableName).Then(insertBlock).End();
             return block;
@@ -280,7 +267,7 @@ namespace CoPilot.ORM.Scripting
             }
             if (options.EnableIdentityInsert)
             {
-                _commonScriptingTasks.WrapInsideIdentityInsertScript(tableDefinition.ToString(), insertBlock);
+                _provider.CommonScriptingTasks.WrapInsideIdentityInsertScript(tableDefinition.ToString(), insertBlock);
             }
             var block = If().NotExists().TableData(tableDefinition.TableName).Then(insertBlock).End();
             return block;
@@ -607,7 +594,7 @@ namespace CoPilot.ORM.Scripting
             var ctx = new TableContext(_model, entity.GetType());
             var opCtx = ctx.Insert(ctx, entity);
 
-            return _insertWriter.GetStatement(opCtx, options);
+            return _provider.InsertStatementWriter.GetStatement(opCtx, options);
         }
         
         private SqlStatement GetCreateStatement(Type entityType, CreateOptions options = null)
@@ -620,7 +607,7 @@ namespace CoPilot.ORM.Scripting
         {
             options = options ?? CreateOptions.Default();
             
-            return _createWriter.GetStatement(table, options);
+            return _provider.CreateStatementWriter.GetStatement(table, options);
         }
 
     

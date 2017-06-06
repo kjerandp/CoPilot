@@ -1,10 +1,9 @@
-﻿using System.Linq;
-using CoPilot.ORM.Context;
-using CoPilot.ORM.Database.Commands.Query.Interfaces;
+﻿using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.Query.Strategies;
-using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Database.Commands.SqlWriters;
+using System.Linq;
 
-namespace CoPilot.ORM.Database.Commands.Query
+namespace CoPilot.ORM.Providers.SqlServer
 {
     public class SqlQueryStrategySelector : IQueryStrategySelector
     {
@@ -17,12 +16,15 @@ namespace CoPilot.ORM.Database.Commands.Query
             _secondary = new TempTableJoinStrategy(builder, writer);
             //_secondary = new TableVariableJoinStrategy(builder, writer);
         }
-        public IQueryExecutionStrategy Get(TableContext ctx)
+        public QueryStrategySelector Get()
         {
-            if (ctx.Predicates != null && ctx.Nodes.Any(r => r.Value.IsInverted))
-                return _secondary;
+            return ctx =>
+            {
+                if (ctx.Predicates != null && ctx.Nodes.Any(r => r.Value.IsInverted))
+                    return _secondary;
 
-            return _default;
+                return _default;
+            };
         }
     }
 }

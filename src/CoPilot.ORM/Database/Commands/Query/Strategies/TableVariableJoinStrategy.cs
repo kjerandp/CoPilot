@@ -5,7 +5,8 @@ using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
-using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Database.Commands.SqlWriters;
+using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping.Mappers;
@@ -16,13 +17,11 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
 {
     public class TableVariableJoinStrategy : IQueryExecutionStrategy, IQueryScriptCreator
     {
-        private readonly IQueryBuilder _builder;
-        private readonly ISelectStatementWriter _writer;
+        private readonly IDbProvider _provider;
 
-        public TableVariableJoinStrategy(IQueryBuilder builder, ISelectStatementWriter writer)
+        public TableVariableJoinStrategy(IDbProvider provider)
         {
-            _builder = builder;
-            _writer = writer;
+            _provider = provider;
         }
         public IEnumerable<object> Execute(ITableContextNode node, FilterGraph filter, DbReader reader)
         {
@@ -56,7 +55,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
 
         private ScriptBlock GetScript(QueryContext q, ITableContextNode parantNode = null)
         {
-            var segments = _builder.Build(q);
+            var segments = _provider.QueryBuilder.Build(q);
             var tempName = q.BaseNode.Path.Replace(".", "_");
             var temp = new QuerySegments();
             var script = new ScriptBlock();
@@ -94,7 +93,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
 
                 script.Add($"DECLARE @{tempName} TABLE({GetColumnAsString(pk)})");
                 script.Add($"INSERT INTO @{tempName}");
-                script.Append(_writer.GetStatement(temp));
+                script.Append(_provider.SelectStatementWriter.GetStatement(temp));
                 script.Add("");
             }
             if (parantNode != null)
@@ -106,21 +105,22 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
                     segments.AddToSegment(QuerySegment.PostBaseTable, join);
                 }
             }
-            script.Append(_writer.GetStatement(segments));
+            script.Append(_provider.SelectStatementWriter.GetStatement(segments));
             
             
             return script;
         }
 
-        private static string GetColumnAsString(DbColumn col)
+        private string GetColumnAsString(DbColumn col)
         {
-            var str = $"{col.ColumnName} {DbConversionHelper.GetAsString(col.DataType)}";
-            
-            if (col.MaxSize != null && DbConversionHelper.HasSize(col.DataType))
-            {
-                str += $"({col.MaxSize})";
-            }
-            else if (col.NumberPrecision != null)
+            var str = $"{col.ColumnName} {_provider.GetDataTypeAsString(col.DataType, col.MaxSize)}";
+
+            //if (col.MaxSize != null && _provider.HasSize(col.DataType))
+            //{
+            //    str += $"({col.MaxSize})";
+            //}
+            //else 
+            if (col.NumberPrecision != null)
             {
                 str += $"({col.NumberPrecision.Scale},{col.NumberPrecision.Precision})";
             }

@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
+using System.Data;
 using System.Linq.Expressions;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands;
-using CoPilot.ORM.Filtering;
+using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
 
@@ -19,11 +19,16 @@ namespace CoPilot.ORM.Database
         /// <summary>
         /// CoPilot's internal description of the database and its entities
         /// </summary>
-        DbModel Model { get; }      
+        DbModel Model { get; }
         /// <summary>
         /// Get a SqlConnection from the connection string provided to CoPilot
         /// </summary>
-        SqlConnection Connection { get; }
+        IDbConnection Connection { get; }
+
+        /// <summary>
+        /// Database provider
+        /// </summary>
+        IDbProvider DbProvider { get; }
 
         /// <summary>
         /// Query database writing a parameterized query statement or name of stored procedure

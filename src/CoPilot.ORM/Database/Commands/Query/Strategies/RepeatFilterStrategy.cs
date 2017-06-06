@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
-using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Mapping.Mappers;

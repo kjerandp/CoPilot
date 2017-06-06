@@ -9,6 +9,7 @@ using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.IntegrationTests.Config;
 using CoPilot.ORM.IntegrationTests.Models.BandSample;
+using CoPilot.ORM.Providers.SqlServer;
 using CoPilot.ORM.Scripting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -35,7 +36,7 @@ namespace CoPilot.ORM.IntegrationTests
 
             BandSampleDatabase.DropCreateDatabase(model);
 
-            _db = model.CreateDb(ConnectionString);
+            _db = model.CreateDb(ConnectionString, new SqlServerProvider());
             
         }
 
@@ -76,8 +77,8 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanCreateStoredProcedureFromQuery()
         {
-            var builder = new ScriptBuilder(_db.Model);
-            
+            var builder = new ScriptBuilder(_db.DbProvider, _db.Model);
+
             var proc = builder.CreateStoredProcedureFromQuery<Recording>("Get_Recordings_CTE", r => r.Recorded > DateTime.MinValue, null, "Genre", "Band", "AlbumTracks").ToString();
 
             Console.WriteLine(proc);

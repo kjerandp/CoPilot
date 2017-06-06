@@ -9,6 +9,7 @@ using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands;
+using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Helpers;
@@ -179,23 +180,25 @@ namespace CoPilot.ORM.Config
         /// Creates and returns an implementation of the CoPilot IDb interface 
         /// </summary>
         /// <param name="connectionString">Connection string to database</param>
+        /// <param name="dbProvider">Database provider</param>
         /// <returns>Instance of the CoPilot interface (IDb)</returns>
-        public IDb CreateDb(string connectionString)
+        public IDb CreateDb(string connectionString, IDbProvider dbProvider)
         {
             if (!IsInitialized) CreateModel();
 
-            return _model.CreateDb(connectionString);
+            return _model.CreateDb(connectionString, dbProvider);
         }
 
         /// <summary>
         /// Creates and returns an implementation of the CoPilot IDb interface without any mapping
         /// </summary>
         /// <param name="connectionString">Connection string to database</param>
+        /// <param name="dbProvider">Database provider</param>
         /// <returns>Instance of the CoPilot interface (IDb)</returns>
-        public static IDb Create(string connectionString)
+        public static IDb Create(string connectionString, IDbProvider dbProvider)
         {
             var m = new DbMapper();
-            return m.CreateDb(connectionString);
+            return m.CreateDb(connectionString, dbProvider);
         }
 
         /// <summary>

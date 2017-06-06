@@ -1,13 +1,19 @@
 using System.Collections.Generic;
 using CoPilot.ORM.Context.Operations;
+using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
-using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
-using CoPilot.ORM.Helpers;
+using CoPilot.ORM.Database.Commands.SqlWriters;
 
-namespace CoPilot.ORM.Database.Commands.SqlWriters
+namespace CoPilot.ORM.Providers.SqlServer
 {
     public class SqlDeleteStatementWriter : IDeleteStatementWriter
     {
+        private readonly SqlServerProvider _provider;
+
+        public SqlDeleteStatementWriter(SqlServerProvider provider)
+        {
+            _provider = provider;
+        }
         public SqlStatement GetStatement(OperationContext ctx, ScriptOptions options = null)
         {
             options = options ?? ScriptOptions.Default();
@@ -31,7 +37,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
                 }
                 else
                 {
-                    valueString = part.Replace("{value}", DbConversionHelper.GetValueAsString(col.DataType, value, options.UseNvar));
+                    valueString = part.Replace("{value}", _provider.GetValueAsString(col.DataType, value));
                 }
                    
                 qualifications.Add($"[{col.ColumnName}] = {valueString}"); 

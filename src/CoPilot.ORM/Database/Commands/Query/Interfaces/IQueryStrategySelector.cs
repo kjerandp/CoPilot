@@ -1,9 +1,9 @@
-﻿using CoPilot.ORM.Context;
+﻿using CoPilot.ORM.Database.Commands.Query.Strategies;
 
 namespace CoPilot.ORM.Database.Commands.Query.Interfaces
 {
     public interface IQueryStrategySelector
     {
-        IQueryExecutionStrategy Get(TableContext ctx);
+        QueryStrategySelector Get();
     }
 }

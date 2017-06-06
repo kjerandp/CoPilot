@@ -174,7 +174,7 @@ namespace CoPilot.ORM.Config.Builders
             if (col.DataType != type)
             {
                 col.DataType = type;
-                if (col.DataType == DbDataType.String && col.MaxSize == null)
+                if (col.DataType == DbDataType.String)
                 {
                     col.MaxSize = DbConversionHelper.DefaultDbStringSize;
                 }
@@ -183,10 +183,7 @@ namespace CoPilot.ORM.Config.Builders
                     col.IsNullable = true;
                 }
             }
-            if (!DbConversionHelper.HasSize(col.DataType))
-            {
-                col.MaxSize = null;
-            }
+            
         }
     }
 }

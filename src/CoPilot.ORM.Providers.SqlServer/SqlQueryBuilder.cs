@@ -1,12 +1,11 @@
-﻿using System;
-using System.Linq;
-using CoPilot.ORM.Common;
+﻿using CoPilot.ORM.Common;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Exceptions;
+using System.Linq;
 
-namespace CoPilot.ORM.Database.Commands.Query
+namespace CoPilot.ORM.Providers.SqlServer
 {
     public class SqlQueryBuilder : IQueryBuilder
     {

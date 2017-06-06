@@ -1,8 +1,8 @@
 ﻿using CoPilot.ORM.Database.Commands.Query.Interfaces;
-using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Scripting;
 
-namespace CoPilot.ORM.Database.Commands.SqlWriters
+namespace CoPilot.ORM.Providers.SqlServer
 {
     public class SqlSelectStatementWriter : ISelectStatementWriter
     {

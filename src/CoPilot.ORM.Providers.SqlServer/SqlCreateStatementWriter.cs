@@ -1,17 +1,24 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
-using CoPilot.ORM.Common;
 using CoPilot.ORM.Config.DataTypes;
+using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
-using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
+using System.Linq;
 
-namespace CoPilot.ORM.Database.Commands.SqlWriters
+namespace CoPilot.ORM.Providers.SqlServer
 {
     public class SqlCreateStatementWriter : ICreateStatementWriter
     {
+        private readonly SqlServerProvider _provider;
+
+        public SqlCreateStatementWriter(SqlServerProvider provider)
+        {
+            _provider = provider;
+        }
+
         public SqlStatement GetStatement(DbTable table, CreateOptions options)
         {
             List<string> compositeKeys = null;
@@ -41,7 +48,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
                 {
                     extendedInfo = " " + GetForeignKeyString(dbColumn);
                 }
-                createColumns.Add($"{(createColumns.ItemCount > 0 ? "," : "")}{dbColumn.ColumnName}{GetDataTypeString(dbColumn, options)}{extendedInfo}");
+                createColumns.Add($"{(createColumns.ItemCount > 0 ? "," : "")}{dbColumn.ColumnName}{GetDataTypeString(dbColumn)}{extendedInfo}");
             }
 
             if (compositeKeys != null)
@@ -86,14 +93,11 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
             return str;
         }
 
-        private string GetDataTypeString(DbColumn column, CreateOptions options)
+        private string GetDataTypeString(DbColumn column)
         {
-            var str = " " + DbConversionHelper.GetAsString(column.DataType, options.UseNvar);
-            if (column.MaxSize != null && DbConversionHelper.HasSize(column.DataType))
-            {
-                str += $"({column.MaxSize})";
-            }
-            else if (column.NumberPrecision != null)
+            var str = " " + _provider.GetDataTypeAsString(column.DataType, column.MaxSize);
+            
+            if (column.NumberPrecision != null)
             {
                 str += $"({column.NumberPrecision.Scale},{column.NumberPrecision.Precision})";
             }
@@ -108,7 +112,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
                     var dataType = DbConversionHelper.MapToDbDataType(column.DefaultValue.Value.GetType());
                     if (dataType != DbDataType.Unknown)
                     {
-                        defaultValue = DbConversionHelper.GetValueAsString(dataType, column.DefaultValue.Value, options.UseNvar);
+                        defaultValue = _provider.GetValueAsString(dataType, column.DefaultValue.Value);
                     }
                 }
                 else
@@ -119,7 +123,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
                     }
                     else
                     {
-                        defaultValue = DbConversionHelper.GetExpressionAsString(column.DefaultValue.Expression);
+                        defaultValue = _provider.GetDbExpressionAsString(column.DefaultValue.Expression);
                     }
                 }
                 if (!string.IsNullOrEmpty(defaultValue))

@@ -3,7 +3,7 @@ using System.Linq;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
-using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Filtering.Operands;
 using CoPilot.ORM.Helpers;
@@ -11,7 +11,7 @@ using CoPilot.ORM.Mapping.Mappers;
 
 namespace CoPilot.ORM.Database.Commands.Query.Strategies
 {
-    internal class MultipleQueriesStrategy : IQueryExecutionStrategy
+    public class MultipleQueriesStrategy : IQueryExecutionStrategy
     {
         private readonly IQueryBuilder _builder;
         private readonly ISelectStatementWriter _writer;

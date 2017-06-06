@@ -1,65 +1,42 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Linq.Expressions;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
-using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
 using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping.Mappers;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Context.Query;
-using CoPilot.ORM.Database.Commands.Query.Interfaces;
+using CoPilot.ORM.Database.Providers;
 
 namespace CoPilot.ORM.Database.Commands
 {
     public class DbReader : IDisposable
     {
-        private readonly SqlCommand _sqlCommand;
-        private readonly SqlConnection _sqlConnection;
+        private readonly IDbCommand _command;
+        private readonly IDbConnection _connection;
         private readonly DbModel _model;
-        private readonly ISelectStatementWriter _writer;
-        private readonly IQueryBuilder _builder;
-        private readonly IQueryStrategySelector _strategySelector;
-        public DbReader(IDb db) : this(db.Connection, db.Model) { }
+        private readonly IDbProvider _provider;
 
-        internal DbReader(SqlCommand command, DbModel model) : this(model)
+        public DbReader(IDb db) : this(db.DbProvider, db.DbProvider.CreateCommand(db.Connection), db.Model){}
+
+        internal DbReader(IDbProvider provider, IDbCommand command, DbModel model)
         {
             _model = model;
-            _sqlCommand = command;
-            
-            _sqlConnection = null;
+            _command = command;
+            _provider = provider;
+            _connection = null;
 
         }
-
-        internal DbReader(SqlConnection connection, DbModel model) : this(model)
-        {
-            _model = model;
-            _sqlConnection = connection;
-            _sqlCommand = new SqlCommand()
-            {
-                Connection = _sqlConnection,
-                CommandTimeout = 0
-            };
-            _sqlConnection.Open();
-
-            
-        }
-
-        private DbReader(DbModel model)
-        {
-            _writer = model.ResourceLocator.Get<ISelectStatementWriter>();
-            _builder = model.ResourceLocator.Get<IQueryBuilder>();
-            _strategySelector = model.ResourceLocator.Get<IQueryStrategySelector>();
-        }
+        
 
         public object FindByKey(ITableContextNode node, object key)
         {
-            var strategy = _strategySelector.Get(node.Context);
+            var strategy = _provider.QueryStrategySelector(node.Context);
             var filter = FilterGraph.CreateByPrimaryKeyFilter(node, key);
             var item = strategy.Execute(node, filter, this).SingleOrDefault();
             return item;
@@ -79,14 +56,16 @@ namespace CoPilot.ORM.Database.Commands
         public DbResponse Query(string commandText, object args, params string[] names)
         {
             var request = DbRequest.CreateRequest(_model, commandText, args);
-            var response = CommandExecutor.ExecuteQuery(_sqlCommand, request, names);
+            request.Command = _command;
+            var response = _provider.ExecuteQuery(request, names);
             
             return response;
         }
 
         public DbResponse Query(DbRequest request, params string[] names)
         {
-            return CommandExecutor.ExecuteQuery(_sqlCommand, request, names);
+            request.Command = _command;
+            return _provider.ExecuteQuery(request, names);
         }
 
         public IEnumerable<T> Query<T>(string commandText, object args, params string[] names)
@@ -126,9 +105,9 @@ namespace CoPilot.ORM.Database.Commands
         {
             var ctx = CreateContext(orderBy, predicates, filter, include);
             var rootFilter = ctx.GetFilter();
-            _sqlCommand.CommandType = CommandType.Text;
+            _command.CommandType = CommandType.Text;
 
-            return _strategySelector.Get(ctx).Execute(ctx, rootFilter, this).OfType<T>();
+            return _provider.QueryStrategySelector(ctx).Execute(ctx, rootFilter, this).OfType<T>();
         }
 
         public IEnumerable<dynamic> Query<TEntity>(Expression<Func<TEntity, object>> selector, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
@@ -157,8 +136,9 @@ namespace CoPilot.ORM.Database.Commands
             var ctx = CreateContext(selector, orderByClause, predicates, filter);
             var rootFilter = ctx.GetFilter();
             var stm = GetStatement(ctx, rootFilter);
-            var queryResult = CommandExecutor.ExecuteQuery(_sqlCommand, stm, ctx.Path);
-            _sqlCommand.CommandType = CommandType.Text;
+            stm.Command = _command;
+            var queryResult = _provider.ExecuteQuery(stm, ctx.Path);
+            _command.CommandType = CommandType.Text;
             return queryResult.Map<TDto>();
         }
 
@@ -190,7 +170,7 @@ namespace CoPilot.ORM.Database.Commands
         private SqlStatement GetStatement(ITableContextNode node, FilterGraph filter)
         {
             var q = node.Context.GetQueryContext(node, filter);
-            return q.GetStatement(_builder, _writer);
+            return q.GetStatement(_provider.QueryBuilder, _provider.SelectStatementWriter);
         }
 
         private TableContext<T> CreateContext<T>(Expression<Func<T, bool>> filter = null, params string[] include) where T : class
@@ -238,12 +218,12 @@ namespace CoPilot.ORM.Database.Commands
 
         public void Dispose()
         {
-            if (_sqlConnection != null)
+            if (_connection != null)
             {
-                _sqlConnection.Close();
-                _sqlConnection.Dispose();
+                _connection.Close();
+                _connection.Dispose();
             }
-            _sqlCommand.Dispose();
+            _command.Dispose();
         }
 
         

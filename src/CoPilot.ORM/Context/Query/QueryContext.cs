@@ -4,7 +4,7 @@ using CoPilot.ORM.Common;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
-using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Filtering;
 
 namespace CoPilot.ORM.Context.Query

@@ -1,6 +1,6 @@
 ﻿using CoPilot.ORM.Scripting;
 
-namespace CoPilot.ORM.Database.Commands.SqlWriters.Interfaces
+namespace CoPilot.ORM.Database.Commands.SqlWriters
 {
     public interface ICommonScriptingTasks
     {

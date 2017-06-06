@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
+using System.Data;
 using System.Linq.Expressions;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands;
+using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
@@ -14,21 +15,23 @@ namespace CoPilot.ORM.Database
     internal class Db :  IDb
     {
         private readonly string _connectionString;
-
-        internal Db(DbModel model, string connectionString)
+ 
+        internal Db(DbModel model, string connectionString, IDbProvider provider)
         {
+            DbProvider = provider;
             Model = model;
-            _connectionString = connectionString;
-            
+            _connectionString = connectionString;        
         }
 
-        public SqlConnection Connection => new SqlConnection(_connectionString);
+        public IDbProvider DbProvider { get; }
+
+        public IDbConnection Connection => DbProvider.CreateConnection(_connectionString);
 
         public DbModel Model { get; }
 
         public DbResponse Query(string commandText, object args, params string[] names)
         {
-            using (var rdr = new DbReader(Connection, Model))
+            using (var rdr = new DbReader(this))
             {
                 return rdr.Query(commandText, args, names);
             }
@@ -36,7 +39,7 @@ namespace CoPilot.ORM.Database
 
         public IEnumerable<T> Query<T>(string commandText, object args, ObjectMapper mapper = null, params string[] names)
         {
-            using (var rdr = new DbReader(Connection, Model))
+            using (var rdr = new DbReader(this))
             {
                 return rdr.Query<T>(commandText, args, mapper, names);
             }
@@ -44,7 +47,7 @@ namespace CoPilot.ORM.Database
 
         public IEnumerable<T> Query<T>(OrderByClause<T> orderBy, Predicates predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
         {
-            using (var rdr = new DbReader(Connection, Model))
+            using (var rdr = new DbReader(this))
             {
                 return rdr.Query(orderBy, predicates, filter, include);
             }
@@ -52,7 +55,7 @@ namespace CoPilot.ORM.Database
 
         public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, Predicates predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
         {
-            using (var rdr = new DbReader(Connection, Model))
+            using (var rdr = new DbReader(this))
             {
                 return rdr.Query<TEntity, TDto>(selector, orderByClause, predicates, filter);
             }
@@ -60,7 +63,7 @@ namespace CoPilot.ORM.Database
         
         public T FindByKey<T>(object key, params string[] include) where T : class
         {
-            using (var reader = new DbReader(Connection, Model))
+            using (var reader = new DbReader(this))
             {
                 return reader.FindByKey<T>(key, include);
             }
@@ -72,14 +75,11 @@ namespace CoPilot.ORM.Database
             
             using (var con = Connection)
             {
-                var command = new SqlCommand()
-                {
-                    Connection = con,
-                    CommandTimeout = 0,
-                    CommandType = request.CommandType
-                };
+                var command = DbProvider.CreateCommand(con);
+                command.CommandType = request.CommandType;
+                request.Command = command;
                 con.Open();
-                var response = CommandExecutor.ExecuteNonQuery(command, request);
+                var response = DbProvider.ExecuteNonQuery(request);
                 con.Close();
 
                 return response;
@@ -92,14 +92,11 @@ namespace CoPilot.ORM.Database
 
             using (var con = Connection)
             {
-                var command = new SqlCommand()
-                {
-                    Connection = con,
-                    CommandTimeout = 0,
-                    CommandType = request.CommandType
-                };
+                var command = DbProvider.CreateCommand(con);
+                command.CommandType = request.CommandType;
+                request.Command = command;
                 con.Open();
-                var response = CommandExecutor.ExecuteScalar(command, request);
+                var response = DbProvider.ExecuteScalar(request);
                 con.Close();
 
                 return response;
@@ -108,7 +105,7 @@ namespace CoPilot.ORM.Database
 
         public void Save<T>(T entity, OperationType operations, params string[] include) where T : class
         {
-            using (var writer = new DbWriter(Model, Connection) { Operations = operations })
+            using (var writer = new DbWriter(this) { Operations = operations })
             {
                 try
                 {
@@ -126,7 +123,7 @@ namespace CoPilot.ORM.Database
 
         public void Save<T>(IEnumerable<T> entities, OperationType operations, params string[] include) where T : class
         {
-            using (var writer = new DbWriter(Model, Connection) { Operations = operations })
+            using (var writer = new DbWriter(this) { Operations = operations })
             {
                 try
                 {
@@ -143,7 +140,7 @@ namespace CoPilot.ORM.Database
 
         public void Delete<T>(T entity, params string[] include) where T : class
         {
-            using (var writer = new DbWriter(Model, Connection) { Operations = OperationType.Delete|OperationType.Update })
+            using (var writer = new DbWriter(this) { Operations = OperationType.Delete|OperationType.Update })
             {
                 try
                 {
@@ -160,7 +157,7 @@ namespace CoPilot.ORM.Database
 
         public void Delete<T>(IEnumerable<T> entities, params string[] include) where T : class
         {
-            using (var writer = new DbWriter(Model, Connection) { Operations = OperationType.Delete | OperationType.Update })
+            using (var writer = new DbWriter(this) { Operations = OperationType.Delete | OperationType.Update })
             {
                 try
                 {
@@ -177,7 +174,7 @@ namespace CoPilot.ORM.Database
 
         public void Patch<T>(object dto) where T : class
         {
-            using (var writer = new DbWriter(Model, Connection) { Operations = OperationType.Update})
+            using (var writer = new DbWriter(this) { Operations = OperationType.Update})
             {
                 try
                 {

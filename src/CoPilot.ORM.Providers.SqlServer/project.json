@@ -1,0 +1,28 @@
+{
+  "title": "CoPilot.ORM.Providers.SqlServer",
+  "authors": [ "Kjerand Pedersen" ],
+  "description": "CoPilot is an object relational mapper (ORM). In its core it works like a micro ORM, but it has some neat and powerful features added on top of it. This is the Sql Server provider.",
+  "version": "1.1.0",
+  "copyright": "Copyright 2017",
+  "packOptions": {
+    "owners": [ "Kjerand Pedersen" ],
+    "summary": "Light weight object relational mapper (O/RM). MS SQL Provider.",
+    "releaseNotes": "Now targets netstandard1.6 for core applications and net46. Also added support for bulk commands.",
+    "requireLicenseAcceptance": true,
+    "licenseUrl": "https://raw.githubusercontent.com/kjerandp/CoPilot/master/LICENSE",
+    "projectUrl": "https://github.com/kjerandp/CoPilot",
+    "tags": [ "CoPilot", "micro", "ORM", "O/RM", "core", "netstandard", "mapper", "sql", "data", "DAL", "ado.net" ]
+  },
+  "dependencies": {
+    "CoPilot.ORM": "1.1.0",
+    "System.Data.SqlClient": "4.3.0"
+  },
+  "frameworks": {
+    "netstandard1.6": {
+      "dependencies": {
+        "System.Reflection": "4.3.0" 
+      }
+    },
+    "net46": {}
+  }
+}

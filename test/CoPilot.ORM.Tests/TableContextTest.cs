@@ -1,9 +1,9 @@
 ﻿using System;
-using CoPilot.ORM.Database.Commands.Query.Interfaces;
-using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Filtering.Operands;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
+using CoPilot.ORM.Providers.SqlServer;
 using CoPilot.ORM.Tests.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -13,11 +13,13 @@ namespace CoPilot.ORM.Tests
     public class TableContextTest
     {
         private DbModel _model;
+        private IDbProvider _provider;
 
         [TestInitialize]
         public void Init()
         {
             _model = TestModel.GetModel();
+            _provider = new SqlServerProvider();
         }
 
         [TestMethod]
@@ -49,8 +51,8 @@ namespace CoPilot.ORM.Tests
             Assert.AreEqual("T8.PUB_CITY_CODE = @param1", orgCtx.GetFilter().ToString());
             Assert.AreEqual("5", ((ValueOperand)orgCtx.GetFilter().Root.Right).Value);
 
-            var writer = _model.ResourceLocator.Get<ISelectStatementWriter>();
-            var builder = _model.ResourceLocator.Get<IQueryBuilder>();
+            var writer = _provider.SelectStatementWriter;
+            var builder = _provider.QueryBuilder;
             Console.WriteLine(writer.GetStatement(builder.Build(orgCtx.GetQueryContext())));
             Console.WriteLine();
             var node = orgCtx.FindByPath("OwnedResources");
@@ -93,8 +95,8 @@ namespace CoPilot.ORM.Tests
             var filter = ExpressionHelper.DecodeExpression<Resource>(r => r.UsedBy.Name.StartsWith("Ko", StringComparison.OrdinalIgnoreCase));
             ctx.ApplyFilter(filter);
 
-            var writer = _model.ResourceLocator.Get<ISelectStatementWriter>();
-            var builder = _model.ResourceLocator.Get<IQueryBuilder>();
+            var writer = _provider.SelectStatementWriter;
+            var builder = _provider.QueryBuilder;
             Console.WriteLine(writer.GetStatement(builder.Build(ctx.GetQueryContext())));
 
             Console.WriteLine();

@@ -1,19 +1,24 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using CoPilot.ORM.Common;
 using CoPilot.ORM.Context.Operations;
+using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
-using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Exceptions;
-using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
+using System.Linq;
 
-namespace CoPilot.ORM.Database.Commands.SqlWriters
+namespace CoPilot.ORM.Providers.SqlServer
 {
     public class SqlUpdateStatementWriter : IUpdateStatementWriter
     {
+        private readonly SqlServerProvider _provider;
+
+        public SqlUpdateStatementWriter(SqlServerProvider provider)
+        {
+            _provider = provider;
+        }
+
         public SqlStatement GetStatement(OperationContext ctx, ScriptOptions options = null)
         {
             options = options ?? ScriptOptions.Default();
@@ -46,7 +51,7 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
                     }
                     else
                     {
-                        valueString = part.Replace("{value}", DbConversionHelper.GetValueAsString(col.DataType, value, options.UseNvar));
+                        valueString = part.Replace("{value}", _provider.GetValueAsString(col.DataType, value));
                     }
                     if (col.IsPrimaryKey)
                     {

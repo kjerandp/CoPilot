@@ -1,7 +1,7 @@
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Scripting;
 
-namespace CoPilot.ORM.Database.Commands.SqlWriters.Interfaces
+namespace CoPilot.ORM.Database.Commands.SqlWriters
 {
     public interface ISelectStatementWriter
     {

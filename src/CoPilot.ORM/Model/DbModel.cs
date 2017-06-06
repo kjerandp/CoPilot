@@ -8,6 +8,7 @@ using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Database;
+using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Mapping;
 
@@ -155,9 +156,9 @@ namespace CoPilot.ORM.Model
             return namer.Name(member.Name, table.TableName.Replace(" ", "_"));
         }
 
-        public IDb CreateDb(string connectionString)
+        public IDb CreateDb(string connectionString, IDbProvider dbProvider)
         {
-            return new Db(this, connectionString);
+            return new Db(this, connectionString, dbProvider);
         }
     }
 }
