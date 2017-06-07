@@ -5,28 +5,27 @@ namespace CoPilot.ORM.Filtering.Operands
 {
     public class ContextMemberOperand : IExpressionOperand
     {
-        private readonly MemberExpressionOperand _memberExpression;
         public ContextMemberOperand(MemberExpressionOperand memberExpression)
         {
-            _memberExpression = memberExpression;
+            MemberExpressionOperand = memberExpression;
         }
 
         public ContextColumn ContextColumn { get; internal set; }
-        
+        public MemberExpressionOperand MemberExpressionOperand { get; }
 
         public override string ToString()
         {
             var str = $"T{ContextColumn.Node.Index}.{ContextColumn.Column.ColumnName}";
-            if (!string.IsNullOrEmpty(_memberExpression?.Custom))
+            if (!string.IsNullOrEmpty(MemberExpressionOperand?.Custom))
             {
-                return _memberExpression.Custom.Replace("{column}", str);
+                return MemberExpressionOperand.Custom.Replace("{column}", str);
             }
-            if (!string.IsNullOrEmpty(_memberExpression?.WrapWith))
+            if (!string.IsNullOrEmpty(MemberExpressionOperand?.WrapWith))
             {
-                str = $"{_memberExpression.WrapWith}({str})";
+                str = $"{MemberExpressionOperand.WrapWith}({str})";
             }
             return str;
-        }
 
+        }
     }
 }

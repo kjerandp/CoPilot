@@ -1,15 +1,15 @@
-﻿using CoPilot.ORM.Common;
+﻿using System.Linq;
+using CoPilot.ORM.Common;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Exceptions;
-using System.Linq;
 using CoPilot.ORM.Filtering.Interfaces;
 using CoPilot.ORM.Filtering.Operands;
 
-namespace CoPilot.ORM.Providers.SqlServer
+namespace CoPilot.ORM.Providers.MySql
 {
-    public class SqlQueryBuilder : IQueryBuilder
+    public class MySqlQueryBuilder : IQueryBuilder
     {
         
         public QuerySegments Build(QueryContext queryContext)
@@ -62,6 +62,22 @@ namespace CoPilot.ORM.Providers.SqlServer
             }
             return qs;
         }
+        private static string GetColumnAsText(ContextColumn col)
+        {
+            var colName = SanitizeName(col.Column.ColumnName);
+
+            var str = $"T{col.Node.Index}.{colName}";
+            if (!string.IsNullOrEmpty(col.ColumnAlias))
+            {
+                str += $" as '{col.ColumnAlias}'";
+            }
+            return str;
+        }
+
+        private static string GetFromItemText(TableJoinDescription join)
+        {
+            return $"{(join.JoinType == TableJoinType.InnerJoin ? "INNER" : "LEFT")} JOIN {SanitizeName(join.TargetKey.Table.TableName)} T{join.TargetTableIndex} ON T{join.TargetTableIndex}.{join.TargetKey.ColumnName}=T{join.SourceTableIndex}.{join.SourceKey.ColumnName}";
+        }
 
         private static string GetFilterOperandAsText(IExpressionOperand operand)
         {
@@ -95,26 +111,9 @@ namespace CoPilot.ORM.Providers.SqlServer
             return operand.ToString();
         }
 
-        private static string GetColumnAsText(ContextColumn col)
-        {
-            var colName = SanitizeName(col.Column.ColumnName);
-            
-            var str = $"T{col.Node.Index}.{colName}";
-            if (!string.IsNullOrEmpty(col.ColumnAlias))
-            {
-                str += $" as [{col.ColumnAlias}]";
-            }
-            return str;
-        }
-        
-        private static string GetFromItemText(TableJoinDescription join)
-        {
-            return $"{(join.JoinType == TableJoinType.InnerJoin ? "INNER" : "LEFT")} JOIN {SanitizeName(join.TargetKey.Table.TableName)} T{join.TargetTableIndex} ON T{join.TargetTableIndex}.{join.TargetKey.ColumnName}=T{join.SourceTableIndex}.{join.SourceKey.ColumnName}";
-        }
-
         private static string SanitizeName(string name)
         {
-            return name.Contains(" ") ? "[" + name + "]" : name;
+            return name.Contains(" ") ? "`" + name + "`" : name;
         }
 
     }

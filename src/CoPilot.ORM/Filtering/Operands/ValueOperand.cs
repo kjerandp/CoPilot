@@ -1,5 +1,4 @@
-﻿using System;
-using CoPilot.ORM.Database.Commands;
+﻿using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Filtering.Interfaces;
 using CoPilot.ORM.Helpers;
 

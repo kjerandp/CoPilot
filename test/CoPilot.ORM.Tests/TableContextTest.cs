@@ -44,7 +44,7 @@ namespace CoPilot.ORM.Tests
         {
             var orgCtx = _model.CreateContext<Organization>("OwnedResources.UsedBy.City", "UsedResources");
 
-            var filter = ExpressionHelper.DecodeExpression<Organization>(r => r.City.CityCode == "5");
+            var filter = ExpressionHelper.DecodeExpression<Organization>(r => r.City.CityCode == "5", _provider);
 
             orgCtx.ApplyFilter(filter);
 
@@ -67,7 +67,7 @@ namespace CoPilot.ORM.Tests
         {
             var orgCtx = _model.CreateContext<Organization>();
 
-            var filter = ExpressionHelper.DecodeExpression<Organization>(r => r.OrganizationType == OrganizationType.TypeB);
+            var filter = ExpressionHelper.DecodeExpression<Organization>(r => r.OrganizationType == OrganizationType.TypeB, _provider);
 
             orgCtx.ApplyFilter(filter);
 
@@ -80,7 +80,7 @@ namespace CoPilot.ORM.Tests
         {
             var orgCtx = _model.CreateContext<Organization>();
 
-            var filter = ExpressionHelper.DecodeExpression<Organization>(r => r.City.Id == 6);
+            var filter = ExpressionHelper.DecodeExpression<Organization>(r => r.City.Id == 6, _provider);
 
             orgCtx.ApplyFilter(filter);
 
@@ -92,7 +92,7 @@ namespace CoPilot.ORM.Tests
         {
             var ctx = _model.CreateContext<Resource>( "Owner.City", "UsedBy" );
 
-            var filter = ExpressionHelper.DecodeExpression<Resource>(r => r.UsedBy.Name.StartsWith("Ko", StringComparison.OrdinalIgnoreCase));
+            var filter = ExpressionHelper.DecodeExpression<Resource>(r => r.UsedBy.Name.StartsWith("Ko", StringComparison.OrdinalIgnoreCase), _provider);
             ctx.ApplyFilter(filter);
 
             var writer = _provider.SelectStatementWriter;

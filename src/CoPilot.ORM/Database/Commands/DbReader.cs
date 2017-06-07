@@ -179,7 +179,8 @@ namespace CoPilot.ORM.Database.Commands
 
             if (filter != null)
             {
-                var expression = ExpressionHelper.DecodeExpression(filter);
+                var decoder = new ExpressionDecoder(_provider);
+                var expression = decoder.Decode(filter.Body);
                 ctx.ApplyFilter(expression);
             }
 

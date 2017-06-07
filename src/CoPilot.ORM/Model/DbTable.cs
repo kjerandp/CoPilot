@@ -15,7 +15,7 @@ namespace CoPilot.ORM.Model
         internal static Tuple<string, string> SanitizeTableName(string tableName)
         {
             string schema = null;
-
+            
             tableName = tableName.Replace("[", "").Replace("]", "");
             var s = tableName.Split('.');
 
@@ -32,7 +32,6 @@ namespace CoPilot.ORM.Model
             {
                 throw new CoPilotConfigurationException($"'{tableName}' is an invalid table name.");
             }
-            //if (tableName.Contains(" ")) tableName = "[" + tableName + "]";
             return new Tuple<string, string>(schema, tableName);
         } 
 

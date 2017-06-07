@@ -1,30 +1,30 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
+using CoPilot.ORM.Common;
 using CoPilot.ORM.Config.DataTypes;
+using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.Query.Strategies;
 using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Exceptions;
-using CoPilot.ORM.Logging;
-using System.Linq;
 using CoPilot.ORM.Extensions;
-using System.Reflection;
-using CoPilot.ORM.Common;
-using CoPilot.ORM.Database;
 using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Helpers;
+using CoPilot.ORM.Logging;
 using CoPilot.ORM.Model;
-using CoPilot.ORM.Providers.SqlServer.Writers;
+using CoPilot.ORM.Providers.MySql.Writers;
+using MySql.Data.MySqlClient;
 
-namespace CoPilot.ORM.Providers.SqlServer
+namespace CoPilot.ORM.Providers.MySql
 {
-    public class SqlServerProvider : IDbProvider
+    public class MySqlServerProvider : IDbProvider
     {
         private readonly object _lockObj = new object();
         private readonly bool _useNvar;
@@ -33,19 +33,19 @@ namespace CoPilot.ORM.Providers.SqlServer
         public ILogger Logger { get; set; }
         public IModelValidator ModelValidator { get; set; }
 
-        public SqlServerProvider(LoggingLevel loggingLevel = LoggingLevel.None, bool useNvar = true)
+        public MySqlServerProvider(LoggingLevel loggingLevel = LoggingLevel.None, bool useNvar = true)
         {
             _useNvar = useNvar;
             _converters = new MethodCallConverters();
 
-            CreateStatementWriter = new SqlCreateStatementWriter(this);
-            InsertStatementWriter = new SqlInsertStatementWriter(this);
-            UpdateStatementWriter = new SqlUpdateStatementWriter(this);
-            DeleteStatementWriter = new SqlDeleteStatementWriter(this);
-            SelectStatementWriter = new SqlSelectStatementWriter();
+            CreateStatementWriter = new MySqlCreateStatementWriter(this);
+            InsertStatementWriter = new MySqlInsertStatementWriter(this);
+            UpdateStatementWriter = new MySqlUpdateStatementWriter(this);
+            DeleteStatementWriter = new MySqlDeleteStatementWriter(this);
+            SelectStatementWriter = new MySqlSelectStatementWriter();
             CommonScriptingTasks = new SqlCommonScriptingTasks();
-            QueryBuilder = new SqlQueryBuilder();
-            QueryStrategySelector = new SqlQueryStrategySelector(QueryBuilder, SelectStatementWriter).Get();
+            QueryBuilder = new MySqlQueryBuilder();
+            QueryStrategySelector = new MySqlQueryStrategySelector(QueryBuilder, SelectStatementWriter).Get();
 
             Logger = new ConsoleLogger {LoggingLevel = loggingLevel};
             ModelValidator = new SimpleModelValidator();
@@ -57,7 +57,7 @@ namespace CoPilot.ORM.Providers.SqlServer
             var resultSets = new List<DbRecordSet>();
             var timer = Stopwatch.StartNew();
             
-            var command = (SqlCommand) cmd.Command;
+            var command = (MySqlCommand) cmd.Command;
 
             try
             {
@@ -135,7 +135,7 @@ namespace CoPilot.ORM.Providers.SqlServer
         public int ExecuteNonQuery(DbRequest cmd)
         {
             var result = 0;
-            var command = (SqlCommand) cmd.Command;
+            var command = (MySqlCommand) cmd.Command;
             try
             {
                 lock (_lockObj)
@@ -168,7 +168,7 @@ namespace CoPilot.ORM.Providers.SqlServer
 
         public void PrepareNonQuery(DbRequest cmd)
         {
-            var command = (SqlCommand)cmd.Command;
+            var command = (MySqlCommand)cmd.Command;
             command.CommandText = string.Join(";\n", SplitSqlStatements(cmd.ToString()));
             command.CommandType = cmd.CommandType;
             AddArgsToCommand(command, cmd.Parameters, cmd.Args);
@@ -177,7 +177,7 @@ namespace CoPilot.ORM.Providers.SqlServer
         public int ReRunCommand(IDbCommand command, object args)
         {
             int result;
-            var cmd = (SqlCommand) command;
+            var cmd = (MySqlCommand) command;
 
             var props = args.GetType().GetClassMembers().ToDictionary(k => "@"+k.Name, v => v.GetValue(args));
             try
@@ -205,7 +205,7 @@ namespace CoPilot.ORM.Providers.SqlServer
         public object ExecuteScalar(DbRequest cmd)
         {
             var timer = Stopwatch.StartNew();
-            var command = (SqlCommand) cmd.Command;
+            var command = (MySqlCommand) cmd.Command;
             object result;
             try { 
                 lock (_lockObj)
@@ -246,14 +246,14 @@ namespace CoPilot.ORM.Providers.SqlServer
 
         public IDbConnection CreateConnection(string connectionString)
         {
-            return new SqlConnection(connectionString);
+            return new MySqlConnection(connectionString);
         }
 
         public IDbCommand CreateCommand(IDbConnection connection = null, int timeout = 0)
         {
-            var cmd = new SqlCommand(""){CommandTimeout = timeout};
+            var cmd = new MySqlCommand(""){CommandTimeout = timeout};
 
-            var con = connection as SqlConnection;
+            var con = connection as MySqlConnection;
 
             if (con != null)
             {
@@ -338,35 +338,35 @@ namespace CoPilot.ORM.Providers.SqlServer
             throw new CoPilotUnsupportedException($"Unable to convert {dataType} to a string.");
         }
 
-        private SqlDbType ToDbType(DbDataType type)
+        private MySqlDbType ToDbType(DbDataType type)
         {
             switch (type)
             {
-                case DbDataType.Int64: return SqlDbType.BigInt;
-                case DbDataType.Binary: return SqlDbType.Binary;
-                case DbDataType.Varbinary: return SqlDbType.VarBinary;
-                case DbDataType.Boolean: return SqlDbType.Bit;
-                case DbDataType.Char: return _useNvar ? SqlDbType.NChar : SqlDbType.Char;
-                case DbDataType.Date: return SqlDbType.Date;
-                case DbDataType.DateTime: return SqlDbType.DateTime2;
-                case DbDataType.DateTimeOffset: return SqlDbType.DateTimeOffset;
-                case DbDataType.Decimal: return SqlDbType.Decimal;
-                case DbDataType.Double: return SqlDbType.Float;
-                case DbDataType.Int32: return SqlDbType.Int;
-                case DbDataType.Currency: return SqlDbType.Money;
-                case DbDataType.Text: return _useNvar ? SqlDbType.NText : SqlDbType.Text;
-                case DbDataType.String: return _useNvar ? SqlDbType.NVarChar : SqlDbType.VarChar;
-                case DbDataType.Float: return SqlDbType.Real;
-                case DbDataType.Int16: return SqlDbType.SmallInt;
-                case DbDataType.TimeSpan: return SqlDbType.Time;
-                case DbDataType.TimeStamp: return SqlDbType.Timestamp;
-                case DbDataType.Byte: return SqlDbType.TinyInt;
-                case DbDataType.Guid: return SqlDbType.UniqueIdentifier;
-                case DbDataType.Xml: return SqlDbType.Xml;
-                case DbDataType.Enum: return SqlDbType.SmallInt;
+                case DbDataType.Int64: return MySqlDbType.Int64;
+                case DbDataType.Binary: return MySqlDbType.Binary;
+                case DbDataType.Varbinary: return MySqlDbType.VarBinary;
+                case DbDataType.Boolean: return MySqlDbType.Bit;
+                case DbDataType.Char: return MySqlDbType.VarChar;
+                case DbDataType.Date: return MySqlDbType.Date;
+                case DbDataType.DateTime: return MySqlDbType.DateTime;
+                case DbDataType.DateTimeOffset: throw new CoPilotUnsupportedException("DateTimeOffset not supported");
+                case DbDataType.Decimal: return MySqlDbType.Decimal;
+                case DbDataType.Double: return MySqlDbType.Float;
+                case DbDataType.Int32: return MySqlDbType.Int32;
+                case DbDataType.Currency: throw new CoPilotUnsupportedException("Currency not supported");
+                case DbDataType.Text: return MySqlDbType.Text;
+                case DbDataType.String: return MySqlDbType.String;
+                case DbDataType.Float: return MySqlDbType.Float;
+                case DbDataType.Int16: return MySqlDbType.Int16;
+                case DbDataType.TimeSpan: throw new CoPilotUnsupportedException("Timespan not supported");
+                case DbDataType.TimeStamp: return MySqlDbType.Timestamp;
+                case DbDataType.Byte: return MySqlDbType.Byte;
+                case DbDataType.Guid: return MySqlDbType.Guid;
+                case DbDataType.Xml: throw new CoPilotUnsupportedException("Xml not supported");
+                case DbDataType.Enum: return MySqlDbType.Enum;
 
                 default:
-                    return SqlDbType.Char;
+                    return MySqlDbType.VarChar;
             }
         }
 
@@ -386,7 +386,7 @@ namespace CoPilot.ORM.Providers.SqlServer
                 .Select(x => x.Trim(' ', '\r', '\n'));
         }
 
-        private void AddArgsToCommand(SqlCommand command, IReadOnlyCollection<DbParameter> parameters, IReadOnlyDictionary<string, object> args)
+        private void AddArgsToCommand(MySqlCommand command, IReadOnlyCollection<DbParameter> parameters, IReadOnlyDictionary<string, object> args)
         {
             if (command.Parameters.Count > 0) command.Parameters.Clear();
 
@@ -415,7 +415,7 @@ namespace CoPilot.ORM.Providers.SqlServer
             }
         }
 
-        private static void ReplaceArgsInCommand(SqlCommand command, IReadOnlyDictionary<string, object> args)
+        private static void ReplaceArgsInCommand(MySqlCommand command, IReadOnlyDictionary<string, object> args)
         {
             if (command.Parameters == null || command.Parameters.Count == 0) throw new CoPilotUnsupportedException("Command doesn't have any parameters defined!");
 
@@ -437,7 +437,7 @@ namespace CoPilot.ORM.Providers.SqlServer
             }
         }
 
-        private static void AddArrayParameters<T>(SqlCommand cmd, string name, IEnumerable<T> values)
+        private static void AddArrayParameters<T>(MySqlCommand cmd, string name, IEnumerable<T> values)
             where T : class
         {
             name = name.StartsWith("@") ? name : "@" + name;

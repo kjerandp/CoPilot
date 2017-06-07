@@ -35,7 +35,7 @@ namespace CoPilot.ORM.Tests
             var writer = _provider.SelectStatementWriter;
             var builder = _provider.QueryBuilder;
             var ctx = _model.CreateContext<Resource>("Owner.City", "UsedBy.City");
-            var filterGraph = ExpressionHelper.DecodeExpression<Resource>(r => r.Id == 1);
+            var filterGraph = ExpressionHelper.DecodeExpression<Resource>(r => r.Id == 1, _provider);
             ctx.ApplyFilter(filterGraph);
             var sql = writer.GetStatement(builder.Build(ctx.GetQueryContext()));
 

@@ -1,32 +1,28 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
-using CoPilot.ORM.Filtering.Operands;
 using System.Reflection;
 using CoPilot.ORM.Exceptions;
+using CoPilot.ORM.Filtering;
 
-namespace CoPilot.ORM.Filtering
+namespace CoPilot.ORM.Providers.MySql
 {
-    public static class ExpressionDecoderConfig
+    public class MethodCallConverters
     {
-        public delegate void MemberMethodCallConverter(object[] args, ConversionResult result);
-
-        private static readonly Dictionary<string, MemberMethodCallConverter> Converters = new Dictionary<string, MemberMethodCallConverter>();
-
-        static ExpressionDecoderConfig()
+        private readonly Dictionary<string, MemberMethodCallConverter> _converters;
+        public MethodCallConverters()
         {
-            RegisterDefaultConverters();
+            _converters = new Dictionary<string, MemberMethodCallConverter>
+            {
+                { "StartsWith", StartsWithConverter },
+                { "ToLower", ToLowerConverter },
+                { "ToUpper", ToUpperConverter },
+                { "Contains", ContainsConverter },
+                { "ToString", ToStringConverter },
+                { "Equals", EqualsConverter }
+            };
         }
 
-        private static void RegisterDefaultConverters()
-        {
-            AddConverter("StartsWith", StartsWithConverter);
-            AddConverter("ToLower", ToLowerConverter);
-            AddConverter("ToUpper", ToUpperConverter);
-            AddConverter("Contains", ContainsConverter);
-            AddConverter("ToString", ToStringConverter);
-            AddConverter("Equals", EqualsConverter);
-            //DateTime.Date?
-        }
+       
 
         private static void ToStringConverter(object[] args, ConversionResult result)
         {
@@ -90,34 +86,15 @@ namespace CoPilot.ORM.Filtering
             result.Value = value;
         }
 
-        public static void AddConverter(string methodName, MemberMethodCallConverter converter)
+        public MemberMethodCallConverter GetConverter(string methodName)
         {
-            if (!Converters.ContainsKey(methodName))
-                Converters.Add(methodName, null);
-
-            Converters[methodName] = converter;
-        }
-
-        public static MemberMethodCallConverter GetConverter(string methodName)
-        {
-            if (Converters.ContainsKey(methodName))
+            if (_converters.ContainsKey(methodName))
             {
-                return Converters[methodName];
+                return _converters[methodName];
             }
             throw new CoPilotUnsupportedException($"Member method call '{methodName}' not supported!");
         }
 
     }
 
-    public class ConversionResult
-    {
-        public ConversionResult(MemberExpressionOperand memberExpressionOperand)
-        {
-            MemberExpressionOperand = memberExpressionOperand;
-        }
-
-        public MemberExpressionOperand MemberExpressionOperand { get; }
-        public object Value { get; set; }
-        public string Operator { get; set; }
-    }
 }

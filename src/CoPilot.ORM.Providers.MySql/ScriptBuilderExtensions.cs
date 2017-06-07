@@ -16,7 +16,7 @@ using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
 
-namespace CoPilot.ORM.Providers.SqlServer
+namespace CoPilot.ORM.Providers.MySql
 {
     public static class ScriptBuilderExtensions
     {

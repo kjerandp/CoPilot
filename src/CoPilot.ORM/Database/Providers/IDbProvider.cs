@@ -4,6 +4,7 @@ using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.Query.Strategies;
 using CoPilot.ORM.Database.Commands.SqlWriters;
+using CoPilot.ORM.Filtering;
 
 namespace CoPilot.ORM.Database.Providers
 {
@@ -30,5 +31,6 @@ namespace CoPilot.ORM.Database.Providers
         IDbCommand CreateCommand(IDbConnection connection = null, int timeout=0);
         
         bool ValidateModel(IDb db);
+        MemberMethodCallConverter GetMethodCallConverter(string methodName);
     }
 }

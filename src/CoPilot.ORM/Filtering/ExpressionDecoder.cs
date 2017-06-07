@@ -1,6 +1,5 @@
-﻿using System;
-using System.Linq.Expressions;
-using CoPilot.ORM.Config.DataTypes;
+﻿using System.Linq.Expressions;
+using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Filtering.Decoders;
 using CoPilot.ORM.Filtering.Decoders.DecodedNodeTypes;
@@ -14,6 +13,12 @@ namespace CoPilot.ORM.Filtering
     {
         private ExpressionGraph _graph;
         private int _paramIndex;
+        private IDbProvider _provider;
+
+        public ExpressionDecoder(IDbProvider provider)
+        {
+            _provider = provider;
+        }
 
         public ExpressionGraph Decode(Expression expression)
         {
@@ -90,7 +95,7 @@ namespace CoPilot.ORM.Filtering
                 }
                 if (!string.IsNullOrEmpty(refNode.ReferencedTypeMethodCall))
                 {
-                    var converter = ExpressionDecoderConfig.GetConverter(refNode.ReferencedTypeMethodCall);
+                    var converter = _provider.GetMethodCallConverter(refNode.ReferencedTypeMethodCall);
                     var result = new ConversionResult(op);
                     converter.Invoke(refNode.ReferenceTypeMethodCallArgs, result);
 

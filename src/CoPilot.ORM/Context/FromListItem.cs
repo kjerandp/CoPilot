@@ -30,9 +30,10 @@ namespace CoPilot.ORM.Context
 
         public override string ToString()
         {
+
             var tblName = Node.Table.TableName;
             //if (tblName.Contains(" ")) tblName = "[" + tblName + "]";
-            return $"{tblName} T{Node.Index}";
+            return $"{tblName} <T{Node.Index}>";
         }
     }
 }

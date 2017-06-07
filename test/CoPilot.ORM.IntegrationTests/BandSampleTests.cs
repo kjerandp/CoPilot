@@ -31,10 +31,9 @@ namespace CoPilot.ORM.IntegrationTests
         [ClassInitialize]
         public static void BandSampleTestsInitialize(TestContext testContext)
         {
-            //CoPilotGlobalResources.LoggingLevel = LoggingLevel.Verbose;
             var model = BandSampleConfig.CreateModel();
 
-            BandSampleDatabase.DropCreateDatabase(model);
+            //BandSampleDatabase.DropCreateDatabase(model);
 
             _db = model.CreateDb(ConnectionString, new SqlServerProvider());
             
