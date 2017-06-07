@@ -2,7 +2,7 @@
 
 CoPilot is an object relational mapper (ORM). In its core it works like a micro ORM, but it has some neat and powerful features added on top of it. 
 
-Note: This is work in progress to support multiple ado.net database providers.
+Note: This is work in progress to enable support for different ado.net database providers.
 
 **Key features:**  
 * Map POCO models to tables including relationships (one-to-many and many-to-one relationships). 
