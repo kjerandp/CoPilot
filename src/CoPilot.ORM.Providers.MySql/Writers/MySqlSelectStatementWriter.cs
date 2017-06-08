@@ -26,11 +26,17 @@ namespace CoPilot.ORM.Providers.MySql.Writers
                     + segments.Print(QuerySegment.Filter) 
                     + segments.Print(QuerySegment.PostFilter);
             }
+            if (segments.Exist(QuerySegment.PreOrdering))
+            {
+                sql += segments.Print(QuerySegment.PreOrdering, "\n", "\n");
+            }
             if (segments.Exist(QuerySegment.Ordering))
             {
-                sql += "\nORDER BY" + segments.Print(QuerySegment.PreOrdering)
-                    + segments.Print(QuerySegment.Ordering, "\n\t,")
-                    + segments.Print(QuerySegment.PostOrdering, "\n", "\n");
+                sql += "\nORDER BY" + segments.Print(QuerySegment.Ordering, "\n\t,");
+            }
+            if (segments.Exist(QuerySegment.PostOrdering))
+            {
+                sql += segments.Print(QuerySegment.PostOrdering, "\n", "\n");
             }
             if (segments.Exist(QuerySegment.PreStatement))
             {

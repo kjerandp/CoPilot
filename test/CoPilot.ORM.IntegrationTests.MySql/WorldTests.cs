@@ -1,8 +1,8 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Config;
 using CoPilot.ORM.Config.Naming;
+using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database;
 using CoPilot.ORM.IntegrationTests.MySql.WorldModels;
 using CoPilot.ORM.Providers.MySql;
@@ -21,7 +21,7 @@ namespace CoPilot.ORM.IntegrationTests.MySql
             var response = _db.Query("select * from country", null);
             Assert.AreEqual(1,response.RecordSets.Length);
             Assert.IsTrue(response.RecordSets[0].Records.Any());
-            response = _db.Query("select * from country;select * from city where population >= @population", new {population=1000000});
+            response = _db.Query("select * from country;select * from city where population >= @population", new {population=2000000});
             Assert.AreEqual(2, response.RecordSets.Length);
             Assert.IsTrue(response.RecordSets[0].Records.Any());
             Assert.IsTrue(response.RecordSets[1].Records.Any());
@@ -48,9 +48,17 @@ namespace CoPilot.ORM.IntegrationTests.MySql
         public void CanConnectAndExecuteSelectorTypeQueries()
         {
             var response = _db.Query<CountryLanguage, Country>(r => r.Country, r => r.Language == "French" && r.IsOfficial);
-            Assert.IsTrue(response.Any());
+            Assert.IsTrue(response.Any());  
+        }
 
-            
+        [TestMethod]
+        public void CanConnectAndExecuteQueriesWithOrderingAndPredicates()
+        {
+            var response = _db.Query<Country>(OrderByClause<Country>.OrderByAscending(r => r.Name).ThenByDecending(r => r.Continent),new Predicates {Distinct = true, Take = 10, Skip = 20}, r => r.Continent == "Europe", "Cities", "Languages").ToList();
+            Assert.AreEqual(10, response.Count());
+            Assert.IsTrue(response.Any(r => r.Languages.Any()));
+
+
         }
 
     }
