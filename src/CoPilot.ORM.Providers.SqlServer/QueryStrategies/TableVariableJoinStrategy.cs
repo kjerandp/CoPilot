@@ -4,16 +4,15 @@ using System.Linq;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Context.Query;
+using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
-using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Filtering;
-using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping.Mappers;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
 
-namespace CoPilot.ORM.Database.Commands.Query.Strategies
+namespace CoPilot.ORM.Providers.SqlServer.QueryStrategies
 {
     public class TableVariableJoinStrategy : IQueryExecutionStrategy, IQueryScriptCreator
     {

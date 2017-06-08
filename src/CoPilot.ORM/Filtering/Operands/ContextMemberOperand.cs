@@ -10,7 +10,7 @@ namespace CoPilot.ORM.Filtering.Operands
             MemberExpressionOperand = memberExpression;
         }
 
-        public ContextColumn ContextColumn { get; internal set; }
+        public ContextColumn ContextColumn { get; set; }
         public MemberExpressionOperand MemberExpressionOperand { get; }
 
         public override string ToString()

@@ -14,6 +14,7 @@ using CoPilot.ORM.Filtering.Interfaces;
 using CoPilot.ORM.Filtering.Operands;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
+using CoPilot.ORM.Providers.SqlServer.QueryStrategies;
 using CoPilot.ORM.Scripting;
 
 namespace CoPilot.ORM.Providers.SqlServer

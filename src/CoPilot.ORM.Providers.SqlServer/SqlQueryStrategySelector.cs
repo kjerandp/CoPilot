@@ -2,6 +2,7 @@
 using CoPilot.ORM.Database.Commands.Query.Strategies;
 using CoPilot.ORM.Database.Commands.SqlWriters;
 using System.Linq;
+using CoPilot.ORM.Providers.SqlServer.QueryStrategies;
 
 namespace CoPilot.ORM.Providers.SqlServer
 {

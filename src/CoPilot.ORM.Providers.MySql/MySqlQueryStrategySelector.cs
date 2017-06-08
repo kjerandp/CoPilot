@@ -2,6 +2,7 @@
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.Query.Strategies;
 using CoPilot.ORM.Database.Commands.SqlWriters;
+using CoPilot.ORM.Providers.MySql.QueryStrategies;
 
 namespace CoPilot.ORM.Providers.MySql
 {
@@ -14,7 +15,7 @@ namespace CoPilot.ORM.Providers.MySql
         {
             _default = new RepeatFilterStrategy(builder, writer);
             _secondary = new TempTableJoinStrategy(builder, writer);
-            //_secondary = new TableVariableJoinStrategy(builder, writer);
+            //_secondary = new TempTableWhereStrategy(builder, writer);
         }
         public QueryStrategySelector Get()
         {

@@ -1,9 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Context.Query;
+using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Filtering;
@@ -11,7 +11,7 @@ using CoPilot.ORM.Filtering.Operands;
 using CoPilot.ORM.Mapping.Mappers;
 using CoPilot.ORM.Scripting;
 
-namespace CoPilot.ORM.Database.Commands.Query.Strategies
+namespace CoPilot.ORM.Providers.SqlServer.QueryStrategies
 {
     public class TempTableWhereStrategy : IQueryExecutionStrategy, IQueryScriptCreator
     {

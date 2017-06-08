@@ -32,7 +32,15 @@ namespace CoPilot.ORM.Providers.SqlServer.Writers
                     + segments.Print(QuerySegment.Ordering, "\n\t,")
                     + segments.Print(QuerySegment.PostOrdering, "\n", "\n");
             }
-            
+            if (segments.Exist(QuerySegment.PreStatement))
+            {
+                sql = segments.Print(QuerySegment.PreStatement, prefixWith:"") + "\n" + sql;
+            }
+            if (segments.Exist(QuerySegment.PostStatement))
+            {
+                sql += segments.Print(QuerySegment.PostStatement, prefixWith: "\n");
+            }
+
             return new ScriptBlock(sql);
         }
     }

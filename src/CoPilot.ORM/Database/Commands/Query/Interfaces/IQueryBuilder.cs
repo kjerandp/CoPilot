@@ -78,6 +78,8 @@ namespace CoPilot.ORM.Database.Commands.Query.Interfaces
         PostFilter,
         Ordering,
         PreOrdering,
-        PostOrdering
+        PostOrdering,
+        PreStatement,
+        PostStatement
     }
 }

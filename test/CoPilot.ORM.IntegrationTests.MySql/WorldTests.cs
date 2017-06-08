@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using CoPilot.ORM.Common;
 using CoPilot.ORM.Config;
 using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Database;
@@ -81,7 +82,7 @@ namespace CoPilot.ORM.IntegrationTests.MySql
             cit.HasOne<Country>(r => r.CountryCode).InverseKeyMember(r => r.Cities);
             lan.HasOne<Country>(r => r.CountryCode).KeyForMember(r => r.Country).InverseKeyMember(r => r.Languages);
 
-            return mapper.CreateDb(connectionString ?? DefaultConnectionString, new MySqlServerProvider());
+            return mapper.CreateDb(connectionString ?? DefaultConnectionString, new MySqlServerProvider(LoggingLevel.Verbose));
         }
     }
 }
