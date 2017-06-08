@@ -7,7 +7,6 @@ using CoPilot.ORM.Context;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
-using CoPilot.ORM.Database.Commands.Query.Strategies;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Filtering.Interfaces;
@@ -78,20 +77,16 @@ namespace CoPilot.ORM.Providers.MySql
         {
             var block = new ScriptBlock();
 
-            block.Add($"USE {databaseName}");
+            block.Add($"USE {databaseName};");
 
             return block;
         }
 
         public static ScriptBlock DropCreateDatabase(this ScriptBuilder sb, string databaseName)
         {
-            var block = sb.UseDatabase("master");
-
-            block.Append(sb.Go());
-
-            block.Append(sb.If().Exists().Database(databaseName).Then(r => r.DropDatabase(databaseName)).End());
-
-            block.Add();
+            var block = sb.UseDatabase("sys");
+            
+            block.Append(sb.DropDatabase(databaseName));
             block.Append(sb.CreateDatabase(databaseName));
 
             return block;
@@ -101,7 +96,7 @@ namespace CoPilot.ORM.Providers.MySql
         {
             var block = new ScriptBlock();
 
-            block.Add($"CREATE DATABASE {databaseName}");
+            block.Add($"CREATE DATABASE IF NOT EXISTS {databaseName};");
 
             return block;
         }
@@ -109,33 +104,18 @@ namespace CoPilot.ORM.Providers.MySql
         public static ScriptBlock DropDatabase(this ScriptBuilder sb, string databaseName, bool autoCloseConnections = true)
         {
             var block = new ScriptBlock();
-            if (autoCloseConnections)
-            {
-                block.Add("DECLARE @SQL varchar(max)");
-                block.Add("SELECT @SQL = COALESCE(@SQL,'') + 'Kill ' + Convert(varchar, SPId) + ';'");
-                block.Add("FROM MASTER..SysProcesses");
-                block.Add($"WHERE DBId = DB_ID(N'{databaseName}') AND SPId <> @@SPId");
-                block.Add("EXEC(@SQL)");
-            }
-            block.Add($"DROP DATABASE {databaseName}");
+            
+            block.Add($"DROP DATABASE IF EXISTS {databaseName};");
 
             return block;
         }
 
         public static ScriptBlock DropStoredProcedure(this ScriptBuilder sb, string name)
         {
-            return new ScriptBlock($"DROP PROCEDURE {name}");
-        }
-
-        public static ScriptBlock Go(this ScriptBuilder sb, int times = 0)
-        {
-            var block = new ScriptBlock();
-            block.Add("GO" + (times > 0 ? " " + times : ""), "");
-            return block;
+            return new ScriptBlock($"DROP PROCEDURE IF EXISTS {name}");
         }
 
         
-
         public static ScriptBlock CreateTablesIfNotExists(this ScriptBuilder sb, CreateOptions options = null)
         {
             var toCreate = sb.Model.Tables.ToList();
@@ -160,14 +140,12 @@ namespace CoPilot.ORM.Providers.MySql
             var table = sb.Model.GetTableMap<T>().Table;
 
             var createScript = sb.CreateTable<T>(options);
-            var block = sb.If().NotExists().Table(table.TableName).Then(createScript).End();
-            return block;
+            return createScript;
         }
 
         public static ScriptBlock CreateOrReplaceStoredProcedure(this ScriptBuilder sb, string name, DbParameter[] parameters, ScriptBlock body)
         {
             var script = sb.If().Exists().StoredProcedure(name).Then(sb.DropStoredProcedure(name)).End();
-            script.Append(sb.Go());
             script.Append(sb.CreateStoredProcedure(name, parameters, body));
             return script;
         }
@@ -237,9 +215,7 @@ namespace CoPilot.ORM.Providers.MySql
 
         public static ScriptBlock CreateTableIfNotExists(this ScriptBuilder sb, DbTable table, CreateOptions options = null)
         {
-            var createScript = sb.CreateTable(table, options);
-            var block = sb.If().NotExists().Table(table.TableName).Then(createScript).End();
-            return block;
+            return sb.CreateTable(table, options);
         }
         
         public static ScriptBlock CreateStoredProcedure(this ScriptBuilder sb, string name, DbParameter[] parameters, ScriptBlock body)
@@ -262,11 +238,13 @@ namespace CoPilot.ORM.Providers.MySql
 
         private static string GetParameterAsString(this ScriptBuilder sb, DbParameter prm)
         {
-            var str = prm.Name + " " + sb.DbProvider.GetDataTypeAsString(prm.DataType, prm.Size);
-            if (prm.NumberPrecision != null)
+            var dataTypeText = sb.DbProvider.GetDataTypeAsString(prm.DataType, prm.Size);
+            if (prm.NumberPrecision != null && dataTypeText.EndsWith("<precision>"))
             {
-                str += $"({prm.NumberPrecision.Scale},{prm.NumberPrecision.Precision})";
+                dataTypeText = dataTypeText.Replace("<precision>",$"({prm.NumberPrecision.Scale},{prm.NumberPrecision.Precision})");
             }
+            var str = prm.Name + " " + dataTypeText;
+            
             if (prm.DefaultValue != null)
             {
                 str += $" DEFAULT({prm.DefaultValue as string})"; 
@@ -286,7 +264,6 @@ namespace CoPilot.ORM.Providers.MySql
             }
             block.Append(sb.CreateTableIfNotExists(table, options));
             created.Add(table);
-            block.Append(sb.Go());
         }
 
         private static void MapParametersToColumns(IExpressionOperand operand, Dictionary<string, ContextColumn> mappingDictionary)

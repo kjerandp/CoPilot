@@ -13,9 +13,9 @@ namespace CoPilot.ORM.Providers.MySql.Writers
 {
     public class MySqlInsertStatementWriter : IInsertStatementWriter
     {
-        private readonly MySqlServerProvider _provider;
+        private readonly MySqlProvider _provider;
 
-        public MySqlInsertStatementWriter(MySqlServerProvider provider)
+        public MySqlInsertStatementWriter(MySqlProvider provider)
         {
             _provider = provider;
         }

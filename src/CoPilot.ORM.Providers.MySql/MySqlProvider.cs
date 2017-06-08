@@ -24,7 +24,7 @@ using MySql.Data.MySqlClient;
 
 namespace CoPilot.ORM.Providers.MySql
 {
-    public class MySqlServerProvider : IDbProvider
+    public class MySqlProvider : IDbProvider
     {
         private readonly object _lockObj = new object();
         private readonly bool _useNvar;
@@ -33,7 +33,7 @@ namespace CoPilot.ORM.Providers.MySql
         public ILogger Logger { get; set; }
         public IModelValidator ModelValidator { get; set; }
 
-        public MySqlServerProvider(LoggingLevel loggingLevel = LoggingLevel.None, bool useNvar = true)
+        public MySqlProvider(LoggingLevel loggingLevel = LoggingLevel.None, bool useNvar = true)
         {
             _useNvar = useNvar;
             _converters = new MethodCallConverters();
@@ -275,11 +275,11 @@ namespace CoPilot.ORM.Providers.MySql
 
         public string GetDataTypeAsString(DbDataType dataType, int size = 0)
         {
-            var str = ToDbType(dataType).ToString().ToLowerInvariant();
-            if (DbConversionHelper.DataTypeHasSize(dataType))
+            var str = GetTypeString(dataType);
+            if (str.EndsWith("<length>"))
             {
-                var maxSize = size <= 0 || size > 8000 ? "max" : size.ToString();
-                str += $"({maxSize})";
+                var maxSize = size <= 0? "" : "("+size+")";
+                str = str.Replace("<length>", $"{maxSize}");
             }
             return str;
         }
@@ -338,6 +338,37 @@ namespace CoPilot.ORM.Providers.MySql
             throw new CoPilotUnsupportedException($"Unable to convert {dataType} to a string.");
         }
 
+        private string GetTypeString(DbDataType type)
+        {
+            switch (type)
+            {
+                case DbDataType.Int64: return "BIGINT";
+                case DbDataType.Binary: return "BINARY";
+                case DbDataType.Varbinary: return "VARBINARY";
+                case DbDataType.Boolean: return "BIT";
+                case DbDataType.Char: return "CHAR<length>";
+                case DbDataType.Date: return "DATE";
+                case DbDataType.DateTime: return "DATETIME";
+                case DbDataType.DateTimeOffset: throw new CoPilotUnsupportedException(type.ToString());
+                case DbDataType.Decimal: return "DECIMAL<precision>";
+                case DbDataType.Double: return "DOUBLE";
+                case DbDataType.Int32: return "INT";
+                case DbDataType.Currency: return "DECIMAL(10,2)";
+                case DbDataType.Text: return "TEXT";
+                case DbDataType.String: return "VARCHAR<length>";
+                case DbDataType.Float: return "FLOAT";
+                case DbDataType.Int16: return "SMALLINT";
+                case DbDataType.TimeSpan: return "TIME";
+                case DbDataType.TimeStamp: return "TIMESTAMP";
+                case DbDataType.Byte: return "TINYINT";
+                case DbDataType.Guid: return "CHAR(16) BINARY";
+                case DbDataType.Xml: return "TEXT";
+                case DbDataType.Enum: return "INT";
+
+                default:
+                    return "CHAR";
+            }
+        }
         private MySqlDbType ToDbType(DbDataType type)
         {
             switch (type)
@@ -349,21 +380,21 @@ namespace CoPilot.ORM.Providers.MySql
                 case DbDataType.Char: return MySqlDbType.VarChar;
                 case DbDataType.Date: return MySqlDbType.Date;
                 case DbDataType.DateTime: return MySqlDbType.DateTime;
-                case DbDataType.DateTimeOffset: throw new CoPilotUnsupportedException("DateTimeOffset not supported");
+                case DbDataType.DateTimeOffset: throw new CoPilotUnsupportedException(type.ToString());
                 case DbDataType.Decimal: return MySqlDbType.Decimal;
-                case DbDataType.Double: return MySqlDbType.Float;
+                case DbDataType.Double: return MySqlDbType.Double;
                 case DbDataType.Int32: return MySqlDbType.Int32;
-                case DbDataType.Currency: throw new CoPilotUnsupportedException("Currency not supported");
+                case DbDataType.Currency: return MySqlDbType.Decimal;
                 case DbDataType.Text: return MySqlDbType.Text;
                 case DbDataType.String: return MySqlDbType.String;
                 case DbDataType.Float: return MySqlDbType.Float;
                 case DbDataType.Int16: return MySqlDbType.Int16;
-                case DbDataType.TimeSpan: throw new CoPilotUnsupportedException("Timespan not supported");
+                case DbDataType.TimeSpan: return MySqlDbType.Time;
                 case DbDataType.TimeStamp: return MySqlDbType.Timestamp;
                 case DbDataType.Byte: return MySqlDbType.Byte;
                 case DbDataType.Guid: return MySqlDbType.Guid;
-                case DbDataType.Xml: throw new CoPilotUnsupportedException("Xml not supported");
-                case DbDataType.Enum: return MySqlDbType.Enum;
+                case DbDataType.Xml: return MySqlDbType.Text;
+                case DbDataType.Enum: return MySqlDbType.Int32; 
 
                 default:
                     return MySqlDbType.VarChar;

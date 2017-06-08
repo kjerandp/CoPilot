@@ -8,9 +8,9 @@ namespace CoPilot.ORM.Providers.MySql.Writers
 {
     public class MySqlDeleteStatementWriter : IDeleteStatementWriter
     {
-        private readonly MySqlServerProvider _provider;
+        private readonly MySqlProvider _provider;
 
-        public MySqlDeleteStatementWriter(MySqlServerProvider provider)
+        public MySqlDeleteStatementWriter(MySqlProvider provider)
         {
             _provider = provider;
         }

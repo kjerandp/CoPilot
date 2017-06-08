@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Database.Commands;
@@ -12,9 +13,9 @@ namespace CoPilot.ORM.Providers.MySql.Writers
 {
     public class MySqlCreateStatementWriter : ICreateStatementWriter
     {
-        private readonly MySqlServerProvider _provider;
+        private readonly MySqlProvider _provider;
 
-        public MySqlCreateStatementWriter(MySqlServerProvider provider)
+        public MySqlCreateStatementWriter(MySqlProvider provider)
         {
             _provider = provider;
         }
@@ -22,13 +23,17 @@ namespace CoPilot.ORM.Providers.MySql.Writers
         public SqlStatement GetStatement(DbTable table, CreateOptions options)
         {
             List<string> compositeKeys = null;
-
+            List<string> pk = new List<string>();
+             
             var hasCompositeKey = table.HasCompositeKey;
             if(hasCompositeKey) compositeKeys = new List<string>();
 
             var stm = new SqlStatement();
-            stm.Script.Add($"CREATE TABLE [{table.Schema}].[{table.TableName}] (");
+            stm.Script.Add($"CREATE TABLE IF NOT EXISTS `{table.TableName}` (");
+
             var createColumns = new ScriptBlock();
+            var constraints = new ScriptBlock();
+
             foreach (var dbColumn in table.Columns)
             {
                 var extendedInfo = "";
@@ -37,35 +42,44 @@ namespace CoPilot.ORM.Providers.MySql.Writers
                 {
                     if (hasCompositeKey)
                     {
-                        compositeKeys.Add("["+dbColumn.ColumnName+"]");
+                        compositeKeys.Add("`"+dbColumn.ColumnName+"`");
                     }
                     else
                     {
                         extendedInfo = " " + GetPrimaryKeyString(dbColumn, options);
+                        pk.Add(dbColumn.ColumnName);
                     }
                 }
-                else if (dbColumn.IsForeignKey)
+                if (dbColumn.IsForeignKey)
                 {
-                    extendedInfo = " " + GetForeignKeyString(dbColumn);
+                    constraints.Add(GetForeignKeyString(dbColumn));
                 }
                 createColumns.Add($"{(createColumns.ItemCount > 0 ? "," : "")}{dbColumn.ColumnName}{GetDataTypeString(dbColumn)}{extendedInfo}");
             }
-
-            if (compositeKeys != null)
-            {
-                createColumns.Add($"CONSTRAINT PK_{table.TableName.Replace(" ", "_")} PRIMARY KEY NONCLUSTERED ({string.Join(", ", compositeKeys)})");
-            }
-
-            var uniqueColumns = table.Columns.Where(r => r.Unique);
-
-            foreach (var uniqueColumn in uniqueColumns)
-            {
-                createColumns.Add($",CONSTRAINT UQ_{uniqueColumn.ColumnName} UNIQUE({uniqueColumn.ColumnName})");
-            }
             
+            //TODO
+            //if (compositeKeys != null)
+            //{
+            //    constraints.Add($"CONSTRAINT PK_{table.TableName.Replace(" ", "_")} PRIMARY KEY NONCLUSTERED ({string.Join(", ", compositeKeys)})");
+            //}
+
+            //var uniqueColumns = table.Columns.Where(r => r.Unique);
+
+            //foreach (var uniqueColumn in uniqueColumns)
+            //{
+            //    constraints.Add($",CONSTRAINT UQ_{uniqueColumn.ColumnName} UNIQUE({uniqueColumn.ColumnName})");
+            //}
 
             stm.Script.Add(createColumns);
-            stm.Script.Add(")");
+            if (pk.Any())
+            {
+                stm.Script.Add($"\t,PRIMARY KEY ({string.Join(", ", pk)})");
+            }
+            if (constraints.ItemCount > 0)
+            {
+                stm.Script.Append(constraints);
+            }
+            stm.Script.Add(");");
             return stm;
         }
 
@@ -74,7 +88,7 @@ namespace CoPilot.ORM.Providers.MySql.Writers
             var str = string.Empty;
             if (column.DefaultValue?.Expression == DbExpressionType.PrimaryKeySequence)
             {
-                str += $"IDENTITY({options.KeySequenceStartAt},{options.KeySequenceIncrementBy}) ";
+                str += "AUTO_INCREMENT ";
                 
             }
             //else if (column.DefaultValue?.Value != null)
@@ -83,25 +97,25 @@ namespace CoPilot.ORM.Providers.MySql.Writers
             //    str += " ";
             //}
 
-            return str + "PRIMARY KEY";
+            return str;
         }
 
         private static string GetForeignKeyString(DbColumn column)
         {
 
-            var str = $"REFERENCES {column.ForeignkeyRelationship.PrimaryKeyColumn.Table.TableName}({column.ForeignkeyRelationship.PrimaryKeyColumn.ColumnName})";
+            var str = $"\t,FOREIGN KEY (`{column.ColumnName}`) REFERENCES {column.ForeignkeyRelationship.PrimaryKeyColumn.Table.TableName}({column.ForeignkeyRelationship.PrimaryKeyColumn.ColumnName})";
             return str;
         }
 
         private string GetDataTypeString(DbColumn column)
         {
-            var str = " " + _provider.GetDataTypeAsString(column.DataType, column.MaxSize);
-            
-            if (column.NumberPrecision != null)
+            var dataTypeText = _provider.GetDataTypeAsString(column.DataType, column.MaxSize);
+            if (column.NumberPrecision != null && dataTypeText.IndexOf("<precision>", StringComparison.Ordinal) > 0)
             {
-                str += $"({column.NumberPrecision.Scale},{column.NumberPrecision.Precision})";
+                dataTypeText = dataTypeText.Replace("<precision>", $"({column.NumberPrecision.Scale},{column.NumberPrecision.Precision})");
             }
-
+            var str = " " + dataTypeText;
+            
             str += $" {(!column.IsNullable ? "NOT " : "")}NULL";
 
             if (column.DefaultValue != null && column.DefaultValue.Expression != DbExpressionType.PrimaryKeySequence)

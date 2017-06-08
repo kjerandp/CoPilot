@@ -76,8 +76,8 @@ namespace CoPilot.ORM.IntegrationTests.MySql
         private const string DefaultConnectionString = @"
                 Server=localhost;
                 Database=world;
-                Uid=ApplicationUser;
-                Pwd=fire4test;";
+                Uid=testuser;
+                Pwd=password;";
 
         public static IDb Create(string connectionString = null)
         {
@@ -98,7 +98,7 @@ namespace CoPilot.ORM.IntegrationTests.MySql
             cit.HasOne<Country>(r => r.CountryCode).InverseKeyMember(r => r.Cities);
             lan.HasOne<Country>(r => r.CountryCode).KeyForMember(r => r.Country).InverseKeyMember(r => r.Languages);
 
-            return mapper.CreateDb(connectionString ?? DefaultConnectionString, new MySqlServerProvider(LoggingLevel.Verbose));
+            return mapper.CreateDb(connectionString ?? DefaultConnectionString, new MySqlProvider(LoggingLevel.Verbose));
         }
     }
 }

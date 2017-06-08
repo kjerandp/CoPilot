@@ -12,9 +12,9 @@ namespace CoPilot.ORM.Providers.MySql.Writers
 {
     public class MySqlUpdateStatementWriter : IUpdateStatementWriter
     {
-        private readonly MySqlServerProvider _provider;
+        private readonly MySqlProvider _provider;
 
-        public MySqlUpdateStatementWriter(MySqlServerProvider provider)
+        public MySqlUpdateStatementWriter(MySqlProvider provider)
         {
             _provider = provider;
         }
