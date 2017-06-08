@@ -26,7 +26,7 @@ namespace CoPilot.ORM.Providers.MySql
 
         private static void ToStringConverter(object[] args, ConversionResult result)
         {
-            result.MemberExpressionOperand.Custom = "CAST({column} as nvarchar)";
+            result.MemberExpressionOperand.Custom = "CAST({column} as CHAR)";
         }
 
         private static void ContainsConverter(object[] args, ConversionResult result)

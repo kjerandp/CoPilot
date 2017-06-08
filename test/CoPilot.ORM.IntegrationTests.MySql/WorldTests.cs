@@ -57,10 +57,18 @@ namespace CoPilot.ORM.IntegrationTests.MySql
             var response = _db.Query<Country>(OrderByClause<Country>.OrderByAscending(r => r.Name).ThenByDecending(r => r.Continent),new Predicates {Distinct = true, Take = 10, Skip = 20}, r => r.Continent == "Europe", "Cities", "Languages").ToList();
             Assert.AreEqual(10, response.Count());
             Assert.IsTrue(response.Any(r => r.Languages.Any()));
-
-
         }
 
+        [TestMethod]
+        public void CanConnectAndExecuteQueriesWithMethodCallExpressions()
+        {
+            var response = _db.Query<Country>(r => r.Continent.ToLower() == "europe" || r.Continent.ToUpper() == "EUROPE" || r.Continent.Contains("Europe") || r.Continent.StartsWith("Europe"), "Cities", "Languages");
+            Assert.IsTrue(response.Any(r => r.Languages.Any()));
+            response = _db.Query<Country>(r => r.SurfaceArea.ToString() != null);
+            var maxSurface = _db.Scalar<double>("select max(surfacearea) from country");
+            response = _db.Query<Country>(r => r.SurfaceArea.Equals(maxSurface));
+            Assert.IsTrue(response.All(r => r.SurfaceArea >= maxSurface));
+        }
     }
 
     public static class WorldConfig

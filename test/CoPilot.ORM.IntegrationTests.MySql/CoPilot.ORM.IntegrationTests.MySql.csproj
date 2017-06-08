@@ -57,6 +57,8 @@
   </Choose>
   <ItemGroup>
     <Compile Include="WorldModels\City.cs" />
+    <Compile Include="WorldModels\Country.cs" />
+    <Compile Include="WorldModels\CountryLanguage.cs" />
     <Compile Include="WorldTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
