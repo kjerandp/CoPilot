@@ -13,6 +13,7 @@ namespace CoPilot.ORM.Logging
         void LogError(string logText, string details = null);
         void LogException(Exception exception);
 
+        bool SuppressLogging { get; set; }
     }
 
     

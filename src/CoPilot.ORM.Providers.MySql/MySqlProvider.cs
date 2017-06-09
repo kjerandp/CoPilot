@@ -27,15 +27,16 @@ namespace CoPilot.ORM.Providers.MySql
     public class MySqlProvider : IDbProvider
     {
         private readonly object _lockObj = new object();
-        private readonly bool _useNvar;
         private readonly MethodCallConverters _converters;
 
         public ILogger Logger { get; set; }
         public IModelValidator ModelValidator { get; set; }
+        public readonly string Collation;
 
-        public MySqlProvider(LoggingLevel loggingLevel = LoggingLevel.None, bool useNvar = true)
+        public MySqlProvider(string collation = null, bool useNationalCharacterSet = false, LoggingLevel loggingLevel = LoggingLevel.None)
         {
-            _useNvar = useNvar;
+            Collation = collation;
+            UseNationalCharacterSet = useNationalCharacterSet;
             _converters = new MethodCallConverters();
 
             CreateStatementWriter = new MySqlCreateStatementWriter(this);
@@ -50,7 +51,9 @@ namespace CoPilot.ORM.Providers.MySql
             Logger = new ConsoleLogger {LoggingLevel = loggingLevel};
             ModelValidator = new SimpleModelValidator();
         }
-        
+
+        public bool UseNationalCharacterSet { get; }
+
         //TODO Move some of this into CORE?
         public DbResponse ExecuteQuery(DbRequest cmd, params string[] names)
         {
@@ -314,7 +317,7 @@ namespace CoPilot.ORM.Providers.MySql
                     return "'" + str + "'";
                 }
 
-                return (_useNvar ? "N'" : "'") + str + "'";
+                return (UseNationalCharacterSet ? "N'" : "'") + str + "'";
             }
 
             if (DbConversionHelper.IsNumeric(dataType))
@@ -347,7 +350,7 @@ namespace CoPilot.ORM.Providers.MySql
                 case DbDataType.Binary: return "BINARY";
                 case DbDataType.Varbinary: return "VARBINARY";
                 case DbDataType.Boolean: return "BIT";
-                case DbDataType.Char: return "CHAR<length>";
+                case DbDataType.Char: return (UseNationalCharacterSet ? "NCHAR":"CHAR")+"<length>";
                 case DbDataType.Date: return "DATE";
                 case DbDataType.DateTime: return "DATETIME";
                 case DbDataType.DateTimeOffset: throw new CoPilotUnsupportedException(type.ToString());
@@ -356,20 +359,21 @@ namespace CoPilot.ORM.Providers.MySql
                 case DbDataType.Int32: return "INT";
                 case DbDataType.Currency: return "DECIMAL(10,2)";
                 case DbDataType.Text: return "TEXT";
-                case DbDataType.String: return "VARCHAR<length>";
+                case DbDataType.String: return (UseNationalCharacterSet ? "NVARCHAR" : "VARCHAR") + "<length>";
                 case DbDataType.Float: return "FLOAT";
                 case DbDataType.Int16: return "SMALLINT";
                 case DbDataType.TimeSpan: return "TIME";
                 case DbDataType.TimeStamp: return "TIMESTAMP";
                 case DbDataType.Byte: return "TINYINT";
-                case DbDataType.Guid: return "CHAR(16) BINARY";
+                case DbDataType.Guid: return (UseNationalCharacterSet ? "NCHAR" : "CHAR") + "(16) BINARY";
                 case DbDataType.Xml: return "TEXT";
                 case DbDataType.Enum: return "INT";
 
                 default:
-                    return "CHAR";
+                    return (UseNationalCharacterSet ? "NCHAR" : "CHAR");
             }
         }
+
         private MySqlDbType ToDbType(DbDataType type)
         {
             switch (type)

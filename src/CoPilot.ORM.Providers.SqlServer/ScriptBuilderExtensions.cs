@@ -113,7 +113,7 @@ namespace CoPilot.ORM.Providers.SqlServer
                 block.Add("DECLARE @SQL varchar(max)");
                 block.Add("SELECT @SQL = COALESCE(@SQL,'') + 'Kill ' + Convert(varchar, SPId) + ';'");
                 block.Add("FROM MASTER..SysProcesses");
-                block.Add($"WHERE DBId = DB_ID(N'{databaseName}') AND SPId <> @@SPId");
+                block.Add($"WHERE DBId = DB_ID({(sb.DbProvider.UseNationalCharacterSet?"N":"")}'{databaseName}') AND SPId <> @@SPId");
                 block.Add("EXEC(@SQL)");
             }
             block.Add($"DROP DATABASE {databaseName}");
@@ -405,7 +405,7 @@ namespace CoPilot.ORM.Providers.SqlServer
                 }
                 public ThenBlock Column(string table, string column)
                 {
-                    _currentTextLine += $"(SELECT top 1 * FROM sys.columns WHERE Name = N'{column}' AND Object_ID = Object_ID(N'{table}')";
+                    _currentTextLine += $"(SELECT top 1 * FROM sys.columns WHERE Name = {(_scriptBuilder.DbProvider.UseNationalCharacterSet ? "N" : "")}'{column}' AND Object_ID = Object_ID(N'{table}')";
                     _block.Add(_currentTextLine);
 
                     return new ThenBlock(_scriptBuilder, _block);
@@ -427,7 +427,7 @@ namespace CoPilot.ORM.Providers.SqlServer
 
                 public ThenBlock StoredProcedure(string name)
                 {
-                    _currentTextLine += $"(SELECT top 1 * FROM sys.objects WHERE object_id = OBJECT_ID(N'{name}'))";
+                    _currentTextLine += $"(SELECT top 1 * FROM sys.objects WHERE object_id = OBJECT_ID({(_scriptBuilder.DbProvider.UseNationalCharacterSet ? "N" : "")}'{name}'))";
                     _block.Add(_currentTextLine);
 
                     return new ThenBlock(_scriptBuilder, _block);

@@ -3,7 +3,6 @@ using CoPilot.ORM.Common;
 using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
-using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.IntegrationTests.Models.BandSample;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Providers.SqlServer;
@@ -14,7 +13,7 @@ namespace CoPilot.ORM.IntegrationTests.Config
 {
     public class SqlServerBandSampleSetup
     {
-        private readonly IDbProvider _provider = new SqlServerProvider();
+        private readonly SqlServerProvider _provider = new SqlServerProvider(useNationalCharacterSet:true);
         private readonly DbModel _model;
         private const string ConnectionString = @"
                     data source=localhost; 
@@ -36,8 +35,13 @@ namespace CoPilot.ORM.IntegrationTests.Config
             db.Command(CreateDatabaseScript(scriptBuilder));
 
             Console.WriteLine(BandSampleConfig.DbName + " database created...");
-            //seed data
+
+            //supress any logging and seed data
+            _provider.Logger.SuppressLogging = true;
+
             Seed(db, scriptBuilder);
+
+            _provider.Logger.SuppressLogging = false;
 
         }
         private static string CreateDatabaseScript(ScriptBuilder builder)

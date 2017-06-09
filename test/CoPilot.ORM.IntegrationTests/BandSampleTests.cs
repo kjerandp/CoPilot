@@ -22,8 +22,8 @@ namespace CoPilot.ORM.IntegrationTests
         public static void BandSampleTestsInitialize(TestContext testContext)
         {
             var model = BandSampleConfig.CreateModel();
-            var databaseSetup = new MySqlBandSampleSetup(model);
-            //var databaseSetup = new SqlServerBandSampleSetup(model);
+            //var databaseSetup = new MySqlBandSampleSetup(model);
+            var databaseSetup = new SqlServerBandSampleSetup(model);
             databaseSetup.DropCreateDatabase();
             _db = databaseSetup.GetDb();
             
@@ -185,6 +185,7 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanDoBulkInserts()
         {
+            _db.DbProvider.Logger.SuppressLogging = true;
             const int insertCount = 10000;
             
             var bands = new List<object>();
@@ -204,12 +205,15 @@ namespace CoPilot.ORM.IntegrationTests
                 writer.Commit();
             }
             sw.Stop();
+            _db.DbProvider.Logger.SuppressLogging = false;
             Console.WriteLine(sw.ElapsedMilliseconds);
         }
 
         [TestMethod]
         public void CanDoLazyBulkInserts()
         {
+            _db.DbProvider.Logger.SuppressLogging = true;
+
             const int insertCount = 10000;
             var sw = Stopwatch.StartNew();
             using (var writer = new DbWriter(_db))
@@ -225,6 +229,7 @@ namespace CoPilot.ORM.IntegrationTests
                 writer.Commit();
             }
             sw.Stop();
+            _db.DbProvider.Logger.SuppressLogging = false;
             Console.WriteLine(sw.ElapsedMilliseconds);
         }
 

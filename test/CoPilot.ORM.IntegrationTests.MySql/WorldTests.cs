@@ -98,7 +98,7 @@ namespace CoPilot.ORM.IntegrationTests.MySql
             cit.HasOne<Country>(r => r.CountryCode).InverseKeyMember(r => r.Cities);
             lan.HasOne<Country>(r => r.CountryCode).KeyForMember(r => r.Country).InverseKeyMember(r => r.Languages);
 
-            return mapper.CreateDb(connectionString ?? DefaultConnectionString, new MySqlProvider(LoggingLevel.Verbose));
+            return mapper.CreateDb(connectionString ?? DefaultConnectionString, new MySqlProvider(loggingLevel: LoggingLevel.Verbose));
         }
     }
 }

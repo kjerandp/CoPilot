@@ -5,6 +5,7 @@ using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.Query.Strategies;
 using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Filtering;
+using CoPilot.ORM.Logging;
 
 namespace CoPilot.ORM.Database.Providers
 {
@@ -19,6 +20,9 @@ namespace CoPilot.ORM.Database.Providers
         ICommonScriptingTasks CommonScriptingTasks { get; }
         QueryStrategySelector QueryStrategySelector { get; }
         
+        bool UseNationalCharacterSet { get; }
+        ILogger Logger { get; }
+
         DbResponse ExecuteQuery(DbRequest cmd, params string[] names);
         int ExecuteNonQuery(DbRequest cmd);
         void PrepareNonQuery(DbRequest cmd);

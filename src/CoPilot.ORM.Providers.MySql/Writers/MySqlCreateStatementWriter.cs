@@ -22,12 +22,9 @@ namespace CoPilot.ORM.Providers.MySql.Writers
 
         public SqlStatement GetStatement(DbTable table, CreateOptions options)
         {
-            List<string> compositeKeys = null;
-            List<string> pk = new List<string>();
-             
-            var hasCompositeKey = table.HasCompositeKey;
-            if(hasCompositeKey) compositeKeys = new List<string>();
 
+            var pk = new List<string>();
+             
             var stm = new SqlStatement();
             stm.Script.Add($"CREATE TABLE IF NOT EXISTS `{table.TableName}` (");
 
@@ -40,15 +37,9 @@ namespace CoPilot.ORM.Providers.MySql.Writers
                 
                 if (dbColumn.IsPrimaryKey)
                 {
-                    if (hasCompositeKey)
-                    {
-                        compositeKeys.Add("`"+dbColumn.ColumnName+"`");
-                    }
-                    else
-                    {
-                        extendedInfo = " " + GetPrimaryKeyString(dbColumn, options);
-                        pk.Add(dbColumn.ColumnName);
-                    }
+                    extendedInfo = " " + GetPrimaryKeyString(dbColumn);
+                    pk.Add($"`{dbColumn.ColumnName}`");
+                   
                 }
                 if (dbColumn.IsForeignKey)
                 {
@@ -56,19 +47,13 @@ namespace CoPilot.ORM.Providers.MySql.Writers
                 }
                 createColumns.Add($"{(createColumns.ItemCount > 0 ? "," : "")}{dbColumn.ColumnName}{GetDataTypeString(dbColumn)}{extendedInfo}");
             }
-            
-            //TODO
-            //if (compositeKeys != null)
-            //{
-            //    constraints.Add($"CONSTRAINT PK_{table.TableName.Replace(" ", "_")} PRIMARY KEY NONCLUSTERED ({string.Join(", ", compositeKeys)})");
-            //}
+           
+            var uniqueColumns = table.Columns.Where(r => r.Unique);
 
-            //var uniqueColumns = table.Columns.Where(r => r.Unique);
-
-            //foreach (var uniqueColumn in uniqueColumns)
-            //{
-            //    constraints.Add($",CONSTRAINT UQ_{uniqueColumn.ColumnName} UNIQUE({uniqueColumn.ColumnName})");
-            //}
+            foreach (var uniqueColumn in uniqueColumns)
+            {
+                constraints.Add($",CONSTRAINT UQ_{uniqueColumn.ColumnName.Replace(" ","_")} UNIQUE(`{uniqueColumn.ColumnName}`)");
+            }
 
             stm.Script.Add(createColumns);
             if (pk.Any())
@@ -79,24 +64,21 @@ namespace CoPilot.ORM.Providers.MySql.Writers
             {
                 stm.Script.Append(constraints);
             }
-            stm.Script.Add(");");
+            stm.Script.Add(string.IsNullOrEmpty(_provider.Collation) ? ");" : $")\nCOLLATE {_provider.Collation};");
+
+
             return stm;
         }
 
-        private static string GetPrimaryKeyString(DbColumn column, CreateOptions options)
+        private static string GetPrimaryKeyString(DbColumn column)
         {
             var str = string.Empty;
-            if (column.DefaultValue?.Expression == DbExpressionType.PrimaryKeySequence)
+            if (column.DefaultValue?.Expression == DbExpressionType.PrimaryKeySequence && !column.Table.HasCompositeKey)
             {
                 str += "AUTO_INCREMENT ";
                 
             }
-            //else if (column.DefaultValue?.Value != null)
-            //{
-            //    str += column.DefaultValue.Value as string;
-            //    str += " ";
-            //}
-
+            
             return str;
         }
 

@@ -27,15 +27,14 @@ namespace CoPilot.ORM.Providers.SqlServer
     public class SqlServerProvider : IDbProvider
     {
         private readonly object _lockObj = new object();
-        private readonly bool _useNvar;
         private readonly MethodCallConverters _converters;
 
         public ILogger Logger { get; set; }
         public IModelValidator ModelValidator { get; set; }
 
-        public SqlServerProvider(LoggingLevel loggingLevel = LoggingLevel.None, bool useNvar = true)
+        public SqlServerProvider(bool useNationalCharacterSet = false, LoggingLevel loggingLevel = LoggingLevel.None)
         {
-            _useNvar = useNvar;
+            UseNationalCharacterSet = useNationalCharacterSet;
             _converters = new MethodCallConverters();
 
             CreateStatementWriter = new SqlCreateStatementWriter(this);
@@ -50,7 +49,9 @@ namespace CoPilot.ORM.Providers.SqlServer
             Logger = new ConsoleLogger {LoggingLevel = loggingLevel};
             ModelValidator = new SimpleModelValidator();
         }
-        
+
+        public bool UseNationalCharacterSet { get; }
+
         public DbResponse ExecuteQuery(DbRequest cmd, params string[] names)
         {
 
@@ -313,7 +314,7 @@ namespace CoPilot.ORM.Providers.SqlServer
                     return "'" + str + "'";
                 }
 
-                return (_useNvar ? "N'" : "'") + str + "'";
+                return (UseNationalCharacterSet ? "N'" : "'") + str + "'";
             }
 
             if (DbConversionHelper.IsNumeric(dataType))
@@ -346,7 +347,7 @@ namespace CoPilot.ORM.Providers.SqlServer
                 case DbDataType.Binary: return SqlDbType.Binary;
                 case DbDataType.Varbinary: return SqlDbType.VarBinary;
                 case DbDataType.Boolean: return SqlDbType.Bit;
-                case DbDataType.Char: return _useNvar ? SqlDbType.NChar : SqlDbType.Char;
+                case DbDataType.Char: return UseNationalCharacterSet ? SqlDbType.NChar : SqlDbType.Char;
                 case DbDataType.Date: return SqlDbType.Date;
                 case DbDataType.DateTime: return SqlDbType.DateTime2;
                 case DbDataType.DateTimeOffset: return SqlDbType.DateTimeOffset;
@@ -354,8 +355,8 @@ namespace CoPilot.ORM.Providers.SqlServer
                 case DbDataType.Double: return SqlDbType.Float;
                 case DbDataType.Int32: return SqlDbType.Int;
                 case DbDataType.Currency: return SqlDbType.Money;
-                case DbDataType.Text: return _useNvar ? SqlDbType.NText : SqlDbType.Text;
-                case DbDataType.String: return _useNvar ? SqlDbType.NVarChar : SqlDbType.VarChar;
+                case DbDataType.Text: return UseNationalCharacterSet ? SqlDbType.NText : SqlDbType.Text;
+                case DbDataType.String: return UseNationalCharacterSet ? SqlDbType.NVarChar : SqlDbType.VarChar;
                 case DbDataType.Float: return SqlDbType.Real;
                 case DbDataType.Int16: return SqlDbType.SmallInt;
                 case DbDataType.TimeSpan: return SqlDbType.Time;
