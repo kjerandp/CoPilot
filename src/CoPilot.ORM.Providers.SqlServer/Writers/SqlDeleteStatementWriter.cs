@@ -42,7 +42,8 @@ namespace CoPilot.ORM.Providers.SqlServer.Writers
                    
                 qualifications.Add($"[{col.ColumnName}] = {valueString}"); 
             }
-            statement.Script.Add($"delete from {ctx.Node.Table} where {string.Join(" AND ", qualifications)}");
+            
+            statement.Script.Add($"delete from [{ctx.Node.Table.Schema}].[{ctx.Node.Table.TableName}] where {string.Join(" AND ", qualifications)}");
             
             return statement;
         }

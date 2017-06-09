@@ -8,7 +8,7 @@ namespace CoPilot.ORM.Database.Commands
         public DbParameter(string name, DbDataType dataType, object defaultValue = null, bool canBeNull = true, bool isOutput = false)
         {
             DefaultValue = defaultValue;
-            Name = name[0] != '@'? "@"+name:name;
+            Name = name;
             DataType = dataType;
             CanBeNull = canBeNull;
             IsOutput = isOutput;

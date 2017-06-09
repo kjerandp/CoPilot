@@ -55,11 +55,11 @@ namespace CoPilot.ORM.Providers.MySql.Writers
                     }
                     if (col.IsPrimaryKey)
                     {
-                        qualifications.Add($"[{col.ColumnName}] = {valueString}");
+                        qualifications.Add($"`{col.ColumnName}` = {valueString}");
                     }
                     else
                     {
-                        colBlock.Add($"{(colBlock.ItemCount > 0 ? "," : "")}{col.ColumnName} = {valueString}");
+                        colBlock.Add($"{(colBlock.ItemCount > 0 ? "," : "")}`{col.ColumnName}` = {valueString}");
                     }
                 }
                 else
@@ -70,11 +70,11 @@ namespace CoPilot.ORM.Providers.MySql.Writers
             if (!qualifications.Any())
                 throw new CoPilotUnsupportedException("Key column not found among the columns provided by the operation context!");
 
-            statement.Script.Add($"UPDATE {ctx.Node.Table} SET");
+            statement.Script.Add($"UPDATE `{ctx.Node.Table}` SET");
             statement.Script.Add(colBlock);
             statement.Script.Add("WHERE");
-            statement.Script.Add(new ScriptBlock(string.Join(" AND ", qualifications)));
-
+            statement.Script.Add(new ScriptBlock(string.Join(" AND ", qualifications)+";"));
+            
             return statement;
         }
 

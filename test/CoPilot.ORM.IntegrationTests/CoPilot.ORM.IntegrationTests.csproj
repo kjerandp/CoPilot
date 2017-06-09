@@ -39,6 +39,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\src\CoPilot.ORM.Providers.SqlServer\bin\Debug\net46\CoPilot.ORM.dll</HintPath>
     </Reference>
+    <Reference Include="CoPilot.ORM.Providers.MySql">
+      <HintPath>..\..\src\CoPilot.ORM.Providers.MySql\bin\Debug\net46\CoPilot.ORM.Providers.MySql.dll</HintPath>
+    </Reference>
     <Reference Include="CoPilot.ORM.Providers.SqlServer">
       <HintPath>..\..\src\CoPilot.ORM.Providers.SqlServer\bin\Debug\net46\CoPilot.ORM.Providers.SqlServer.dll</HintPath>
     </Reference>
@@ -60,8 +63,9 @@
   <ItemGroup>
     <Compile Include="BandSampleTests.cs" />
     <Compile Include="Config\BandSampleConfig.cs" />
-    <Compile Include="Config\BandSampleDatabase.cs" />
+    <Compile Include="Config\MySqlBandSampleSetup.cs" />
     <Compile Include="Config\NorthwndConfig.cs" />
+    <Compile Include="Config\SqlServerBandSampleSetup.cs" />
     <Compile Include="Models\BandSample\Album.cs" />
     <Compile Include="Models\BandSample\AlbumTrack.cs" />
     <Compile Include="Models\BandSample\Band.cs" />

@@ -77,7 +77,7 @@ namespace CoPilot.ORM.Providers.SqlServer.Writers
                 valBlock.Add($"{(valBlock.ItemCount > 0 ? "," : "")}{valueString}");
             }
 
-            statement.Script.Add($"insert into {ctx.Node.Table} (");
+            statement.Script.Add($"insert into [{ctx.Node.Table.Schema}].[{ctx.Node.Table.TableName}] (");
             statement.Script.Add(colBlock);
             statement.Script.Add(") values (");
             statement.Script.Add(valBlock);
@@ -91,7 +91,8 @@ namespace CoPilot.ORM.Providers.SqlServer.Writers
 
         private string GetLookupSubQuery(DbRelationship lookupRel)
         {
-            var q = $"(SELECT {lookupRel.PrimaryKeyColumn.ColumnName} FROM {lookupRel.PrimaryKeyColumn.Table} WHERE {lookupRel.LookupColumn.ColumnName} = {{value}})";
+            
+            var q = $"(SELECT {lookupRel.PrimaryKeyColumn.ColumnName} FROM [{lookupRel.PrimaryKeyColumn.Table.Schema}].[{lookupRel.PrimaryKeyColumn.Table.TableName}] WHERE [{lookupRel.LookupColumn.ColumnName}] = {{value}})";
 
             return q;
         }

@@ -46,7 +46,7 @@ namespace CoPilot.ORM.Providers.SqlServer
             if (queryContext.BaseNode.Level == 0 && queryContext.OrderByClause != null && queryContext.OrderByClause.Any())
             {
                 qs.AddToSegment(QuerySegment.Ordering, queryContext.OrderByClause.Select(r =>
-                            $"T{r.Key.Node.Index}.{r.Key.Column.ColumnName} {(r.Value == Ordering.Ascending ? "asc" : "desc")}"
+                            $"T{r.Key.Node.Index}.{SanitizeName(r.Key.Column.ColumnName)} {(r.Value == Ordering.Ascending ? "asc" : "desc")}"
                 ).ToArray());
 
 
@@ -79,7 +79,7 @@ namespace CoPilot.ORM.Providers.SqlServer
             var cmo = operand as ContextMemberOperand;
             if (cmo != null)
             {
-                var str = $"T{cmo.ContextColumn.Node.Index}.{cmo.ContextColumn.Column.ColumnName}";
+                var str = $"T{cmo.ContextColumn.Node.Index}.{SanitizeName(cmo.ContextColumn.Column.ColumnName)}";
 
                 if (!string.IsNullOrEmpty(cmo.MemberExpressionOperand?.Custom))
                 {
@@ -109,7 +109,7 @@ namespace CoPilot.ORM.Providers.SqlServer
         
         private static string GetFromItemText(TableJoinDescription join)
         {
-            return $"{(join.JoinType == TableJoinType.InnerJoin ? "INNER" : "LEFT")} JOIN {SanitizeName(join.TargetKey.Table.TableName)} T{join.TargetTableIndex} ON T{join.TargetTableIndex}.{join.TargetKey.ColumnName}=T{join.SourceTableIndex}.{join.SourceKey.ColumnName}";
+            return $"{(join.JoinType == TableJoinType.InnerJoin ? "INNER" : "LEFT")} JOIN {SanitizeName(join.TargetKey.Table.TableName)} T{join.TargetTableIndex} ON T{join.TargetTableIndex}.{SanitizeName(join.TargetKey.ColumnName)}=T{join.SourceTableIndex}.{SanitizeName(join.SourceKey.ColumnName)}";
         }
 
         private static string SanitizeName(string name)

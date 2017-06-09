@@ -400,7 +400,7 @@ namespace CoPilot.ORM.Database.Commands
                 ))
             {
                 
-                stm.Script = _provider.CommonScriptingTasks.WrapInsideIdentityInsertScript(table.ToString(), stm.Script);
+                stm.Script = _provider.CommonScriptingTasks.WrapInsideIdentityInsertScript(table, stm.Script);
                 
                 _provider.ExecuteNonQuery(stm);
                 pk = opCtx.Args["@key"];
@@ -580,7 +580,7 @@ namespace CoPilot.ORM.Database.Commands
             var fkCol = node.Relationship.ForeignKeyColumn;
             var pkCol = node.Table.GetSingularKey();
             var parameter = new DbParameter("@key", pkCol.DataType, null, false);
-            var stm = new SqlStatement(_provider.CommonScriptingTasks.SetForeignKeyValueToNullScript(node.Table.ToString(),
+            var stm = new SqlStatement(_provider.CommonScriptingTasks.SetForeignKeyValueToNullScript(node.Table,
                     fkCol.ColumnName, pkCol.ColumnName)) {Command = _command};
             stm.Parameters.Add(parameter);
             stm.AddArgument(parameter.Name, pk);
@@ -595,7 +595,7 @@ namespace CoPilot.ORM.Database.Commands
 
             var parameter = new DbParameter("@key", pkCol.DataType, null, false);
             var stm = new SqlStatement(_provider.CommonScriptingTasks.GetSelectKeysFromChildTableScript(
-                    node.Table.ToString(), pkCol.ColumnName, fkCol.ColumnName)) {Command = _command};
+                    node.Table, pkCol.ColumnName, fkCol.ColumnName)) {Command = _command};
             stm.Parameters.Add(parameter);
             stm.Args.Add(parameter.Name, pk);
 

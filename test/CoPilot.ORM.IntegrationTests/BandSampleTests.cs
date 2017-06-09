@@ -2,16 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using CoPilot.ORM.Common;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.IntegrationTests.Config;
 using CoPilot.ORM.IntegrationTests.Models.BandSample;
-using CoPilot.ORM.Providers.SqlServer;
-using CoPilot.ORM.Scripting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+
 
 namespace CoPilot.ORM.IntegrationTests
 {
@@ -19,23 +17,15 @@ namespace CoPilot.ORM.IntegrationTests
     public class BandSampleTests
     {
         private static IDb _db;
-
-        private const string ConnectionString = @"
-                data source=localhost; 
-                initial catalog="+BandSampleDatabase.DbName+@"; 
-                Integrated Security=true;
-                MultipleActiveResultSets=True; 
-                App=CoPilotIntegrationTest;";
-
-
+        
         [ClassInitialize]
         public static void BandSampleTestsInitialize(TestContext testContext)
         {
             var model = BandSampleConfig.CreateModel();
-
-            //BandSampleDatabase.DropCreateDatabase(model);
-
-            _db = model.CreateDb(ConnectionString, new SqlServerProvider());
+            var databaseSetup = new MySqlBandSampleSetup(model);
+            //var databaseSetup = new SqlServerBandSampleSetup(model);
+            databaseSetup.DropCreateDatabase();
+            _db = databaseSetup.GetDb();
             
         }
 
@@ -74,13 +64,15 @@ namespace CoPilot.ORM.IntegrationTests
         }
 
         [TestMethod]
-        public void CanCreateStoredProcedureFromQuery()
+        public void CanExecuteAndMapStoredProcedure()
         {
-            var builder = new ScriptBuilder(_db.DbProvider, _db.Model);
+            var recordings = _db.Query<Recording>(
+                "Get_Recordings_CTE",
+                new { recorded = new DateTime(2017, 5, 1) },
+                "Base", "Base.AlbumTracks"
+            );
 
-            var proc = builder.CreateStoredProcedureFromQuery<Recording>("Get_Recordings_CTE", r => r.Recorded > DateTime.MinValue, null, "Genre", "Band", "AlbumTracks").ToString();
-
-            Console.WriteLine(proc);
+            Assert.IsTrue(recordings.Any());
 
         }
 
@@ -207,7 +199,7 @@ namespace CoPilot.ORM.IntegrationTests
             using (var writer = new DbWriter(_db))
             {
                 writer.BulkCommand(
-                    "insert into dbo.BAND (city_id,band_name,band_formed) values (@cityId, @bandName, @formed)", bands);
+                    "insert into BAND (city_id,band_name,band_formed) values (@cityId, @bandName, @formed)", bands);
 
                 writer.Commit();
             }
@@ -223,7 +215,7 @@ namespace CoPilot.ORM.IntegrationTests
             using (var writer = new DbWriter(_db))
             {
                 var dt = new DateTime(1980,1,1);
-                writer.PrepareCommand("insert into dbo.BAND (city_id,band_name,band_formed) values (@cityId, @bandName, @formed)", new {cityId=0, bandName=string.Empty, formed=dt});
+                writer.PrepareCommand("insert into BAND (city_id,band_name,band_formed) values (@cityId, @bandName, @formed)", new {cityId=0, bandName=string.Empty, formed=dt});
 
                 for (var i = 0; i < insertCount; i++)
                 {

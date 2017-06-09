@@ -33,7 +33,7 @@ namespace CoPilot.ORM.Providers.MySql
                 if (queryContext.OrderByClause != null && queryContext.OrderByClause.Any())
                 {
                     qs.AddToSegment(QuerySegment.Ordering, queryContext.OrderByClause.Select(r =>
-                                $"T{r.Key.Node.Index}.{r.Key.Column.ColumnName} {(r.Value == Ordering.Ascending ? "asc" : "desc")}"
+                                $"T{r.Key.Node.Index}.{SanitizeName(r.Key.Column.ColumnName)} {(r.Value == Ordering.Ascending ? "asc" : "desc")}"
                     ).ToArray());
                 }
 
@@ -92,7 +92,7 @@ namespace CoPilot.ORM.Providers.MySql
             var cmo = operand as ContextMemberOperand;
             if (cmo != null)
             {
-                var str = $"T{cmo.ContextColumn.Node.Index}.{cmo.ContextColumn.Column.ColumnName}";
+                var str = $"T{cmo.ContextColumn.Node.Index}.{SanitizeName(cmo.ContextColumn.Column.ColumnName)}";
 
                 if (!string.IsNullOrEmpty(cmo.MemberExpressionOperand?.Custom))
                 {

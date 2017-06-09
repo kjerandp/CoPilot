@@ -20,64 +20,11 @@ namespace CoPilot.ORM.Providers.MySql
 {
     public static class ScriptBuilderExtensions
     {
-        public static ScriptBlock InsertIntoTableIfEmpty<T>(this ScriptBuilder sb, ScriptOptions options = null, params T[] entities) where T : class
-        {
-            options = options ?? ScriptOptions.Default();
-
-            var table = sb.Model.GetTableMap<T>().Table;
-            var insertBlock = new ScriptBlock();
-
-            foreach (var entity in entities)
-            {
-                insertBlock.Append(sb.InsertTable(entity, options));
-            }
-            if (options.EnableIdentityInsert)
-            {
-                sb.DbProvider.CommonScriptingTasks.WrapInsideIdentityInsertScript(table.ToString(), insertBlock);
-            }
-
-            var block = sb.If().NotExists().TableData(table.TableName).Then(insertBlock).End();
-            return block;
-        }
-
-        public static ScriptBlock InsertIntoTableIfEmpty<T>(this ScriptBuilder sb, T obj, ScriptOptions options = null, object additionalValues = null) where T : class
-        {
-            options = options ?? ScriptOptions.Default();
-
-            var insertBlock = new ScriptBlock();
-            var table = sb.Model.GetTableMap<T>().Table;
-
-            insertBlock.Append(sb.InsertTable(obj, options));
-            if (options.EnableIdentityInsert)
-            {
-                sb.DbProvider.CommonScriptingTasks.WrapInsideIdentityInsertScript(table.ToString(), insertBlock);
-            }
-            var block = sb.If().NotExists().TableData(table.TableName).Then(insertBlock).End();
-            return block;
-        }
-
-        public static ScriptBlock InsertIntoTableIfEmpty(this ScriptBuilder sb, DbTable tableDefinition, ScriptOptions options = null, params object[] templateObjects)
-        {
-            options = options ?? ScriptOptions.Default();
-
-            var insertBlock = new ScriptBlock();
-            foreach (var entity in templateObjects)
-            {
-                insertBlock.Append(sb.InsertTable(tableDefinition, entity, options));
-            }
-            if (options.EnableIdentityInsert)
-            {
-                sb.DbProvider.CommonScriptingTasks.WrapInsideIdentityInsertScript(tableDefinition.ToString(), insertBlock);
-            }
-            var block = sb.If().NotExists().TableData(tableDefinition.TableName).Then(insertBlock).End();
-            return block;
-        }
-
         public static ScriptBlock UseDatabase(this ScriptBuilder sb, string databaseName)
         {
             var block = new ScriptBlock();
 
-            block.Add($"USE {databaseName};");
+            block.Add($"USE {databaseName.ToLower()};");
 
             return block;
         }
@@ -96,7 +43,7 @@ namespace CoPilot.ORM.Providers.MySql
         {
             var block = new ScriptBlock();
 
-            block.Add($"CREATE DATABASE IF NOT EXISTS {databaseName};");
+            block.Add($"CREATE DATABASE IF NOT EXISTS {databaseName.ToLower()};");
 
             return block;
         }
@@ -105,14 +52,14 @@ namespace CoPilot.ORM.Providers.MySql
         {
             var block = new ScriptBlock();
             
-            block.Add($"DROP DATABASE IF EXISTS {databaseName};");
+            block.Add($"DROP DATABASE IF EXISTS {databaseName.ToLower()};");
 
             return block;
         }
 
         public static ScriptBlock DropStoredProcedure(this ScriptBuilder sb, string name)
         {
-            return new ScriptBlock($"DROP PROCEDURE IF EXISTS {name}");
+            return new ScriptBlock($"DROP PROCEDURE IF EXISTS {name};");
         }
 
         
@@ -137,15 +84,13 @@ namespace CoPilot.ORM.Providers.MySql
 
         public static ScriptBlock CreateTableIfNotExists<T>(this ScriptBuilder sb, CreateOptions options = null) where T : class
         {
-            var table = sb.Model.GetTableMap<T>().Table;
-
             var createScript = sb.CreateTable<T>(options);
             return createScript;
         }
 
         public static ScriptBlock CreateOrReplaceStoredProcedure(this ScriptBuilder sb, string name, DbParameter[] parameters, ScriptBlock body)
         {
-            var script = sb.If().Exists().StoredProcedure(name).Then(sb.DropStoredProcedure(name)).End();
+            var script = sb.DropStoredProcedure(name);
             script.Append(sb.CreateStoredProcedure(name, parameters, body));
             return script;
         }
@@ -185,8 +130,7 @@ namespace CoPilot.ORM.Providers.MySql
             foreach (var p in sqlStatement.Parameters)
             {
                 var contextColumn = paramToColumnMap[p.Name];
-                var newName = "@" +
-                                caseConverter.Convert(
+                var newName = caseConverter.Convert(
                                     contextColumn.Node.MapEntry.GetMappedMember(contextColumn.Column).Name);
                 if (!parameters.Any(r => r.Name.Equals(newName, StringComparison.Ordinal)))
                 {
@@ -199,6 +143,7 @@ namespace CoPilot.ORM.Providers.MySql
                     {
                         param.NumberPrecision = contextColumn.Column.NumberPrecision;
                     }
+ 
                     parameters.Add(param);
                 }
                 script = script.Replace(p.Name, newName);
@@ -230,9 +175,9 @@ namespace CoPilot.ORM.Providers.MySql
                 paramsString = $"({paramsString})";
             }
 
-            var script = new ScriptBlock($"CREATE PROCEDURE {name} {paramsString}","AS","BEGIN");
+            var script = new ScriptBlock($"CREATE PROCEDURE {name} {paramsString}","BEGIN");
             script.AddMultiLineText(body.ToString());
-            script.AddMultiLineText("END", false);
+            script.AddMultiLineText("END;", false);
             return script;
         }
 
@@ -307,209 +252,5 @@ namespace CoPilot.ORM.Providers.MySql
             }
         }
 
-
-        #region Classes for fluent typing of conditional statements
-        public static IfCondition If(this ScriptBuilder sb)
-        {
-            var block = new ScriptBlock();
-            return new IfCondition(sb, block, "IF");
-        }
-
-        public class IfCondition
-        {
-            private readonly ScriptBuilder _scriptBuilder;
-            private readonly ScriptBlock _block;
-            private string _currentTextLine;
-
-            internal IfCondition(ScriptBuilder scriptBuilder, ScriptBlock block, string currentTextLine)
-            {
-                _scriptBuilder = scriptBuilder;
-                _block = block;
-                _currentTextLine = currentTextLine;
-            }
-
-            public ThenBlock IsTrue(string expression)
-            {
-                _currentTextLine += $"({expression})";
-                _block.Add(_currentTextLine);
-                return new ThenBlock(_scriptBuilder, _block);
-            }
-
-            public ThenBlock IsFalse(string expression)
-            {
-                _currentTextLine += $" NOT ({expression})";
-                _block.Add(_currentTextLine);
-                return new ThenBlock(_scriptBuilder, _block);
-            }
-
-            public IfConditionToEvaluate Exists()
-            {
-                _currentTextLine += " EXISTS";
-                return new IfConditionToEvaluate(_scriptBuilder, _block, _currentTextLine);
-            }
-
-            public IfConditionToEvaluate NotExists()
-            {
-                _currentTextLine += " NOT EXISTS";
-                return new IfConditionToEvaluate(_scriptBuilder, _block, _currentTextLine);
-            }
-
-            public class IfConditionToEvaluate
-            {
-                private readonly ScriptBuilder _scriptBuilder;
-                private readonly ScriptBlock _block;
-                private string _currentTextLine;
-
-                public IfConditionToEvaluate(ScriptBuilder scriptBuilder, ScriptBlock block, string currentTextLine)
-                {
-                    _scriptBuilder = scriptBuilder;
-                    _block = block;
-                    _currentTextLine = currentTextLine;
-                }
-
-                public ThenBlock Database(string databaseName)
-                {
-                    _currentTextLine += $"(select top 1 * from sys.databases where name='{databaseName}')";
-                    _block.Add(_currentTextLine);
-
-                    return new ThenBlock(_scriptBuilder, _block);
-                }
-                public ThenBlock Table(string table)
-                {
-                    _currentTextLine += $"(SELECT top 1 * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{table}')";
-                    _block.Add(_currentTextLine);
-
-                    return new ThenBlock(_scriptBuilder, _block);
-                }
-                public ThenBlock Column(string table, string column)
-                {
-                    _currentTextLine += $"(SELECT top 1 * FROM sys.columns WHERE Name = N'{column}' AND Object_ID = Object_ID(N'{table}')";
-                    _block.Add(_currentTextLine);
-
-                    return new ThenBlock(_scriptBuilder, _block);
-                }
-                public ThenBlock Query(string query)
-                {
-                    _currentTextLine += $"({query})";
-                    _block.Add(_currentTextLine);
-
-                    return new ThenBlock(_scriptBuilder, _block);
-                }
-                public ThenBlock TableData(string tableName)
-                {
-                    _currentTextLine += $"(SELECT TOP 1 * FROM {tableName})";
-                    _block.Add(_currentTextLine);
-
-                    return new ThenBlock(_scriptBuilder, _block);
-                }
-
-                public ThenBlock StoredProcedure(string name)
-                {
-                    _currentTextLine += $"(SELECT top 1 * FROM sys.objects WHERE object_id = OBJECT_ID(N'{name}'))";
-                    _block.Add(_currentTextLine);
-
-                    return new ThenBlock(_scriptBuilder, _block);
-                }
-            }
-
-            public class ThenBlock
-            {
-                private readonly ScriptBuilder _scriptBuilder;
-                private readonly ScriptBlock _block;
-
-
-                public ThenBlock(ScriptBuilder scriptBuilder, ScriptBlock block)
-                {
-                    _scriptBuilder = scriptBuilder;
-                    _block = block;
-
-                }
-
-                public EndOrElse Then(Func<ScriptBuilder, ScriptBlock> func)
-                {
-
-                    _block.Add("BEGIN");
-                    _block.Add(func.Invoke(_scriptBuilder));
-                    _block.Add("END");
-                    return new EndOrElse(_scriptBuilder, _block);
-
-                }
-
-                public EndOrElse Then(ScriptBlock block, bool append = false)
-                {
-                    _block.Add("BEGIN");
-
-                    if (append) _block.Append(block);
-                    else _block.Add(block);
-
-                    _block.Add("END");
-                    return new EndOrElse(_scriptBuilder, _block);
-                }
-
-                public EndOrElse Then(string expression)
-                {
-                    _block.Add("BEGIN");
-                    _block.AddMultiLineText(expression);
-                    _block.Add("END");
-                    return new EndOrElse(_scriptBuilder, _block);
-                }
-            }
-
-            public class EndOrElse
-            {
-                private readonly ScriptBuilder _scriptBuilder;
-                private readonly ScriptBlock _block;
-
-                public EndOrElse(ScriptBuilder scriptBuilder, ScriptBlock block)
-                {
-                    _scriptBuilder = scriptBuilder;
-                    _block = block;
-                }
-
-                public ScriptBlock End()
-                {
-                    return _block;
-                }
-
-                public IfCondition ElseIf()
-                {
-
-                    return new IfCondition(_scriptBuilder, _block, "ELSE IF");
-                }
-
-                public ScriptBlock Else(Func<ScriptBuilder, ScriptBlock> func)
-                {
-                    _block.Add("ELSE");
-                    _block.Add("BEGIN");
-                    _block.Add(func.Invoke(_scriptBuilder));
-                    _block.Add("END");
-
-                    return _block;
-                }
-
-                public ScriptBlock Else(ScriptBlock block, bool append = false)
-                {
-                    _block.Add("BEGIN");
-
-                    if (append) _block.Append(block);
-                    else _block.Add(block);
-
-                    _block.Add("END");
-                    return _block;
-                }
-
-                public ScriptBlock Else(string expression)
-                {
-                    _block.Add("ELSE");
-                    _block.Add("BEGIN");
-                    _block.AddMultiLineText(expression);
-                    _block.Add("END");
-                    return _block;
-                }
-
-            }
-        }
-
-        #endregion
     }
 }

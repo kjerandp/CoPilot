@@ -109,9 +109,9 @@ namespace CoPilot.ORM.Model
 
         public override string ToString()
         {
-            return $"[{Schema}].[{TableName}]";
+            return $"<{Schema}>.<{TableName}>";
         }
-        
+
         public Dictionary<DbColumn, ClassMemberInfo> GetColumnsByAlias(ClassMemberInfo[] props)
         {
             return _columns.Join(props, c => c.AliasName.ToLower(), p => p.Name.ToLower(), (c, p) => new {c, p})

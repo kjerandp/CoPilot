@@ -77,14 +77,14 @@ namespace CoPilot.ORM.Providers.MySql.Writers
                 valBlock.Add($"{(valBlock.ItemCount > 0 ? "," : "")}{valueString}");
             }
 
-            statement.Script.Add($"insert into {ctx.Node.Table} (");
+            statement.Script.Add($"insert into `{ctx.Node.Table.TableName}` (");
             statement.Script.Add(colBlock);
             statement.Script.Add(") values (");
             statement.Script.Add(valBlock);
-            statement.Script.Add(")");
+            statement.Script.Add(");");
             if (identityInsertUsed && !options.EnableIdentityInsert && options.SelectScopeIdentity)
             {
-                statement.Script.Add("SELECT SCOPE_IDENTITY()");
+                statement.Script.Add("SELECT LAST_INSERT_ID();");
             } 
             return statement;
         }

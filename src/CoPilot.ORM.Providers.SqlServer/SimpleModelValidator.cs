@@ -14,12 +14,12 @@ namespace CoPilot.ORM.Providers.SqlServer
             var isValid = true;
             foreach (var dbTable in db.Model.Tables)
             {
-                Console.WriteLine(FormatMessage($"Validation of table {dbTable}..."));
+                Console.WriteLine(FormatMessage($"Validation of table [{dbTable.Schema}].[{dbTable.TableName}]..."));
 
                 try
                 {
                     var sql =
-                        $"select top 1 {string.Join(",", dbTable.Columns.Select(r => r.ColumnName))} from {dbTable};select top 1 * from {dbTable}";
+                        $"select top 1 {string.Join(",", dbTable.Columns.Select(r => "["+r.ColumnName+"]"))} from [{dbTable.Schema}].[{dbTable.TableName}];select top 1 * from [{dbTable.Schema}].[{dbTable.TableName}]";
                     var res = db.Query(sql, null);
                     if (res.RecordSets.Last().Records.Length == 0)
                     {

@@ -59,7 +59,7 @@ namespace CoPilot.ORM.Providers.SqlServer.Writers
                     }
                     else
                     {
-                        colBlock.Add($"{(colBlock.ItemCount > 0 ? "," : "")}{col.ColumnName} = {valueString}");
+                        colBlock.Add($"{(colBlock.ItemCount > 0 ? "," : "")}[{col.ColumnName}] = {valueString}");
                     }
                 }
                 else
@@ -69,8 +69,8 @@ namespace CoPilot.ORM.Providers.SqlServer.Writers
             }
             if (!qualifications.Any())
                 throw new CoPilotUnsupportedException("Key column not found among the columns provided by the operation context!");
-
-            statement.Script.Add($"UPDATE {ctx.Node.Table} SET");
+            
+            statement.Script.Add($"UPDATE [{ctx.Node.Table.Schema}].[{ctx.Node.Table.TableName}] SET");
             statement.Script.Add(colBlock);
             statement.Script.Add("WHERE");
             statement.Script.Add(new ScriptBlock(string.Join(" AND ", qualifications)));
@@ -80,7 +80,7 @@ namespace CoPilot.ORM.Providers.SqlServer.Writers
 
         private string GetLookupSubQuery(DbRelationship lookupRel)
         {
-            var q = $"(SELECT {lookupRel.PrimaryKeyColumn.ColumnName} FROM {lookupRel.PrimaryKeyColumn.Table} WHERE {lookupRel.LookupColumn.ColumnName} = {{value}})";
+            var q = $"(SELECT {lookupRel.PrimaryKeyColumn.ColumnName} FROM [{lookupRel.PrimaryKeyColumn.Table.Schema}].[{lookupRel.PrimaryKeyColumn.Table.TableName}] WHERE [{lookupRel.LookupColumn.ColumnName}] = {{value}})";
 
             return q;
         }

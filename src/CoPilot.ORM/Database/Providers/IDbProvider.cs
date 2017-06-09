@@ -18,7 +18,7 @@ namespace CoPilot.ORM.Database.Providers
         IDeleteStatementWriter DeleteStatementWriter { get; }
         ICommonScriptingTasks CommonScriptingTasks { get; }
         QueryStrategySelector QueryStrategySelector { get; }
-
+        
         DbResponse ExecuteQuery(DbRequest cmd, params string[] names);
         int ExecuteNonQuery(DbRequest cmd);
         void PrepareNonQuery(DbRequest cmd);

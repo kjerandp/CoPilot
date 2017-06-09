@@ -40,9 +40,9 @@ namespace CoPilot.ORM.Providers.MySql.Writers
                     valueString = part.Replace("{value}", _provider.GetValueAsString(col.DataType, value));
                 }
                    
-                qualifications.Add($"[{col.ColumnName}] = {valueString}"); 
+                qualifications.Add($"`{col.ColumnName}` = {valueString}"); 
             }
-            statement.Script.Add($"delete from {ctx.Node.Table} where {string.Join(" AND ", qualifications)}");
+            statement.Script.Add($"delete from `{ctx.Node.Table}` where {string.Join(" AND ", qualifications)};");
             
             return statement;
         }

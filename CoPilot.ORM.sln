@@ -23,7 +23,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoPilot.ORM.Tests", "test\C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoPilot.ORM.IntegrationTests", "test\CoPilot.ORM.IntegrationTests\CoPilot.ORM.IntegrationTests.csproj", "{9CA569AC-157A-4AB0-9C3E-7CA92595A7FE}"
 	ProjectSection(ProjectDependencies) = postProject
+		{7F002509-1583-4D92-BC74-59C3C2EC2437} = {7F002509-1583-4D92-BC74-59C3C2EC2437}
 		{518E8021-D79E-4119-A5F5-5173EB0913F1} = {518E8021-D79E-4119-A5F5-5173EB0913F1}
+		{A4DE94FA-38E6-4556-AB6B-4D6ED654D701} = {A4DE94FA-38E6-4556-AB6B-4D6ED654D701}
 	EndProjectSection
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CoPilot.ORM.Providers.SqlServer", "src\CoPilot.ORM.Providers.SqlServer\CoPilot.ORM.Providers.SqlServer.xproj", "{7F002509-1583-4D92-BC74-59C3C2EC2437}"
@@ -31,6 +33,10 @@ EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CoPilot.ORM.Providers.MySql", "src\CoPilot.ORM.Providers.MySql\CoPilot.ORM.Providers.MySql.xproj", "{A4DE94FA-38E6-4556-AB6B-4D6ED654D701}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoPilot.ORM.IntegrationTests.MySql", "test\CoPilot.ORM.IntegrationTests.MySql\CoPilot.ORM.IntegrationTests.MySql.csproj", "{318B895D-D957-4F06-BCAE-8F856CA9E1D1}"
+	ProjectSection(ProjectDependencies) = postProject
+		{518E8021-D79E-4119-A5F5-5173EB0913F1} = {518E8021-D79E-4119-A5F5-5173EB0913F1}
+		{A4DE94FA-38E6-4556-AB6B-4D6ED654D701} = {A4DE94FA-38E6-4556-AB6B-4D6ED654D701}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

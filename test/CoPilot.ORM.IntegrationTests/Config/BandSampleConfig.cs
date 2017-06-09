@@ -1,24 +1,12 @@
 ﻿using CoPilot.ORM.Config;
-using CoPilot.ORM.Database;
 using CoPilot.ORM.IntegrationTests.Models.BandSample;
 using CoPilot.ORM.Model;
-using CoPilot.ORM.Providers.SqlServer;
 
 namespace CoPilot.ORM.IntegrationTests.Config
 {
     public class BandSampleConfig
     {
-        private const string DefaultConnectionString = @"
-                data source=localhost; 
-                initial catalog=BANDS_SAMPLE_DB; 
-                Integrated Security=true;
-                MultipleActiveResultSets=True; 
-                App=CoPilotIntegrationTest;";
-
-        public static IDb CreateFromConfig(string connectionString)
-        {
-            return CreateModel().CreateDb(connectionString ?? DefaultConnectionString, new SqlServerProvider());
-        }
+        public const string DbName = "BandsSample";
 
         public static DbModel CreateModel()
         {

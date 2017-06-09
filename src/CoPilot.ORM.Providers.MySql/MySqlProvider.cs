@@ -43,7 +43,7 @@ namespace CoPilot.ORM.Providers.MySql
             UpdateStatementWriter = new MySqlUpdateStatementWriter(this);
             DeleteStatementWriter = new MySqlDeleteStatementWriter(this);
             SelectStatementWriter = new MySqlSelectStatementWriter();
-            CommonScriptingTasks = new SqlCommonScriptingTasks();
+            CommonScriptingTasks = new MySqlCommonScriptingTasks();
             QueryBuilder = new MySqlQueryBuilder();
             QueryStrategySelector = new MySqlQueryStrategySelector(QueryBuilder, SelectStatementWriter).Get();
 
@@ -51,6 +51,7 @@ namespace CoPilot.ORM.Providers.MySql
             ModelValidator = new SimpleModelValidator();
         }
         
+        //TODO Move some of this into CORE?
         public DbResponse ExecuteQuery(DbRequest cmd, params string[] names)
         {
 

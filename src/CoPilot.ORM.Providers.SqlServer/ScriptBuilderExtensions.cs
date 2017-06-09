@@ -33,7 +33,7 @@ namespace CoPilot.ORM.Providers.SqlServer
             }
             if (options.EnableIdentityInsert)
             {
-                sb.DbProvider.CommonScriptingTasks.WrapInsideIdentityInsertScript(table.ToString(), insertBlock);
+                sb.DbProvider.CommonScriptingTasks.WrapInsideIdentityInsertScript(table, insertBlock);
             }
 
             var block = sb.If().NotExists().TableData(table.TableName).Then(insertBlock).End();
@@ -50,7 +50,7 @@ namespace CoPilot.ORM.Providers.SqlServer
             insertBlock.Append(sb.InsertTable(obj, options));
             if (options.EnableIdentityInsert)
             {
-                sb.DbProvider.CommonScriptingTasks.WrapInsideIdentityInsertScript(table.ToString(), insertBlock);
+                sb.DbProvider.CommonScriptingTasks.WrapInsideIdentityInsertScript(table, insertBlock);
             }
             var block = sb.If().NotExists().TableData(table.TableName).Then(insertBlock).End();
             return block;
@@ -67,7 +67,7 @@ namespace CoPilot.ORM.Providers.SqlServer
             }
             if (options.EnableIdentityInsert)
             {
-                sb.DbProvider.CommonScriptingTasks.WrapInsideIdentityInsertScript(tableDefinition.ToString(), insertBlock);
+                sb.DbProvider.CommonScriptingTasks.WrapInsideIdentityInsertScript(tableDefinition, insertBlock);
             }
             var block = sb.If().NotExists().TableData(tableDefinition.TableName).Then(insertBlock).End();
             return block;
