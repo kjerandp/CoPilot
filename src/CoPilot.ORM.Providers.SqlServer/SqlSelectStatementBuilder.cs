@@ -9,7 +9,7 @@ using CoPilot.ORM.Filtering.Operands;
 
 namespace CoPilot.ORM.Providers.SqlServer
 {
-    public class SqlQueryBuilder : ISelectStatementBuilder
+    public class SqlSelectStatementBuilder : ISelectStatementBuilder
     {
         
         public QuerySegments Build(QueryContext queryContext)
@@ -20,7 +20,11 @@ namespace CoPilot.ORM.Providers.SqlServer
             {
                 if (queryContext.Predicates != null)
                 {
-                    if (queryContext.OrderByClause == null || !queryContext.OrderByClause.Any())
+                    if (queryContext.Predicates.Distinct)
+                    {
+                        qs.AddToSegment(QuerySegment.PreSelect, "DISTINCT");
+                    }
+                    if (queryContext.OrderByClause == null || !queryContext.OrderByClause.Any() || !queryContext.Predicates.Skip.HasValue)
                     {
                         if (queryContext.Predicates.Skip.HasValue)
                             throw new CoPilotUnsupportedException("Need to specify an orderby-clause to use SKIP/TAKE");
@@ -29,20 +33,18 @@ namespace CoPilot.ORM.Providers.SqlServer
                     }
                     else
                     {
-                        if (queryContext.Predicates?.Skip != null)
+                        if (queryContext.Predicates.Skip != null)
                         {
-                            qs.AddToSegment(QuerySegment.PostOrdering, $"OFFSET {queryContext.Predicates.Skip.Value} ROWS");
+                            qs.AddToSegment(QuerySegment.PostOrdering,
+                                $"OFFSET {queryContext.Predicates.Skip.Value} ROWS");
 
                             if (queryContext.Predicates?.Take != null)
                             {
-                                qs.AddToSegment(QuerySegment.PostOrdering, $"FETCH NEXT {queryContext.Predicates.Take.Value} ROWS ONLY");
+                                qs.AddToSegment(QuerySegment.PostOrdering,
+                                    $"FETCH NEXT {queryContext.Predicates.Take.Value} ROWS ONLY");
                             }
                         }
-                    }
-
-                    if (queryContext.Predicates.Distinct)
-                    {
-                        qs.AddToSegment(QuerySegment.PreSelect, "DISTINCT");
+                        
                     }
                 }
 

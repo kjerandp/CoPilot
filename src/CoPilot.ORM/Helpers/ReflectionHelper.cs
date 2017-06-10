@@ -168,12 +168,16 @@ namespace CoPilot.ORM.Helpers
             {
                 return string.Empty;
             }
+            
             var constructor = parameter.GetTypeInfo().GetConstructor(Type.EmptyTypes);
             if (constructor != null)
             {
                 return constructor.Invoke(new object[] {});
             }
-
+            if (parameter.IsNullable(true))
+            {
+                return GetDefaultValue(parameter.GenericTypeArguments.Single());
+            }
             return GetDefaultValue(parameter);
         }
         public static object GetDefaultValue(Type parameter)

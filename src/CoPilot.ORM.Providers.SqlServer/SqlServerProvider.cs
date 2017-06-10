@@ -43,7 +43,7 @@ namespace CoPilot.ORM.Providers.SqlServer
             DeleteStatementWriter = new SqlDeleteStatementWriter(this);
             SelectStatementWriter = new SqlSelectStatementWriter();
             CommonScriptingTasks = new SqlCommonScriptingTasks();
-            SelectStatementBuilder = new SqlQueryBuilder();
+            SelectStatementBuilder = new SqlSelectStatementBuilder();
             QueryStrategySelector = new SqlQueryStrategySelector(SelectStatementBuilder, SelectStatementWriter).Get();
 
             Logger = new ConsoleLogger {LoggingLevel = loggingLevel};

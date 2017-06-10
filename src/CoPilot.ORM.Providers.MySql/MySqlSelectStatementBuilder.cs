@@ -10,7 +10,7 @@ using CoPilot.ORM.Filtering.Operands;
 
 namespace CoPilot.ORM.Providers.MySql
 {
-    public class MySqlQueryBuilder : ISelectStatementBuilder
+    public class MySqlSelectStatementBuilder : ISelectStatementBuilder
     {
         
         public QuerySegments Build(QueryContext queryContext)

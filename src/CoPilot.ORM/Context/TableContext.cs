@@ -937,21 +937,43 @@ namespace CoPilot.ORM.Context
                 return;
             }
 
-            var templateExpression = selectorBody as NewExpression;
-
-            if (templateExpression == null) throw new CoPilotUnsupportedException("Only a new anonymous object with named member references are supported!");
-
             var members = new Dictionary<string, MemberExpression>();
 
-            for (var i = 0; i < templateExpression.Members.Count; i++)
+            var memberInitExpression = selectorBody as MemberInitExpression;
+            if (memberInitExpression != null)
             {
-                memberExpression = templateExpression.Arguments[i] as MemberExpression;
-                if (memberExpression == null)
+                foreach (var binding in memberInitExpression.Bindings.OfType<MemberAssignment>())
                 {
-                    throw new CoPilotUnsupportedException("Selector object can only contain direct member access!");
+                    var member = binding.Expression as MemberExpression;
+                    if (member != null)
+                    {
+                        members.Add(binding.Member.Name, member);
+                    }
+                    else
+                    {
+                        throw new CoPilotUnsupportedException("Selector object not supported!");
+                    }
                 }
-                members.Add(templateExpression.Members[i].Name, memberExpression);
+
             }
+            else
+            {
+                var templateExpression = selectorBody as NewExpression;
+
+                if (templateExpression == null) throw new CoPilotUnsupportedException("Only a new anonymous object with named member references are supported!");
+
+                for (var i = 0; i < templateExpression.Members.Count; i++)
+                {
+                    memberExpression = templateExpression.Arguments[i] as MemberExpression;
+                    if (memberExpression == null)
+                    {
+                        throw new CoPilotUnsupportedException("Selector object can only contain direct member access!");
+                    }
+                    members.Add(templateExpression.Members[i].Name, memberExpression);
+                }
+            }
+
+            
             BuildFromMemberExpressions(members);
         }
 

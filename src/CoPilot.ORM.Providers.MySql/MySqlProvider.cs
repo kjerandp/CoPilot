@@ -45,7 +45,7 @@ namespace CoPilot.ORM.Providers.MySql
             DeleteStatementWriter = new MySqlDeleteStatementWriter(this);
             SelectStatementWriter = new MySqlSelectStatementWriter();
             CommonScriptingTasks = new MySqlCommonScriptingTasks();
-            SelectStatementBuilder = new MySqlQueryBuilder();
+            SelectStatementBuilder = new MySqlSelectStatementBuilder();
             QueryStrategySelector = new MySqlQueryStrategySelector(SelectStatementBuilder, SelectStatementWriter).Get();
 
             Logger = new ConsoleLogger {LoggingLevel = loggingLevel};

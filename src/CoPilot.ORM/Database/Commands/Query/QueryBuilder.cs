@@ -325,7 +325,7 @@ namespace CoPilot.ORM.Database.Commands.Query
         IEnumerable<TTarget> AsEnumerable();
     }
     
-    public interface IFilteredQuery<T> where T : class
+    public interface IFilteredQuery<T> : IOrderableQuery<T> where T : class
     {
         IIncludableQuery<T> Select();
         IOrderableQuery<T> Select(params string[] include);
