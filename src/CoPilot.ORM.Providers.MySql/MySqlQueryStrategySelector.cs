@@ -11,7 +11,7 @@ namespace CoPilot.ORM.Providers.MySql
         private readonly IQueryExecutionStrategy _default;
         private readonly IQueryExecutionStrategy _secondary;
 
-        public MySqlQueryStrategySelector(IQueryBuilder builder, ISelectStatementWriter writer)
+        public MySqlQueryStrategySelector(ISelectStatementBuilder builder, ISelectStatementWriter writer)
         {
             _default = new RepeatFilterStrategy(builder, writer);
             _secondary = new TempTableJoinStrategy(builder, writer);

@@ -2,7 +2,6 @@
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Config;
 using CoPilot.ORM.Config.Naming;
-using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database;
 using CoPilot.ORM.IntegrationTests.MySql.WorldModels;
 using CoPilot.ORM.Providers.MySql;
@@ -30,31 +29,45 @@ namespace CoPilot.ORM.IntegrationTests.MySql
         [TestMethod]
         public void CanConnectAndExecuteSimpleContextQueries()
         {
-            var response = _db.Query<Country>(r => r.Continent == "Europe");
+            var response = _db.From<Country>().Where(r => r.Continent == "Europe").Select().AsEnumerable();
             Assert.IsTrue(response.Any());
         }
 
         [TestMethod]
         public void CanConnectAndExecuteSimpleContextQueriesWithJoins()
         {
-            var response = _db.Query<Country>(r => r.Continent == "Europe", "Cities");
+            var response = _db.From<Country>().Where(r => r.Continent == "Europe").Select("Cities").AsEnumerable();
             Assert.IsTrue(response.Any(r => r.Cities.Any()));
 
-            response = _db.Query<Country>(r => r.Continent == "Europe", "Cities", "Languages");
+            response = _db.From<Country>().Where(r => r.Continent == "Europe").Select("Cities", "Languages").AsEnumerable();
             Assert.IsTrue(response.Any(r => r.Languages.Any()));
         }
 
         [TestMethod]
         public void CanConnectAndExecuteSelectorTypeQueries()
         {
-            var response = _db.Query<CountryLanguage, Country>(r => r.Country, r => r.Language == "French" && r.IsOfficial);
+            //var response = _db.Query<CountryLanguage, Country>(r => r.Country, r => r.Language == "French" && r.IsOfficial);
+            var response =
+                _db.From<CountryLanguage>()
+                    .Where(r => r.Language == "French" && r.IsOfficial)
+                    .Select(r => r.Country)
+                    .AsEnumerable();
             Assert.IsTrue(response.Any());  
         }
 
         [TestMethod]
         public void CanConnectAndExecuteQueriesWithOrderingAndPredicates()
         {
-            var response = _db.Query<Country>(OrderByClause<Country>.OrderByAscending(r => r.Name).ThenByDecending(r => r.Continent),new Predicates {Distinct = true, Take = 10, Skip = 20}, r => r.Continent == "Europe", "Cities", "Languages").ToList();
+            //var response = _db.Query<Country>(OrderByClause<Country>.OrderByAscending(r => r.Name).ThenByDecending(r => r.Continent),new Predicates {Distinct = true, Take = 10, Skip = 20}, r => r.Continent == "Europe", "Cities", "Languages").ToList();
+
+            var response = _db.From<Country>()
+                .Where(r => r.Continent == "Europe")
+                .Select("Cities", "Languages")
+                .OrderBy(r => r.Name)
+                .ThenBy(r => r.Continent)
+                .Take(10).Skip(20)
+                .Distinct().ToArray();
+
             Assert.AreEqual(10, response.Count());
             Assert.IsTrue(response.Any(r => r.Languages.Any()));
         }
@@ -62,11 +75,12 @@ namespace CoPilot.ORM.IntegrationTests.MySql
         [TestMethod]
         public void CanConnectAndExecuteQueriesWithMethodCallExpressions()
         {
-            var response = _db.Query<Country>(r => r.Continent.ToLower() == "europe" || r.Continent.ToUpper() == "EUROPE" || r.Continent.Contains("Europe") || r.Continent.StartsWith("Europe"), "Cities", "Languages");
+            var response = _db.From<Country>().Where(r => r.Continent.ToLower() == "europe" || r.Continent.ToUpper() == "EUROPE" || r.Continent.Contains("Europe") || r.Continent.StartsWith("Europe")).Select("Languages", "Cities").AsEnumerable();
             Assert.IsTrue(response.Any(r => r.Languages.Any()));
-            response = _db.Query<Country>(r => r.SurfaceArea.ToString() != null);
+            response = _db.From<Country>().Where(r => r.SurfaceArea.ToString() != null).Select().AsEnumerable();
+            Assert.IsTrue(response.Any());
             var maxSurface = _db.Scalar<double>("select max(surfacearea) from country");
-            response = _db.Query<Country>(r => r.SurfaceArea.Equals(maxSurface));
+            response = _db.From<Country>().Where(r => r.SurfaceArea.Equals(maxSurface)).Select().AsEnumerable();
             Assert.IsTrue(response.All(r => r.SurfaceArea >= maxSurface));
         }
     }

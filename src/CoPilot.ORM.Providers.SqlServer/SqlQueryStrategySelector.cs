@@ -11,7 +11,7 @@ namespace CoPilot.ORM.Providers.SqlServer
         private readonly IQueryExecutionStrategy _default;
         private readonly IQueryExecutionStrategy _secondary;
 
-        public SqlQueryStrategySelector(IQueryBuilder builder, ISelectStatementWriter writer)
+        public SqlQueryStrategySelector(ISelectStatementBuilder builder, ISelectStatementWriter writer)
         {
             _default = new RepeatFilterStrategy(builder, writer);
             _secondary = new TempTableJoinStrategy(builder, writer);

@@ -52,7 +52,7 @@ namespace CoPilot.ORM.Tests
             Assert.AreEqual("5", ((ValueOperand)orgCtx.GetFilter().Root.Right).Value);
 
             var writer = _provider.SelectStatementWriter;
-            var builder = _provider.QueryBuilder;
+            var builder = _provider.SelectStatementBuilder;
             Console.WriteLine(writer.GetStatement(builder.Build(orgCtx.GetQueryContext())));
             Console.WriteLine();
             var node = orgCtx.FindByPath("OwnedResources");
@@ -96,7 +96,7 @@ namespace CoPilot.ORM.Tests
             ctx.ApplyFilter(filter);
 
             var writer = _provider.SelectStatementWriter;
-            var builder = _provider.QueryBuilder;
+            var builder = _provider.SelectStatementBuilder;
             Console.WriteLine(writer.GetStatement(builder.Build(ctx.GetQueryContext())));
 
             Console.WriteLine();

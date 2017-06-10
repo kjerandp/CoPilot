@@ -10,7 +10,7 @@ using CoPilot.ORM.Filtering.Operands;
 
 namespace CoPilot.ORM.Providers.MySql
 {
-    public class MySqlQueryBuilder : IQueryBuilder
+    public class MySqlQueryBuilder : ISelectStatementBuilder
     {
         
         public QuerySegments Build(QueryContext queryContext)
@@ -43,7 +43,7 @@ namespace CoPilot.ORM.Providers.MySql
                     {
                         qs.AddToSegment(QuerySegment.PreSelect, "DISTINCT");
                     }
-                    var limit = new Tuple<int, int>(queryContext.Predicates.Skip ?? 0, queryContext.Predicates.Top ?? queryContext.Predicates.Take ?? 0);
+                    var limit = new Tuple<int, int>(queryContext.Predicates.Skip ?? 0, queryContext.Predicates.Take ?? 0);
 
                     if (limit.Item1 > 0 && limit.Item2 == 0)
                     {

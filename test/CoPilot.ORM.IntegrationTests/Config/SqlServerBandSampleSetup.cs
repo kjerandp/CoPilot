@@ -13,7 +13,7 @@ namespace CoPilot.ORM.IntegrationTests.Config
 {
     public class SqlServerBandSampleSetup
     {
-        private readonly SqlServerProvider _provider = new SqlServerProvider(useNationalCharacterSet:true);
+        private readonly SqlServerProvider _provider = new SqlServerProvider(useNationalCharacterSet:true, loggingLevel:LoggingLevel.Verbose);
         private readonly DbModel _model;
         private const string ConnectionString = @"
                     data source=localhost; 

@@ -315,7 +315,23 @@ namespace CoPilot.ORM.Context
                 var splitPath = PathHelper.SplitLastInPathString(item.Key);
                 var node = FindByPath(splitPath.Item1);
                 if (node == null) throw new CoPilotConfigurationException("No context found!");
-                var member = node.MapEntry.GetMemberByName(splitPath.Item2);
+                string lookup = null;
+                if (_selectTemplate != null)
+                {
+                    if (string.IsNullOrEmpty(item.Key) || item.Key.Equals("1", StringComparison.Ordinal))
+                    {
+                        lookup = _selectTemplate.First().Key;
+                    }
+                    else
+                    {
+                        lookup = _selectTemplate.Where(r => r.Value.Equals(splitPath.Item2, StringComparison.Ordinal))
+                                .Select(r => r.Key).SingleOrDefault();
+                    }
+                }
+                if(lookup == null)
+                    lookup = splitPath.Item2;
+               
+                var member = node.MapEntry.GetMemberByName(lookup);
                 if (member == null) throw new CoPilotConfigurationException("No member found!");
                 var col = node.MapEntry.GetColumnByMember(member);
                 if (col != null)
@@ -876,12 +892,21 @@ namespace CoPilot.ORM.Context
     {
         public TableContext(DbModel model, params string[] include) : base(model, typeof(T), include){}
 
+        public void ApplySelector<TTarget>(Expression<Func<T, TTarget>> selector) {
+            ApplySelector(selector.Body);
+        }
+
         public void ApplySelector(Expression<Func<T,object>> selector)
         {
-            var memberExpression = selector.Body as MemberExpression;
+            ApplySelector(selector.Body);
+        }
+
+        private void ApplySelector(Expression selectorBody)
+        {
+            var memberExpression = selectorBody as MemberExpression;
             if (memberExpression == null)
             {
-                var unaryExpression = selector.Body as UnaryExpression;
+                var unaryExpression = selectorBody as UnaryExpression;
                 memberExpression = unaryExpression?.Operand as MemberExpression;
             }
             if (memberExpression != null)
@@ -905,15 +930,15 @@ namespace CoPilot.ORM.Context
                         }
                         return;
                     }
-                    
+
                 }
-                
+
                 BuildFromPath(memberExpression.Member.Name, path);
                 return;
             }
-            
-            var templateExpression = selector.Body as NewExpression;
-            
+
+            var templateExpression = selectorBody as NewExpression;
+
             if (templateExpression == null) throw new CoPilotUnsupportedException("Only a new anonymous object with named member references are supported!");
 
             var members = new Dictionary<string, MemberExpression>();
@@ -944,5 +969,7 @@ namespace CoPilot.ORM.Context
         {
             return Update(this, entity);
         }
+
+        
     }
 }

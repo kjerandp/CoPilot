@@ -69,6 +69,11 @@ namespace CoPilot.ORM.Helpers
             }
         }
 
+        internal static object CreateInstance(Type type, object[] values)
+        {
+            return Activator.CreateInstance(type, values);
+        }
+
         public static void SetValueOnMember(MemberInfo member, object entity, object value, bool throwOnError = true)
         {
 

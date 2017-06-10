@@ -5,8 +5,10 @@ using System.Linq.Expressions;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands;
+using CoPilot.ORM.Database.Commands.Query;
 using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Exceptions;
+using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
 
@@ -37,7 +39,15 @@ namespace CoPilot.ORM.Database
             }
         }
 
-        public IEnumerable<T> Query<T>(string commandText, object args, ObjectMapper mapper = null, params string[] names)
+        public IEnumerable<T> Query<T>(string commandText, object args, params string[] names)
+        {
+            using (var rdr = new DbReader(this))
+            {
+                return rdr.Query<T>(commandText, args, null, names);
+            }
+        }
+
+        public IEnumerable<T> Query<T>(string commandText, object args, ObjectMapper mapper, params string[] names)
         {
             using (var rdr = new DbReader(this))
             {
@@ -101,6 +111,24 @@ namespace CoPilot.ORM.Database
 
                 return response;
             }
+        }
+
+        public T Scalar<T>(string commandText, object args = null)
+        {
+            object convertedValue;
+            ReflectionHelper.ConvertValueToType(typeof(T), Scalar(commandText, args), out convertedValue);
+
+            return (T)convertedValue;
+        }
+
+        public void Save<T>(T entity, params string[] include) where T : class
+        {
+            Save(entity, (OperationType.Insert | OperationType.Update | OperationType.Delete), include);
+        }
+
+       public void Save<T>(IEnumerable<T> entities, params string[] include) where T : class
+        {
+            Save(entities, (OperationType.Insert | OperationType.Update | OperationType.Delete), include);
         }
 
         public void Save<T>(T entity, OperationType operations, params string[] include) where T : class
@@ -192,6 +220,14 @@ namespace CoPilot.ORM.Database
         public bool ValidateModel()
         {
             return DbProvider.ValidateModel(this);
-        }     
+        }
+
+        public IQuery<T> From<T>() where T : class
+        {
+            using (var rdr = new DbReader(this))
+            {
+                return rdr.From<T>();
+            }
+        }
     } 
 }

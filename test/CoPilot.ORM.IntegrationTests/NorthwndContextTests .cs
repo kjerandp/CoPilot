@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using CoPilot.ORM.Common;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands;
@@ -25,7 +26,8 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanQueryAllOrdersWithRelatedEntities()
         {
-            var orders = _db.Query<Order>(null, "OrderDetails.Product", "Employee", "Customer").ToArray();
+            //var orders = _db.Query<Order>(null, "OrderDetails.Product", "Employee", "Customer").ToArray();
+            var orders = _db.From<Order>().Select("OrderDetails.Product", "Employee", "Customer").ToArray();
             Assert.IsNotNull(orders);
             Assert.IsTrue(orders.All(r => r.OrderDetails.Any()));
             Assert.IsNotNull(orders.First()?.OrderDetails.First()?.Product);
@@ -34,7 +36,7 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanGetSingleOrderById()
         {
-            var order = _db.Single<Order>(r => r.OrderId == 10254, "OrderDetails.Product", "Employee", "Customer");
+            var order = _db.From<Order>().Where(r => r.OrderId == 10254).Select("OrderDetails.Product", "Employee", "Customer").Single();
             Assert.IsNotNull(order);
             Assert.AreEqual(10254, order.OrderId);
             Assert.AreEqual("Chop-suey Chinese", order.Customer.CompanyName);
@@ -52,13 +54,21 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanQueryOrdersWithOrderByClauseAndPredicates()
         {
-            var orders = _db.Query(
-                OrderByClause<Order>.OrderByAscending(r => r.OrderDate)
-                    .ThenByAscending(r => r.ShippedDate),
-                new Predicates { Skip = 10, Take = 20 }, 
-                r => r.Employee.Id == 4 && r.ShippedDate.HasValue,
-                 "OrderDetails.Product", "Employee", "Customer"
-            ).ToArray();
+            //var orders = _db.Query(
+            //    OrderByClause<Order>.OrderByAscending(r => r.OrderDate)
+            //        .ThenByAscending(r => r.ShippedDate),
+            //    new Predicates { Skip = 10, Take = 20 }, 
+            //    r => r.Employee.Id == 4 && r.ShippedDate.HasValue,
+            //     "OrderDetails.Product", "Employee", "Customer"
+            //).ToArray();
+            var orders = _db.From<Order>()
+                .Where(r => r.Employee.Id == 4 && r.ShippedDate.HasValue)
+                .Select("OrderDetails.Product", "Employee", "Customer")
+                .OrderBy(r => r.OrderDate)
+                .ThenBy(r => r.ShippedDate)
+                .Skip(10)
+                .Take(20)
+                .ToArray();
             Assert.IsNotNull(orders);
             Assert.AreEqual(20, orders.Count());
             Assert.IsTrue(orders.Any(r => r.OrderDetails != null && r.OrderDetails.Any()));
@@ -68,7 +78,7 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanQueryCustomerWithFilterExpressions()
         {
-            var customers = _db.Query<Customer>(r => r.CompanyName.StartsWith("A"));
+            var customers = _db.From<Customer>().Where(r => r.CompanyName.StartsWith("A")).Select().AsEnumerable();
             Assert.IsNotNull(customers);
             Assert.AreEqual(4, customers.Count());
         }
@@ -76,14 +86,15 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanQueryProductWithFilterExpressions()
         {
-            var products = _db.Query<Product>(r => r.UnitPrice > 10f && r.ProductName != "Test product");
+            var products = _db.From<Product>().Where(r => r.UnitPrice > 10f && r.ProductName != "Test product").Select().ToArray();
             Assert.IsNotNull(products);
             Assert.AreEqual(63, products.Count());
 
-            var sortedProducts = _db.Query(OrderByClause<Product>.OrderByAscending(r => r.ProductName), r => r.ProductName != "Test product");
+            //var sortedProducts = _db.Query(OrderByClause<Product>.OrderByAscending(r => r.ProductName), r => r.ProductName != "Test product");
+            var sortedProducts = _db.From<Product>().Where(r => r.ProductName != "Test product").Select().OrderBy(r => r.ProductName).AsEnumerable();
             Assert.AreEqual("Alice Mutton", sortedProducts.First().ProductName);
 
-            var sortedProductsDesc = _db.Query(OrderByClause<Product>.OrderByDecending(r => r.ProductName), r => r.ProductName != "Test product");
+            var sortedProductsDesc = _db.From<Product>().Where(r => r.ProductName != "Test product").Select().OrderBy(r => r.ProductName, Ordering.Descending).AsEnumerable();
             Assert.AreEqual("Alice Mutton", sortedProductsDesc.Last().ProductName);
         }
 

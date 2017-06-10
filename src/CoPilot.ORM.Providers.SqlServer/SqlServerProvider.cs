@@ -43,8 +43,8 @@ namespace CoPilot.ORM.Providers.SqlServer
             DeleteStatementWriter = new SqlDeleteStatementWriter(this);
             SelectStatementWriter = new SqlSelectStatementWriter();
             CommonScriptingTasks = new SqlCommonScriptingTasks();
-            QueryBuilder = new SqlQueryBuilder();
-            QueryStrategySelector = new SqlQueryStrategySelector(QueryBuilder, SelectStatementWriter).Get();
+            SelectStatementBuilder = new SqlQueryBuilder();
+            QueryStrategySelector = new SqlQueryStrategySelector(SelectStatementBuilder, SelectStatementWriter).Get();
 
             Logger = new ConsoleLogger {LoggingLevel = loggingLevel};
             ModelValidator = new SimpleModelValidator();
@@ -231,7 +231,7 @@ namespace CoPilot.ORM.Providers.SqlServer
 
         public ICreateStatementWriter CreateStatementWriter { get; }
 
-        public IQueryBuilder QueryBuilder { get; }
+        public ISelectStatementBuilder SelectStatementBuilder { get; }
 
         public QueryStrategySelector QueryStrategySelector { get; }
 

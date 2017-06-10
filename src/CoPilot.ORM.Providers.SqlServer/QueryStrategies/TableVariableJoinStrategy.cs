@@ -54,7 +54,7 @@ namespace CoPilot.ORM.Providers.SqlServer.QueryStrategies
 
         private ScriptBlock GetScript(QueryContext q, ITableContextNode parantNode = null)
         {
-            var segments = _provider.QueryBuilder.Build(q);
+            var segments = _provider.SelectStatementBuilder.Build(q);
             var tempName = q.BaseNode.Path.Replace(".", "_");
             var temp = new QuerySegments();
             var script = new ScriptBlock();

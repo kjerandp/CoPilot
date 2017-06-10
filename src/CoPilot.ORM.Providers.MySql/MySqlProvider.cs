@@ -45,8 +45,8 @@ namespace CoPilot.ORM.Providers.MySql
             DeleteStatementWriter = new MySqlDeleteStatementWriter(this);
             SelectStatementWriter = new MySqlSelectStatementWriter();
             CommonScriptingTasks = new MySqlCommonScriptingTasks();
-            QueryBuilder = new MySqlQueryBuilder();
-            QueryStrategySelector = new MySqlQueryStrategySelector(QueryBuilder, SelectStatementWriter).Get();
+            SelectStatementBuilder = new MySqlQueryBuilder();
+            QueryStrategySelector = new MySqlQueryStrategySelector(SelectStatementBuilder, SelectStatementWriter).Get();
 
             Logger = new ConsoleLogger {LoggingLevel = loggingLevel};
             ModelValidator = new SimpleModelValidator();
@@ -234,7 +234,7 @@ namespace CoPilot.ORM.Providers.MySql
 
         public ICreateStatementWriter CreateStatementWriter { get; }
 
-        public IQueryBuilder QueryBuilder { get; }
+        public ISelectStatementBuilder SelectStatementBuilder { get; }
 
         public QueryStrategySelector QueryStrategySelector { get; }
 

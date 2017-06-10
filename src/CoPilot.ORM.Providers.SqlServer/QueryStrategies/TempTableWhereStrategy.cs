@@ -15,10 +15,10 @@ namespace CoPilot.ORM.Providers.SqlServer.QueryStrategies
 {
     public class TempTableWhereStrategy : IQueryExecutionStrategy, IQueryScriptCreator
     {
-        private readonly IQueryBuilder _builder;
+        private readonly ISelectStatementBuilder _builder;
         private readonly ISelectStatementWriter _writer;
 
-        public TempTableWhereStrategy(IQueryBuilder builder, ISelectStatementWriter writer)
+        public TempTableWhereStrategy(ISelectStatementBuilder builder, ISelectStatementWriter writer)
         {
             _builder = builder;
             _writer = writer;

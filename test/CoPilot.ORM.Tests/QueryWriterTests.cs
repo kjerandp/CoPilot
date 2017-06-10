@@ -33,7 +33,7 @@ namespace CoPilot.ORM.Tests
         public void CanWriteProperSqlForSelectSingle()
         {
             var writer = _provider.SelectStatementWriter;
-            var builder = _provider.QueryBuilder;
+            var builder = _provider.SelectStatementBuilder;
             var ctx = _model.CreateContext<Resource>("Owner.City", "UsedBy.City");
             var filterGraph = ExpressionHelper.DecodeExpression<Resource>(r => r.Id == 1, _provider);
             ctx.ApplyFilter(filterGraph);

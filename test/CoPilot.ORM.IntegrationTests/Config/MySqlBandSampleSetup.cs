@@ -58,12 +58,11 @@ namespace CoPilot.ORM.IntegrationTests.Config
             block.Append(
                 builder.DropCreateDatabase(databaseName)
             );
-            //block.Append(go);
+
             block.Append(
                 builder.UseDatabase(databaseName)
             );
-            //block.Append(go);
-
+            
             //create all tables
             block.Append(
                 builder.CreateTablesIfNotExists(createOptions)

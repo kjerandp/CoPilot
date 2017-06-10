@@ -112,7 +112,7 @@ namespace CoPilot.ORM.Providers.MySql
         public static ScriptBlock CreateStoredProcedureFromQuery(this ScriptBuilder sb, string name, TableContext ctx, IQueryScriptCreator scriptCreator = null)
         {
             if (scriptCreator == null)
-                scriptCreator = new TempTableJoinStrategy(sb.DbProvider.QueryBuilder, sb.DbProvider.SelectStatementWriter);
+                scriptCreator = new TempTableJoinStrategy(sb.DbProvider.SelectStatementBuilder, sb.DbProvider.SelectStatementWriter);
 
             var rootFilter = ctx.GetFilter();
             var paramToColumnMap = new Dictionary<string, ContextColumn>();

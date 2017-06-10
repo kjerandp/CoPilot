@@ -18,7 +18,7 @@ namespace CoPilot.ORM.Context.Query
         public FilterGraph Filter { get; set; }
         public Predicates Predicates { get; internal set; }
 
-        public SqlStatement GetStatement(IQueryBuilder builder, ISelectStatementWriter writer)
+        public SqlStatement GetStatement(ISelectStatementBuilder builder, ISelectStatementWriter writer)
         {
             var qs = builder.Build(this);
             var stm = new SqlStatement(writer.GetStatement(qs));

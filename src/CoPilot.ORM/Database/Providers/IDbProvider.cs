@@ -12,7 +12,7 @@ namespace CoPilot.ORM.Database.Providers
     public interface IDbProvider
     {
         ICreateStatementWriter CreateStatementWriter { get; }
-        IQueryBuilder QueryBuilder { get; }
+        ISelectStatementBuilder SelectStatementBuilder { get; }
         ISelectStatementWriter SelectStatementWriter { get; }
         IInsertStatementWriter InsertStatementWriter { get; }
         IUpdateStatementWriter UpdateStatementWriter { get; }

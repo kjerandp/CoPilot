@@ -12,10 +12,10 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
 {
     public class RepeatFilterStrategy : IQueryExecutionStrategy, IQueryScriptCreator
     {
-        private readonly IQueryBuilder _builder;
+        private readonly ISelectStatementBuilder _builder;
         private readonly ISelectStatementWriter _writer;
 
-        public RepeatFilterStrategy(IQueryBuilder builder, ISelectStatementWriter writer)
+        public RepeatFilterStrategy(ISelectStatementBuilder builder, ISelectStatementWriter writer)
         {
             _builder = builder;
             _writer = writer;

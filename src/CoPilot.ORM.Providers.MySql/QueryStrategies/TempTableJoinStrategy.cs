@@ -14,10 +14,10 @@ namespace CoPilot.ORM.Providers.MySql.QueryStrategies
 {
     public class TempTableJoinStrategy : IQueryExecutionStrategy, IQueryScriptCreator
     {
-        private readonly IQueryBuilder _builder;
+        private readonly ISelectStatementBuilder _builder;
         private readonly ISelectStatementWriter _writer;
 
-        public TempTableJoinStrategy(IQueryBuilder builder, ISelectStatementWriter writer)
+        public TempTableJoinStrategy(ISelectStatementBuilder builder, ISelectStatementWriter writer)
         {
             _builder = builder;
             _writer = writer;

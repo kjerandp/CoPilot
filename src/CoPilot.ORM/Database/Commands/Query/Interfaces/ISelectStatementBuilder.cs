@@ -5,7 +5,7 @@ using CoPilot.ORM.Exceptions;
 
 namespace CoPilot.ORM.Database.Commands.Query.Interfaces
 {
-    public interface IQueryBuilder
+    public interface ISelectStatementBuilder
     {
         QuerySegments Build(QueryContext ctx);
     }

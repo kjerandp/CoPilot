@@ -6,16 +6,16 @@ using System.Linq.Expressions;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Filtering;
-using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping.Mappers;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Context.Query;
+using CoPilot.ORM.Database.Commands.Query;
 using CoPilot.ORM.Database.Providers;
 
 namespace CoPilot.ORM.Database.Commands
 {
-    public class DbReader : IDisposable
+    public class DbReader : IDisposable, IQueryBuilder
     {
         private readonly IDbCommand _command;
         private readonly IDbConnection _connection;
@@ -51,6 +51,11 @@ namespace CoPilot.ORM.Database.Commands
         public T FindByKey<T>(object key, params string[] include) where T : class
         {
             return FindByKey(typeof(T), key, include) as T;
+        }
+
+        public IQuery<T> From<T>() where T : class
+        {
+            return new QueryBuilder<T>(_provider, _model, this);
         }
 
         public DbResponse Query(string commandText, object args, params string[] names)
@@ -134,12 +139,20 @@ namespace CoPilot.ORM.Database.Commands
         public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, Predicates predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
         {
             var ctx = CreateContext(selector, orderByClause, predicates, filter);
-            var rootFilter = ctx.GetFilter();
-            var stm = GetStatement(ctx, rootFilter);
-            stm.Command = _command;
-            var queryResult = _provider.ExecuteQuery(stm, ctx.Path);
-            _command.CommandType = CommandType.Text;
+           
+            var queryResult = Query(ctx);
+            
             return queryResult.Map<TDto>();
+        }
+
+        public DbResponse Query(TableContext ctx)
+        {
+            var filter = ctx.GetFilter();
+            var stm = GetStatement(ctx, filter);
+            _command.CommandType = CommandType.Text;
+            stm.Command = _command;
+
+            return _provider.ExecuteQuery(stm, ctx.Path);
         }
 
         public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
@@ -170,7 +183,7 @@ namespace CoPilot.ORM.Database.Commands
         private SqlStatement GetStatement(ITableContextNode node, FilterGraph filter)
         {
             var q = node.Context.GetQueryContext(node, filter);
-            return q.GetStatement(_provider.QueryBuilder, _provider.SelectStatementWriter);
+            return q.GetStatement(_provider.SelectStatementBuilder, _provider.SelectStatementWriter);
         }
 
         private TableContext<T> CreateContext<T>(Expression<Func<T, bool>> filter = null, params string[] include) where T : class

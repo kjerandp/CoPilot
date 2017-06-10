@@ -29,8 +29,13 @@ namespace CoPilot.ORM.Mapping.Mappers
             ObjectMapper mapper = dataset =>
             {
                 var result = new MappedRecord[dataset.Records.Length];
+                if (type.Namespace == null) //anonymous type
+                {
+                    return dataset.Records.Select(r => new MappedRecord(ReflectionHelper.CreateInstance(type,r))).ToArray();
+                }
                 Parallel.ForEach(dataset.Records, (r, n, i) =>
                 {
+                    
                     var dtoToFill = ReflectionHelper.CreateInstance(type);
 
                     if (dtoToFill.GetType().IsSimpleValueType())

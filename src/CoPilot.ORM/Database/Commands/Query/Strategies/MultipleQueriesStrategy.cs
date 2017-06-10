@@ -13,10 +13,10 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
 {
     public class MultipleQueriesStrategy : IQueryExecutionStrategy
     {
-        private readonly IQueryBuilder _builder;
+        private readonly ISelectStatementBuilder _builder;
         private readonly ISelectStatementWriter _writer;
 
-        public MultipleQueriesStrategy(IQueryBuilder builder, ISelectStatementWriter writer)
+        public MultipleQueriesStrategy(ISelectStatementBuilder builder, ISelectStatementWriter writer)
         {
             _builder = builder;
             _writer = writer;

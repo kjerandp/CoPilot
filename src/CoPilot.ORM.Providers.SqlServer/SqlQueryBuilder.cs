@@ -9,26 +9,48 @@ using CoPilot.ORM.Filtering.Operands;
 
 namespace CoPilot.ORM.Providers.SqlServer
 {
-    public class SqlQueryBuilder : IQueryBuilder
+    public class SqlQueryBuilder : ISelectStatementBuilder
     {
         
         public QuerySegments Build(QueryContext queryContext)
         {
             var qs = new QuerySegments();
 
-            if (queryContext.BaseNode.Level == 0 && queryContext.Predicates != null)
+            if (queryContext.BaseNode.Level == 0)
             {
-                if ((queryContext.OrderByClause == null || !queryContext.OrderByClause.Any()) && (queryContext.Predicates.Skip.HasValue || queryContext.Predicates.Take.HasValue))
+                if (queryContext.Predicates != null)
                 {
-                    throw new CoPilotUnsupportedException("Need to specify an orderby-clause to use SKIP/TAKE");
+                    if (queryContext.OrderByClause == null || !queryContext.OrderByClause.Any())
+                    {
+                        if (queryContext.Predicates.Skip.HasValue)
+                            throw new CoPilotUnsupportedException("Need to specify an orderby-clause to use SKIP/TAKE");
+                        if (queryContext.Predicates.Take.HasValue)
+                            qs.AddToSegment(QuerySegment.PreSelect, $"TOP {queryContext.Predicates.Take.Value}");
+                    }
+                    else
+                    {
+                        if (queryContext.Predicates?.Skip != null)
+                        {
+                            qs.AddToSegment(QuerySegment.PostOrdering, $"OFFSET {queryContext.Predicates.Skip.Value} ROWS");
+
+                            if (queryContext.Predicates?.Take != null)
+                            {
+                                qs.AddToSegment(QuerySegment.PostOrdering, $"FETCH NEXT {queryContext.Predicates.Take.Value} ROWS ONLY");
+                            }
+                        }
+                    }
+
+                    if (queryContext.Predicates.Distinct)
+                    {
+                        qs.AddToSegment(QuerySegment.PreSelect, "DISTINCT");
+                    }
                 }
-                if (queryContext.Predicates.Distinct)
+
+                if (queryContext.OrderByClause != null && queryContext.OrderByClause.Any())
                 {
-                    qs.AddToSegment(QuerySegment.PreSelect, "DISTINCT");
-                }
-                if (queryContext.Predicates.Top.HasValue)
-                {
-                    qs.AddToSegment(QuerySegment.PreSelect, $"TOP {queryContext.Predicates.Top.Value}");
+                    qs.AddToSegment(QuerySegment.Ordering, queryContext.OrderByClause.Select(r =>
+                                $"T{r.Key.Node.Index}.{SanitizeName(r.Key.Column.ColumnName)} {(r.Value == Ordering.Ascending ? "asc" : "desc")}"
+                    ).ToArray());
                 }
             }
             qs.AddToSegment(QuerySegment.Select, queryContext.SelectColumns.Select(GetColumnAsText).ToArray());
@@ -42,24 +64,6 @@ namespace CoPilot.ORM.Providers.SqlServer
                 qs.AddToSegment(QuerySegment.Filter, GetFilterOperandAsText(queryContext.Filter.Root));
             }
 
-           
-            if (queryContext.BaseNode.Level == 0 && queryContext.OrderByClause != null && queryContext.OrderByClause.Any())
-            {
-                qs.AddToSegment(QuerySegment.Ordering, queryContext.OrderByClause.Select(r =>
-                            $"T{r.Key.Node.Index}.{SanitizeName(r.Key.Column.ColumnName)} {(r.Value == Ordering.Ascending ? "asc" : "desc")}"
-                ).ToArray());
-
-
-                if (queryContext.Predicates?.Skip != null)
-                {
-                    qs.AddToSegment(QuerySegment.PostOrdering, $"OFFSET {queryContext.Predicates.Skip.Value} ROWS");
-                    
-                    if (queryContext.Predicates?.Take != null)
-                    {
-                        qs.AddToSegment(QuerySegment.PostOrdering, $"FETCH NEXT {queryContext.Predicates.Take.Value} ROWS ONLY");
-                    }
-                }
-            }
             return qs;
         }
 
