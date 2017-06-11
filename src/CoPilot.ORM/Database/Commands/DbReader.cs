@@ -96,7 +96,7 @@ namespace CoPilot.ORM.Database.Commands
             return Query(null, null, filter, include);
         }
 
-        public IEnumerable<T> Query<T>(Predicates predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
+        public IEnumerable<T> Query<T>(SelectModifiers predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
         {
             return Query(null, predicates, filter, include);
         }
@@ -106,7 +106,7 @@ namespace CoPilot.ORM.Database.Commands
             return Query(orderBy, null, filter, include);
         }
 
-        public IEnumerable<T> Query<T>(OrderByClause<T> orderBy, Predicates predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
+        public IEnumerable<T> Query<T>(OrderByClause<T> orderBy, SelectModifiers predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
         {
             var ctx = CreateContext(orderBy, predicates, filter, include);
             var rootFilter = ctx.GetFilter();
@@ -125,18 +125,18 @@ namespace CoPilot.ORM.Database.Commands
             return Query(selector, orderByClause, null, filter);
         }
 
-        public IEnumerable<dynamic> Query<TEntity>(Expression<Func<TEntity, object>> selector, Predicates predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
+        public IEnumerable<dynamic> Query<TEntity>(Expression<Func<TEntity, object>> selector, SelectModifiers predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
         {
             return Query(selector, null, predicates, filter);
         }
 
-        public IEnumerable<dynamic> Query<TEntity>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, Predicates predicates,
+        public IEnumerable<dynamic> Query<TEntity>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, SelectModifiers predicates,
             Expression<Func<TEntity, bool>> filter = null) where TEntity : class
         {
             return Query<TEntity, object>(selector, orderByClause, predicates, filter);
         }
 
-        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, Predicates predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
+        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, SelectModifiers predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
         {
             var ctx = CreateContext(selector, orderByClause, predicates, filter);
            
@@ -160,7 +160,7 @@ namespace CoPilot.ORM.Database.Commands
             return Query<TEntity, TDto>(selector, orderByClause, null, filter);
         }
 
-        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, Predicates predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
+        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, SelectModifiers predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
         {
             return Query<TEntity, TDto>(selector, null, predicates, filter);
         }
@@ -200,7 +200,7 @@ namespace CoPilot.ORM.Database.Commands
             return ctx;
         }
 
-        private TableContext<T> CreateContext<T>(OrderByClause<T> orderBy, Predicates predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
+        private TableContext<T> CreateContext<T>(OrderByClause<T> orderBy, SelectModifiers predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
         {
             var ctx = CreateContext(filter, include);
             ApplyToContext(ctx, orderBy, predicates);
@@ -208,7 +208,7 @@ namespace CoPilot.ORM.Database.Commands
             return ctx;
         }
 
-        private TableContext<T> CreateContext<T>(Expression<Func<T, object>> selector, OrderByClause<T> orderBy,Predicates predicates, Expression<Func<T, bool>> filter = null) where T : class
+        private TableContext<T> CreateContext<T>(Expression<Func<T, object>> selector, OrderByClause<T> orderBy,SelectModifiers predicates, Expression<Func<T, bool>> filter = null) where T : class
         {
             var ctx = CreateContext(filter);
 
@@ -218,7 +218,7 @@ namespace CoPilot.ORM.Database.Commands
             return ctx;
         }
 
-        private static void ApplyToContext<T>(TableContext ctx, OrderByClause<T> orderBy, Predicates predicates) where T : class
+        private static void ApplyToContext<T>(TableContext ctx, OrderByClause<T> orderBy, SelectModifiers predicates) where T : class
         {
             if (orderBy != null)
             {

@@ -77,7 +77,7 @@ namespace CoPilot.ORM.Database
         /// <remarks>Use dot notation to include multiple levels, ex: "OrderLines.Product"</remarks></param>
         /// <returns>Query result mapped to an IEnumerable of type T</returns>
         [Obsolete("Use new functional expressions instead to define contextual queries (_db.From<T>()...).")]
-        IEnumerable<T> Query<T>(OrderByClause<T> orderByClause, Predicates predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class;
+        IEnumerable<T> Query<T>(OrderByClause<T> orderByClause, SelectModifiers predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class;
 
 
         /// <summary>
@@ -93,7 +93,7 @@ namespace CoPilot.ORM.Database
         /// <remarks>Basic support for method calls on properties mapping to columns. <see cref="ExpressionDecoderConfig.MemberMethodCallConverter"/> and <see cref="ExpressionDecoderConfig"/></remarks></param>
         /// <returns>Query result mapped to type of TDto</returns>
         [Obsolete("Use new functional expressions instead to define contextual queries (_db.From<T>()...).")]
-        IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, Predicates predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class;
+        IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, SelectModifiers predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class;
 
         /// <summary>
         /// 

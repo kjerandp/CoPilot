@@ -46,7 +46,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
         {
             foreach (var rel in parentNode.Nodes.Where(r => !r.Value.Relationship.IsLookupRelationship))
             {
-                if (parentNode.Context.Predicates != null) throw new CoPilotUnsupportedException("This query strategy cannot be used with predicates!");
+                if (parentNode.Context.SelectModifiers != null) throw new CoPilotUnsupportedException("This query strategy cannot be used with predicates!");
 
                 var node = rel.Value;
                 if (node.IsInverted)

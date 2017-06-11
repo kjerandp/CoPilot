@@ -21,7 +21,7 @@ namespace CoPilot.ORM.Providers.MySql
         {
             return ctx =>
             {
-                if (ctx.Predicates != null && ctx.Nodes.Any(r => r.Value.IsInverted))
+                if (ctx.SelectModifiers != null && ctx.Nodes.Any(r => r.Value.IsInverted))
                     return _secondary;
 
                 return _default;

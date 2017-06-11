@@ -25,7 +25,7 @@ namespace CoPilot.ORM.IntegrationTests
             var model = BandSampleConfig.CreateModel();
             //var databaseSetup = new MySqlBandSampleSetup(model);
             var databaseSetup = new SqlServerBandSampleSetup(model);
-            databaseSetup.DropCreateDatabase();
+            //databaseSetup.DropCreateDatabase();
             _db = databaseSetup.GetDb();
             
         }
@@ -35,7 +35,7 @@ namespace CoPilot.ORM.IntegrationTests
         {
             var bands = _db.From<Band>()
                 .Where(r => r.Id <= 50) //need to be able to support NOT ( == false or !)
-                .Select("BandMembers")
+                .Include("BandMembers")
                 .OrderBy(r => r.Name)
                 .ThenBy(r => r.Formed, Ordering.Descending)
                 .ThenBy(r => r.Id)
@@ -56,18 +56,34 @@ namespace CoPilot.ORM.IntegrationTests
             */
 
         }
+        [TestMethod]
+        public void CanCreateQueriesWithMultipleLevelsInclude()
+        {
+            var band = _db.From<Band>()
+                .Where(r => r.Id == 1)
+                .Include("Based.Country")
+                .OrderBy(r => r.Name, Ordering.Descending)
+                .ThenBy(r => r.Id)
+                .Single();
+
+            Assert.AreEqual(1, band.Id);
+            Assert.IsFalse(string.IsNullOrEmpty(band.Name));
+            Assert.IsFalse(string.IsNullOrEmpty(band.Based.Country.Name));
+        }
 
         [TestMethod]
         public void CanCreateQueriesWithNewQuerySyntaxWithAnonymousType()
         {
             var band = _db.From<Band>()
                 .Where(r => r.Id == 1)
-                .Select(r => new { BandId = r.Id, BandName = r.Name })
-                .OrderBy(r => "BandName", Ordering.Descending)
-                .ThenBy(r => "BandId")
+                .Select(r => new { BandId = r.Id, BandName = r.Name, Nationality = r.Based.Country.Name })
+                .OrderBy(r => r.BandName, Ordering.Descending)
+                .ThenBy(r => r.BandId)
                 .Single();
 
-            Assert.IsNotNull(band);
+            Assert.AreEqual(1, band.BandId);
+            Assert.IsFalse(string.IsNullOrEmpty(band.BandName));
+            Assert.IsFalse(string.IsNullOrEmpty(band.Nationality));
         }
 
         [TestMethod]
@@ -137,7 +153,7 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanQueryForAlbums()
         {
-            var albums = _db.From<Album>().Select("Tracks.Recording").ToArray();
+            var albums = _db.From<Album>().Include("Tracks.Recording").ToArray();
             Assert.IsTrue(albums.Any());
             Assert.IsTrue(albums.Any(r => r.Tracks.Any(t => t.Recording != null)));
             
@@ -244,7 +260,7 @@ namespace CoPilot.ORM.IntegrationTests
         public void CanDoBulkInserts()
         {
             _db.DbProvider.Logger.SuppressLogging = true;
-            const int insertCount = 10000;
+            const int insertCount = 1000;
             
             var bands = new List<object>();
             var dt = new DateTime(1980, 1, 1);
@@ -272,7 +288,7 @@ namespace CoPilot.ORM.IntegrationTests
         {
             _db.DbProvider.Logger.SuppressLogging = true;
 
-            const int insertCount = 10000;
+            const int insertCount = 1000;
             var sw = Stopwatch.StartNew();
             using (var writer = new DbWriter(_db))
             {

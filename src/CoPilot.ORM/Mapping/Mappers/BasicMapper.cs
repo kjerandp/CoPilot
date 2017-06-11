@@ -35,10 +35,6 @@ namespace CoPilot.ORM.Mapping.Mappers
                 }
                 Parallel.ForEach(dataset.Records, (r, n, i) =>
                 {
-                    if (type == typeof(DateTime?))
-                    {
-                        var x = 0;
-                    }
                     var dtoToFill = ReflectionHelper.CreateInstance(type);
 
                     if (dtoToFill.GetType().IsSimpleValueType())

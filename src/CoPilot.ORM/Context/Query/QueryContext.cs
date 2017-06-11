@@ -16,7 +16,7 @@ namespace CoPilot.ORM.Context.Query
         public ITableContextNode BaseNode { get; internal set; }
         public TableJoinDescription[] JoinedNodes { get; internal set; }
         public FilterGraph Filter { get; set; }
-        public Predicates Predicates { get; internal set; }
+        public SelectModifiers Predicates { get; internal set; }
 
         public SqlStatement GetStatement(ISelectStatementBuilder builder, ISelectStatementWriter writer)
         {

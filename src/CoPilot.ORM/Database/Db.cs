@@ -55,7 +55,7 @@ namespace CoPilot.ORM.Database
             }
         }
 
-        public IEnumerable<T> Query<T>(OrderByClause<T> orderBy, Predicates predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
+        public IEnumerable<T> Query<T>(OrderByClause<T> orderBy, SelectModifiers predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
         {
             using (var rdr = new DbReader(this))
             {
@@ -63,7 +63,7 @@ namespace CoPilot.ORM.Database
             }
         }
 
-        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, Predicates predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
+        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, SelectModifiers predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
         {
             using (var rdr = new DbReader(this))
             {

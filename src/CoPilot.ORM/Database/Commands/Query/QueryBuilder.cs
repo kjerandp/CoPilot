@@ -8,11 +8,12 @@ using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Helpers;
+using CoPilot.ORM.Mapping.Mappers;
 using CoPilot.ORM.Model;
 
 namespace CoPilot.ORM.Database.Commands.Query
 {
-    public class QueryBuilder<T> : IQuery<T>, IIncludableQuery<T>, IOrderedQuery<T> where T : class
+    public class QueryBuilder<T> : IQuery<T>, IOrderedQuery<T> where T : class
     {
         internal TableContext<T> Ctx;
 
@@ -20,7 +21,7 @@ namespace CoPilot.ORM.Database.Commands.Query
         private readonly DbModel _model;
         private readonly DbReader _dbReader;
         private Dictionary<string, Ordering> _orderByPaths;
-        private Predicates _predicates;
+        private SelectModifiers _predicates;
         private Expression<Func<T, bool>> _filterPredicate;
         
 
@@ -42,7 +43,7 @@ namespace CoPilot.ORM.Database.Commands.Query
             return this;
         }
 
-        public IIncludableQuery<T> Include(params string[] paths)
+        public IOrderableQuery<T> Include(params string[] paths)
         {
             Ctx = _model.CreateContext<T>(paths);
             return this;
@@ -99,7 +100,7 @@ namespace CoPilot.ORM.Database.Commands.Query
         {
             if (_predicates == null)
             {
-                _predicates = new Predicates {Take = take};
+                _predicates = new SelectModifiers {Take = take};
             }
             else
             {
@@ -112,7 +113,7 @@ namespace CoPilot.ORM.Database.Commands.Query
         {
             if (_predicates == null)
             {
-                _predicates = new Predicates { Skip = skip };
+                _predicates = new SelectModifiers { Skip = skip };
             }
             else
             {
@@ -125,7 +126,7 @@ namespace CoPilot.ORM.Database.Commands.Query
         {
             if (_predicates == null)
             {
-                _predicates = new Predicates { Distinct = true};
+                _predicates = new SelectModifiers { Distinct = true};
             }
             else
             {
@@ -182,7 +183,10 @@ namespace CoPilot.ORM.Database.Commands.Query
         internal IEnumerable<TTarget> Execute<TTarget>()
         {
             UpdateContext();
-            return _dbReader.Query(Ctx).Map<TTarget>();
+            var mapper = (typeof(TTarget) == typeof(object) || typeof(TTarget) == typeof(IDictionary<string, object>)) ?
+                    DynamicMapper.Create() :
+                    SelectTemplateMapper.Create(Ctx, typeof(TTarget));
+            return _dbReader.Query(Ctx).Map<TTarget>(mapper);
         }
     }
 
@@ -236,7 +240,12 @@ namespace CoPilot.ORM.Database.Commands.Query
                 {
                     return PathHelper.RemoveFirstElementFromPathString(primExpr.Name);
                 }
-                
+                var memExpr = member.Body as MemberExpression;
+                if (memExpr != null)
+                {
+                    return memExpr.Member.Name;
+                }
+
                 var constExpr = member.Body as ConstantExpression;
                 return constExpr != null ? constExpr.Value.ToString() : "1";
                 
@@ -273,76 +282,5 @@ namespace CoPilot.ORM.Database.Commands.Query
             return result;
         } 
     }
-
-
-
-    public interface IOrderedQuery<T> : IPreparedQuery<T> where T : class
-    {
-        IOrderedQuery<T> ThenBy(string path, Ordering ordering = Ordering.Ascending);
-        IOrderedQuery<T> ThenBy(Expression<Func<T, object>> member, Ordering ordering = Ordering.Ascending);
-    }
-
-    public interface IOrderedQuery<out T, TTarget> : IPreparedQuery<T, TTarget> where T : class
-    {
-        IOrderedQuery<T, TTarget> ThenBy(string path, Ordering ordering = Ordering.Ascending);
-        IOrderedQuery<T, TTarget> ThenBy(Expression<Func<TTarget, object>> member, Ordering ordering = Ordering.Ascending);
-    }
-
-    public interface IIncludableQuery<T> : IOrderableQuery<T> where T : class
-    {
-        IIncludableQuery<T> Include(params string[] paths);
-    }
-
-    public interface IOrderableQuery<T> : IPreparedQuery<T> where T : class
-    {
-        IOrderedQuery<T> OrderBy(string path, Ordering ordering = Ordering.Ascending);
-        IOrderedQuery<T> OrderBy(Expression<Func<T, object>> member, Ordering ordering = Ordering.Ascending);
-    }
-
-    public interface IOrderableQuery<out T, TTarget> : IPreparedQuery<T, TTarget> where T : class
-    {
-        IOrderedQuery<T, TTarget> OrderBy(string path, Ordering ordering = Ordering.Ascending);
-        IOrderedQuery<T, TTarget> OrderBy(Expression<Func<TTarget, object>> member, Ordering ordering = Ordering.Ascending);
-    }
-
-    public interface IPreparedQuery<out T> where T : class
-    {
-        IPreparedQuery<T> Take(int take);
-        IPreparedQuery<T> Skip(int skip);
-        IPreparedQuery<T> Distinct();
-        T Single();
-        T[] ToArray();
-        IEnumerable<T> AsEnumerable();
-    }
-
-    public interface IPreparedQuery<out T, out TTarget> where T : class
-    {
-        IPreparedQuery<T, TTarget> Take(int take);
-        IPreparedQuery<T, TTarget> Skip(int skip);
-        IPreparedQuery<T, TTarget> Distinct();
-        TTarget Single();
-        TTarget[] ToArray();
-        IEnumerable<TTarget> AsEnumerable();
-    }
-    
-    public interface IFilteredQuery<T> : IOrderableQuery<T> where T : class
-    {
-        IIncludableQuery<T> Select();
-        IOrderableQuery<T> Select(params string[] include);
-        IOrderableQuery<T, TTarget> Select<TTarget>(Expression<Func<T, TTarget>> selector);
-    }
-
-    public interface IQuery<T> : IFilteredQuery<T> where T : class
-    {
-        IFilteredQuery<T> Where(Expression<Func<T, bool>> predicate);
-        
-    }
-
-    public interface IQueryBuilder
-    {
-        IQuery<T> From<T>() where T : class;
-    }
-
-
     
 }

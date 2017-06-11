@@ -22,7 +22,7 @@ namespace CoPilot.ORM.Context
             if (obj != null)
             {
                 var other = (FromListItem)obj;
-                return Node.Equals(other.Node);
+                return Node != null && Node.Equals(other.Node);
             }
             return false;
 

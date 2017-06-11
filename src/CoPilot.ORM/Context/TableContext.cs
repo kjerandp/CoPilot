@@ -27,7 +27,7 @@ namespace CoPilot.ORM.Context
         {
             _nodeIndex = new Dictionary<int, ITableContextNode> { { _index, this } };
             Model = model;
-            _selectTemplate = new Dictionary<string, string>();
+            SelectTemplate = new Dictionary<string, string>();
 
             MapEntry = map;
             Index = _index;
@@ -40,7 +40,7 @@ namespace CoPilot.ORM.Context
             _nodeIndex = new Dictionary<int, ITableContextNode> { { _index, this } };
             _include = include;
             Model = model;
-            _selectTemplate = new Dictionary<string, string>();
+            SelectTemplate = new Dictionary<string, string>();
 
             MapEntry = Model.GetTableMap(baseType);
             if(MapEntry == null)
@@ -59,15 +59,19 @@ namespace CoPilot.ORM.Context
 
         public ITableContextNode Origin => null;
         public Dictionary<string, TableContextNode> Nodes { get; }
+        public readonly Dictionary<string, string> SelectTemplate;
+        public SelectModifiers SelectModifiers { get; private set; }
+
+        protected FilterGraph RootFilter;
+
         private readonly Dictionary<int, ITableContextNode> _nodeIndex;
         private int _index = 1;
+
         private readonly string[] _include;
         public readonly DbModel Model;
-        protected FilterGraph RootFilter;
-        private readonly Dictionary<string, string> _selectTemplate;
         private Dictionary<ContextColumn, Ordering> _ordering;
-        public Predicates Predicates { get; private set; }
 
+        
         public int Index { get; }
         public int Level => 0;
         public int Order => 0;
@@ -125,7 +129,7 @@ namespace CoPilot.ORM.Context
         
         internal List<ContextColumn> GetSelectColumnsFromNode(ITableContextNode node)
         {
-            if(_selectTemplate.Any()) return GetSelectColumnsFromTemplate();
+            if(SelectTemplate.Any()) return GetSelectColumnsFromTemplate();
 
             var list = new List<ContextColumn>();
             var nodePath = PathHelper.RemoveFirstElementFromPathString(node.Path);
@@ -212,16 +216,23 @@ namespace CoPilot.ORM.Context
                     firstNode = fromList.Select(r => r.Node).OrderBy(r => r.Level).First();
                 }
             }
-     
+            
             fromList.RemoveAll(r => r.Node == firstNode);
 
+            //TODO This is a bit ugly - Fix it!
+            while (true)
+            {
+                var n = fromList.FirstOrDefault(r => r.Node.Origin != firstNode && !fromList.Contains(new FromListItem(r.Node.Origin, r.ForceInnerJoin)));
+                if (n.Node == null) break;
+                fromList.Add(new FromListItem(n.Node.Origin, n.ForceInnerJoin));
+            }
             var orderedList = fromList.OrderBy(r => r.ForceInnerJoin ? 1 : r.Node.Order).ThenBy(r => r.Node.Level);
             
             return new QueryContext
             {
                 SelectColumns = selectColumns.ToArray(),
                 OrderByClause = _ordering,
-                Predicates = Predicates,
+                Predicates = SelectModifiers,
                 BaseNode = firstNode,
                 JoinedNodes = orderedList.Select(r => new TableJoinDescription(r)).ToArray(),
                 Filter = filter
@@ -232,7 +243,7 @@ namespace CoPilot.ORM.Context
         {
             var selectColumns = new List<ContextColumn>();
 
-            foreach (var item in _selectTemplate)
+            foreach (var item in SelectTemplate)
             {
                 var splitPath = PathHelper.SplitLastInPathString(item.Key);
                 var node = string.IsNullOrEmpty(splitPath.Item1)?this:FindByPath(splitPath.Item1);
@@ -316,15 +327,15 @@ namespace CoPilot.ORM.Context
                 var node = FindByPath(splitPath.Item1);
                 if (node == null) throw new CoPilotConfigurationException("No context found!");
                 string lookup = null;
-                if (_selectTemplate != null)
+                if (SelectTemplate != null)
                 {
                     if (string.IsNullOrEmpty(item.Key) || item.Key.Equals("1", StringComparison.Ordinal))
                     {
-                        lookup = _selectTemplate.First().Key;
+                        lookup = SelectTemplate.First().Key;
                     }
                     else
                     {
-                        lookup = _selectTemplate.Where(r => r.Value.Equals(splitPath.Item2, StringComparison.Ordinal))
+                        lookup = SelectTemplate.Where(r => r.Value.Equals(splitPath.Item2, StringComparison.Ordinal))
                                 .Select(r => r.Key).SingleOrDefault();
                     }
                 }
@@ -341,9 +352,9 @@ namespace CoPilot.ORM.Context
             }
         }
 
-        public void SetQueryPredicates(Predicates predicates)
+        public void SetQueryPredicates(SelectModifiers predicates)
         {
-            Predicates = predicates;
+            SelectModifiers = predicates;
         }
         public bool Exist(string path)
         {
@@ -528,7 +539,7 @@ namespace CoPilot.ORM.Context
 
             CreateLookupNodeIfNotExist(splitPath.Item1, splitPath.Item2);
 
-            _selectTemplate.Add(path, key);
+            SelectTemplate.Add(path, key);
         }
 
         private void CreateLookupNodesIfNotExist(ITableContextNode node)
