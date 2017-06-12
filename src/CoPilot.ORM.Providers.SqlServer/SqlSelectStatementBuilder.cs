@@ -82,18 +82,18 @@ namespace CoPilot.ORM.Providers.SqlServer
                 return str;
             }
 
-            var cmo = operand as ContextMemberOperand;
+            var cmo = operand as MemberExpressionOperand;
             if (cmo != null)
             {
-                var str = $"T{cmo.ContextColumn.Node.Index}.{SanitizeName(cmo.ContextColumn.Column.ColumnName)}";
+                var str = $"T{cmo.ColumnReference.Node.Index}.{SanitizeName(cmo.ColumnReference.Column.ColumnName)}";
 
-                if (!string.IsNullOrEmpty(cmo.MemberExpressionOperand?.Custom))
+                if (!string.IsNullOrEmpty(cmo.Custom))
                 {
-                    return cmo.MemberExpressionOperand.Custom.Replace("{column}", str);
+                    return cmo.Custom.Replace("{column}", str);
                 }
-                if (!string.IsNullOrEmpty(cmo.MemberExpressionOperand?.WrapWith))
+                if (!string.IsNullOrEmpty(cmo.WrapWith))
                 {
-                    str = $"{cmo.MemberExpressionOperand.WrapWith}({str})";
+                    str = $"{cmo.WrapWith}({str})";
                 }
                 return str;
             }

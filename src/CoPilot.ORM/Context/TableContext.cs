@@ -163,78 +163,54 @@ namespace CoPilot.ORM.Context
         {
             return GetQueryContext(null, filter);
         }
-        
+
         public QueryContext GetQueryContext(ITableContextNode node = null, FilterGraph filter = null)
         {
             node = node ?? this;
-            var firstNode = node;
+
+            var baseNode = node;
+
             var selectColumns = GetSelectColumnsFromNode(node);
 
-            var fromList = new List<FromListItem>();
-
-            fromList.AddRange(selectColumns.Select(r => r.Node).Distinct().Select(r => new FromListItem(r, false)));
-
-            if (filter == null)
-            {
-                //filter = node.Context.GetFilter();
-            }
-
+            var referencedNodes = selectColumns.Select(r => r.Node).Select(r => new FromListItem(r, false)).ToList();
             if (filter?.Root != null)
             {
-                var memberExpressions = filter.MemberExpressions;
-                var dependencies = memberExpressions.Select(r => r.ContextColumn.Node).Distinct().ToArray();
-
-                foreach (var depNode in dependencies)
-                {
-                    var item = new FromListItem(depNode, true);
-                    if (fromList.Contains(item)) continue;
-                    fromList.Add(item);
-                    if (!memberExpressions.Any(r => r.ContextColumn.Node == depNode && !r.ContextColumn.Column.IsPrimaryKey))
-                    {
-                        continue;
-                    }
-                    item = new FromListItem(depNode.Origin, true);
-                    while (item.Node != null && !fromList.Contains(item))
-                    {
-                        fromList.Add(item);
-                        item = new FromListItem(item.Node.Origin, true);
-                    }
-                }
-                var rootNode = fromList.SingleOrDefault(r => r.Node.Level == 0).Node;
-                if (rootNode != null)
-                {
-                    firstNode = rootNode;
-                    var item = new FromListItem(node.Origin, true);
-                    while (item.Node != null && !fromList.Contains(item))
-                    {
-                        fromList.Add(item);
-                        item = new FromListItem(item.Node.Origin, true);
-                    }
-                }
-                else if(fromList.Any(r => r.Node.Level < firstNode.Level))
-                {
-                    firstNode = fromList.Select(r => r.Node).OrderBy(r => r.Level).First();
-                }
+                referencedNodes.AddRange(filter.MemberExpressions.Select(r => r.ColumnReference.Node).Select(r => new FromListItem(r, true)));
             }
-            
-            fromList.RemoveAll(r => r.Node == firstNode);
-
-            //TODO This is a bit ugly - Fix it!
-            while (true)
+            if (node == this && _ordering != null && _ordering.Any())
             {
-                var n = fromList.FirstOrDefault(r => r.Node.Origin != firstNode && !fromList.Contains(new FromListItem(r.Node.Origin, r.ForceInnerJoin)));
-                if (n.Node == null) break;
-                fromList.Add(new FromListItem(n.Node.Origin, n.ForceInnerJoin));
+                referencedNodes.AddRange(_ordering.Select(r => new FromListItem(r.Key.Node, false)));        
             }
-            var orderedList = fromList.OrderBy(r => r.ForceInnerJoin ? 1 : r.Node.Order).ThenBy(r => r.Node.Level);
+
+            var fromList = new List<FromListItem>(referencedNodes.Distinct().OrderBy(r => r.ForceInnerJoin ? 1 : r.Node.Order).ThenBy(r => r.Node.Level));
+
+            var currentIndex = fromList.Count-1;
             
+            while (currentIndex > 0)
+            {
+                var currentNode = fromList[currentIndex].Node as TableContextNode;
+                if (currentNode == null) break;
+                var depNodeExist = fromList.Exists(r => r.Node.Index == currentNode.Origin.Index);
+                if (!depNodeExist) 
+                    fromList.Insert(currentIndex, new FromListItem(currentNode.Origin, currentNode.JoinType == TableJoinType.InnerJoin));
+
+                currentIndex--;
+            }
+
+            if (fromList[0].Node != baseNode)
+            {
+                baseNode = fromList[0].Node;
+            }
+
+            fromList.RemoveAll(r => r.Node == baseNode);
+
             return new QueryContext
             {
                 SelectColumns = selectColumns.ToArray(),
                 OrderByClause = _ordering,
                 Predicates = SelectModifiers,
-                BaseNode = firstNode,
-                JoinedNodes = orderedList.Select(r => new TableJoinDescription(r)).ToArray(),
+                BaseNode = baseNode,
+                JoinedNodes = fromList.Select(r => new TableJoinDescription(r)).ToArray(),
                 Filter = filter
             };
         }
@@ -352,9 +328,9 @@ namespace CoPilot.ORM.Context
             }
         }
 
-        public void SetQueryPredicates(SelectModifiers predicates)
+        public void SetSelectModifiers(SelectModifiers modifiers)
         {
-            SelectModifiers = predicates;
+            SelectModifiers = modifiers;
         }
         public bool Exist(string path)
         {
@@ -420,11 +396,11 @@ namespace CoPilot.ORM.Context
                     bop.Operator
                 );
 
-                var memberOperand = bin.Left as ContextMemberOperand;
+                var memberOperand = bin.Left as MemberExpressionOperand;
                 ValueOperand matchingVop;
                 if (memberOperand == null)
                 {
-                    memberOperand = bin.Right as ContextMemberOperand;
+                    memberOperand = bin.Right as MemberExpressionOperand;
                     matchingVop = bin.Left as ValueOperand;
                 }
                 else
@@ -432,15 +408,15 @@ namespace CoPilot.ORM.Context
                     matchingVop = bin.Right as ValueOperand;
                 }
 
-                if (matchingVop != null && memberOperand?.ContextColumn.Adapter != null)
+                if (matchingVop != null && memberOperand?.ColumnReference.Adapter != null)
                 {
                     //special case for enums
-                    var member = memberOperand.ContextColumn.Node?.MapEntry?.GetMappedMember(memberOperand.ContextColumn.Column);
+                    var member = memberOperand.ColumnReference.Node?.MapEntry?.GetMappedMember(memberOperand.ColumnReference.Column);
                     if (member != null && member.MemberType.GetTypeInfo().IsEnum)
                     {
                         matchingVop.Value = Enum.ToObject(member.MemberType, matchingVop.Value);
                     }
-                    matchingVop.Value = memberOperand.ContextColumn.Adapter.Invoke(MappingTarget.Database, matchingVop.Value);
+                    matchingVop.Value = memberOperand.ColumnReference.Adapter.Invoke(MappingTarget.Database, matchingVop.Value);
                 }
                 return bin;
             }
@@ -448,9 +424,8 @@ namespace CoPilot.ORM.Context
             var mop = sourceOp as MemberExpressionOperand;
             if (mop != null)
             {
-                var cmo = new ContextMemberOperand(mop);
-                ProcessMemberExpression(mop, cmo);
-                return cmo;
+                ProcessMemberExpression(mop);
+                return mop;
             }
 
             var vop = sourceOp as ValueOperand;
@@ -462,7 +437,7 @@ namespace CoPilot.ORM.Context
             return new NullOperand();
         }
 
-        private void ProcessMemberExpression(MemberExpressionOperand memberExpression, ContextMemberOperand target)
+        private void ProcessMemberExpression(MemberExpressionOperand memberExpression)
         {
             var path = memberExpression.Path;
             var splitPath = PathHelper.SplitLastInPathString(path);
@@ -511,7 +486,7 @@ namespace CoPilot.ORM.Context
 
             if(col == null) throw new CoPilotRuntimeException("Column could not found!");
 
-            target.ContextColumn = new ContextColumn(node, col, adapter);
+            memberExpression.ColumnReference = new ContextColumn(node, col, adapter);
         }
 
         protected void BuildFromMemberExpressions(Dictionary<string, MemberExpression> members)
@@ -898,6 +873,7 @@ namespace CoPilot.ORM.Context
             return context;
         }
     }
+
 
     public class TableContext<T> : TableContext where T : class
     {

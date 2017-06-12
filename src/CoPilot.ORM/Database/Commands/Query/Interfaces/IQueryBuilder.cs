@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using CoPilot.ORM.Common;
 
-namespace CoPilot.ORM.Database.Commands.Query
+namespace CoPilot.ORM.Database.Commands.Query.Interfaces
 {
     public interface IQueryBuilder
     {
@@ -66,7 +66,7 @@ namespace CoPilot.ORM.Database.Commands.Query
         IOrderableQuery<T, TTarget> Select<TTarget>(Expression<Func<T, TTarget>> selector);
     }
 
-    public interface IQuery<T> : IIncludableQuery<T>, IFilteredQuery<T> where T : class
+    public interface IQuery<T> : IFilteredQuery<T> where T : class
     {
         IFilteredQuery<T> Where(Expression<Func<T, bool>> predicate);
 

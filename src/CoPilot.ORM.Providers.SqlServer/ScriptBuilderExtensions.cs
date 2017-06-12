@@ -298,11 +298,11 @@ namespace CoPilot.ORM.Providers.SqlServer
 
                 if (left != null)
                 {
-                    var col = bo.Right as ContextMemberOperand;
+                    var col = bo.Right as MemberExpressionOperand;
                     if (col != null)
                     {
                         mappingDictionary.Add(left.ParamName,
-                            col.ContextColumn);
+                            col.ColumnReference);
                     }
 
                 }
@@ -314,11 +314,11 @@ namespace CoPilot.ORM.Providers.SqlServer
 
                 if (right != null)
                 {
-                    var col = bo.Left as ContextMemberOperand;
+                    var col = bo.Left as MemberExpressionOperand;
                     if (col != null)
                     {
                         mappingDictionary.Add(right.ParamName,
-                            col.ContextColumn);
+                            col.ColumnReference);
                     }
 
                 }

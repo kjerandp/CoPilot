@@ -95,7 +95,7 @@ namespace CoPilot.ORM.Providers.MySql.QueryStrategies
         private static FilterGraph CreateChildFilterUsingTempTable(TableContextNode node, string tempTableName)
         {
             var filter = new FilterGraph();
-            var left = new ContextMemberOperand(null) { ContextColumn = new ContextColumn(node, node.GetTargetKey, null) };
+            var left = new MemberExpressionOperand(new ContextColumn(node, node.GetTargetKey, null));
             var right = new CustomOperand($"(Select `{node.GetSourceKey.ColumnName}` from {tempTableName})");
             filter.Root = new BinaryOperand(left, right, "IN");
 

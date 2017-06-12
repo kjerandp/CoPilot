@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Query;
+using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Helpers;
@@ -166,7 +167,7 @@ namespace CoPilot.ORM.Database.Commands.Query
             }
             if (_predicates != null)
             {
-                Ctx.SetQueryPredicates(_predicates);
+                Ctx.SetSelectModifiers(_predicates);
             }
         }
 

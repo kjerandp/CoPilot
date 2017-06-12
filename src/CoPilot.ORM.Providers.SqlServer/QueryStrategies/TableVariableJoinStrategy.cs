@@ -63,8 +63,8 @@ namespace CoPilot.ORM.Providers.SqlServer.QueryStrategies
                 if (q.Filter != null)
                 {
                     var referencedTables = q.Filter.MemberExpressions
-                            .Where(r => r.ContextColumn.Node.Index != q.BaseNode.Index)
-                            .Select(r => " T"+r.ContextColumn.Node.Index+" ").ToArray();
+                            .Where(r => r.ColumnReference.Node.Index != q.BaseNode.Index)
+                            .Select(r => " T"+r.ColumnReference.Node.Index+" ").ToArray();
 
                     var joins = segments.Get(QuerySegment.Joins);
                     var lastJoin = joins.LastOrDefault();

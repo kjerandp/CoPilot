@@ -97,11 +97,11 @@ namespace CoPilot.ORM.Tests
 
             var writer = _provider.SelectStatementWriter;
             var builder = _provider.SelectStatementBuilder;
-            Console.WriteLine(writer.GetStatement(builder.Build(ctx.GetQueryContext())));
+            Console.WriteLine(writer.GetStatement(builder.Build(ctx.GetQueryContext(ctx.GetFilter()))));
 
             Console.WriteLine();
             ctx.ApplySelector(r => new { r.Id, OwnerId = r.Owner.Id });
-            Console.WriteLine(writer.GetStatement(builder.Build(ctx.GetQueryContext())));
+            Console.WriteLine(writer.GetStatement(builder.Build(ctx.GetQueryContext(ctx.GetFilter()))));
         }
     }
 }

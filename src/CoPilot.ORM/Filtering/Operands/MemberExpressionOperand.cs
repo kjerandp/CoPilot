@@ -1,4 +1,5 @@
 using System;
+using CoPilot.ORM.Context;
 using CoPilot.ORM.Filtering.Interfaces;
 
 namespace CoPilot.ORM.Filtering.Operands
@@ -10,11 +11,15 @@ namespace CoPilot.ORM.Filtering.Operands
             Path = path;
         }
 
-        public Type MemberType { get; set; }
+        public MemberExpressionOperand(ContextColumn columnReference)
+        {
+            ColumnReference = columnReference;
+        }
+
         public string Path { get; internal set; }
         public string WrapWith { get; set; }
         public string Custom { get; set; }
-        //public string ColumnName { get; internal set; }
+        public ContextColumn ColumnReference { get; internal set; }
 
         public override string ToString()
         {
@@ -27,7 +32,10 @@ namespace CoPilot.ORM.Filtering.Operands
             {
                 str = $"{WrapWith}({str})";
             }
-            return str;
+
+            return ColumnReference != null ? str.Replace("{column}", $"T{ColumnReference.Node.Index}.{ColumnReference.Column.ColumnName}"):str;
+
+            
         }
 
     }

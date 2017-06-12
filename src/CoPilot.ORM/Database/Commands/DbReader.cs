@@ -11,6 +11,7 @@ using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands.Query;
+using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Providers;
 
 namespace CoPilot.ORM.Database.Commands
@@ -226,7 +227,7 @@ namespace CoPilot.ORM.Database.Commands
             }
             if (predicates != null)
             {
-                ctx.SetQueryPredicates(predicates);
+                ctx.SetSelectModifiers(predicates);
             }
         }
 
