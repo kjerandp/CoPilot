@@ -34,7 +34,7 @@ namespace CoPilot.ORM.IntegrationTests
         public void CanCreateQueriesWithNewQuerySyntax()
         {
             var bands = _db.From<Band>()
-                .Where(r => r.Id <= 50) //need to be able to support NOT ( == false or !)
+                .Where(r => r.Id > 0 && !r.Name.Contains("Band")) 
                 .Include("BandMembers")
                 .OrderBy(r => r.Name)
                 .ThenBy(r => r.Formed, Ordering.Descending)
@@ -44,7 +44,7 @@ namespace CoPilot.ORM.IntegrationTests
                 .Distinct()
                 .ToArray();
 
-            Assert.IsTrue(bands.Any(r => r.BandMembers.Any()));
+            Assert.IsTrue(bands.Any(r => r.BandMembers != null && r.BandMembers.Any()));
             /*
             var oldWay = _db.Query(
                     OrderByClause<Band>.OrderByAscending(r => r.Name)
@@ -170,19 +170,18 @@ namespace CoPilot.ORM.IntegrationTests
 
             /* 
             SELECT
-		        T3.RECORDING_ID as [Id]
-		        ,T3.RECORDING_SONG_TITLE as [SongTitle]
-		        ,T3.RECORDING_DURATION as [Duration]
-		        ,T3.RECORDING_RECORDED as [Recorded]
+		        T2.RECORDING_ID as [Id]
+		        ,T2.RECORDING_SONG_TITLE as [SongTitle]
+		        ,T2.RECORDING_DURATION as [Duration]
+		        ,T2.RECORDING_RECORDED as [Recorded]
 	        FROM
 		        ALBUM_TRACK T1
-		        INNER JOIN RECORDING T3 ON T3.RECORDING_ID=T1.ALBUM_TRACK_RECORDING_ID
+		        INNER JOIN RECORDING T2 ON T2.RECORDING_ID=T1.ALBUM_TRACK_RECORDING_ID
 	        WHERE
 		        T1.ALBUM_TRACK_ALBUM_ID = @param1     
              */
 
-            // The reason there is no T2 in this case is that the filter is referencing the ALBUM's id column (PK)
-            // but CoPilot optimized this to use the FK of ALBUM_TRACK instead.  
+ 
         }
 
         [TestMethod]
@@ -197,10 +196,10 @@ namespace CoPilot.ORM.IntegrationTests
 
             /*
             SELECT
-		        T3.RECORDING_SONG_TITLE as [SongTitle]
+		        T2.RECORDING_SONG_TITLE as [SongTitle]
 	        FROM
 		        ALBUM_TRACK T1
-		        INNER JOIN RECORDING T3 ON T3.RECORDING_ID=T1.ALBUM_TRACK_RECORDING_ID
+		        INNER JOIN RECORDING T2 ON T2.RECORDING_ID=T1.ALBUM_TRACK_RECORDING_ID
 	        WHERE
 		        T1.ALBUM_TRACK_ALBUM_ID = @param1 
             */

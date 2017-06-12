@@ -37,13 +37,13 @@ namespace CoPilot.ORM.Providers.MySql
                     ).ToArray());
                 }
 
-                if (queryContext.Predicates != null)
+                if (queryContext.Modifiers != null)
                 {
-                    if (queryContext.Predicates.Distinct)
+                    if (queryContext.Modifiers.Distinct)
                     {
                         qs.AddToSegment(QuerySegment.PreSelect, "DISTINCT");
                     }
-                    var limit = new Tuple<int, int>(queryContext.Predicates.Skip ?? 0, queryContext.Predicates.Take ?? 0);
+                    var limit = new Tuple<int, int>(queryContext.Modifiers.Skip ?? 0, queryContext.Modifiers.Take ?? 0);
 
                     if (limit.Item1 > 0 && limit.Item2 == 0)
                     {
@@ -81,7 +81,7 @@ namespace CoPilot.ORM.Providers.MySql
             var bin = operand as BinaryOperand;
             if (bin != null)
             {
-                var str = $"{GetFilterOperandAsText(bin.Left)} {bin.Operator} {GetFilterOperandAsText(bin.Right)}";
+                var str = $"{GetFilterOperandAsText(bin.Left)} {Defaults.GetOperatorAsText(bin.Operator)} {GetFilterOperandAsText(bin.Right)}";
                 if (bin.Enclose)
                 {
                     str = $"({str})";

@@ -32,4 +32,24 @@ namespace CoPilot.ORM.Common
         Info = 3,
         Verbose = 4
     }
+
+    public enum SqlOperator
+    {
+        AndAlso,
+        OrElse,
+        Equal,
+        NotEqual,
+        GreaterThan,
+        GreaterThanOrEqual,
+        LessThan,
+        LessThanOrEqual,
+        Add,
+        Subtract,
+        Like,
+        NotLike,
+        Is,
+        IsNot,
+        In,
+        NotIn
+    }
 }

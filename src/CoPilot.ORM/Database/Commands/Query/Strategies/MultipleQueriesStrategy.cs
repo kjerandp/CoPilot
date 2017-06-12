@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using CoPilot.ORM.Common;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
@@ -80,7 +81,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
             var filter = new FilterGraph();
             var left = new MemberExpressionOperand(new ContextColumn(node, node.GetTargetKey, null));
             var right = new ValueListOperand("@id", keys);
-            filter.Root = new BinaryOperand(left, right, "IN");
+            filter.Root = new BinaryOperand(left, right, SqlOperator.In);
 
             return filter;
         }

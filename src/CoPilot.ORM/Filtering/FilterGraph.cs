@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using CoPilot.ORM.Common;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands;
@@ -88,7 +89,7 @@ namespace CoPilot.ORM.Filtering
             var filter = new FilterGraph();
             var left = new MemberExpressionOperand(new ContextColumn(node, node.Table.GetSingularKey(), null));
             var right = new ValueOperand("@key", key);
-            filter.Root = new BinaryOperand(left, right, "=");
+            filter.Root = new BinaryOperand(left, right, SqlOperator.Equal);
 
             return filter;
         }

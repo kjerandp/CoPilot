@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using CoPilot.ORM.Common;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Filtering;
 
@@ -14,6 +15,7 @@ namespace CoPilot.ORM.Providers.MySql
             _converters = new Dictionary<string, MemberMethodCallConverter>
             {
                 { "StartsWith", StartsWithConverter },
+                { "EndsWith", EndsWithConverter },
                 { "ToLower", ToLowerConverter },
                 { "ToUpper", ToUpperConverter },
                 { "Contains", ContainsConverter },
@@ -21,9 +23,7 @@ namespace CoPilot.ORM.Providers.MySql
                 { "Equals", EqualsConverter }
             };
         }
-
-       
-
+        
         private static void ToStringConverter(object[] args, ConversionResult result)
         {
             result.MemberExpressionOperand.Custom = "CAST({column} as CHAR)";
@@ -34,7 +34,7 @@ namespace CoPilot.ORM.Providers.MySql
             var value = args[0].ToString();
 
             result.MemberExpressionOperand.WrapWith = "LOWER";
-            result.Operator = "LIKE";
+            result.Operator = SqlOperator.Like;
             result.Value = "%" + value.ToLower() + "%";
         }
 
@@ -63,10 +63,27 @@ namespace CoPilot.ORM.Providers.MySql
                     value = value.ToUpper();
                 }
             }
-            result.Operator = "LIKE";
+            result.Operator = SqlOperator.Like;
             result.Value = value + "%";
         }
+        private static void EndsWithConverter(object[] args, ConversionResult result)
+        {
+            var value = args[0].ToString();
 
+            if (args.Length == 2 && args[1].GetType().GetTypeInfo().IsEnum)
+            {
+                var enumArg = (StringComparison)args[1];
+
+                if (enumArg == StringComparison.CurrentCultureIgnoreCase ||
+                    enumArg == StringComparison.OrdinalIgnoreCase)
+                {
+                    result.MemberExpressionOperand.WrapWith = "UPPER";
+                    value = value.ToUpper();
+                }
+            }
+            result.Operator = SqlOperator.Like;
+            result.Value = "%" + value;
+        }
         private static void EqualsConverter(object[] args, ConversionResult result)
         {
             var value = args[0].ToString();
@@ -82,7 +99,7 @@ namespace CoPilot.ORM.Providers.MySql
                     value = value.ToUpper();
                 }
             }
-            result.Operator = "=";
+            result.Operator = SqlOperator.Equal;
             result.Value = value;
         }
 

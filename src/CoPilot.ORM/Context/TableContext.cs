@@ -208,7 +208,7 @@ namespace CoPilot.ORM.Context
             {
                 SelectColumns = selectColumns.ToArray(),
                 OrderByClause = _ordering,
-                Predicates = SelectModifiers,
+                Modifiers = SelectModifiers,
                 BaseNode = baseNode,
                 JoinedNodes = fromList.Select(r => new TableJoinDescription(r)).ToArray(),
                 Filter = filter

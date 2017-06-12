@@ -1,3 +1,4 @@
+using CoPilot.ORM.Common;
 using CoPilot.ORM.Filtering.Operands;
 
 namespace CoPilot.ORM.Filtering
@@ -14,6 +15,6 @@ namespace CoPilot.ORM.Filtering
 
         public MemberExpressionOperand MemberExpressionOperand { get; }
         public object Value { get; set; }
-        public string Operator { get; set; }
+        public SqlOperator? Operator { get; set; }
     }
 }

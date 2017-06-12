@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using CoPilot.ORM.Common;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Context.Query;
@@ -95,7 +96,7 @@ namespace CoPilot.ORM.Providers.SqlServer.QueryStrategies
             var filter = new FilterGraph();
             var left = new MemberExpressionOperand(new ContextColumn(node, node.GetTargetKey, null));
             var right = new CustomOperand($"(Select [{node.GetSourceKey.ColumnName}] from {tempTableName})");
-            filter.Root = new BinaryOperand(left, right, "IN");
+            filter.Root = new BinaryOperand(left, right, SqlOperator.In);
 
             return filter;
 

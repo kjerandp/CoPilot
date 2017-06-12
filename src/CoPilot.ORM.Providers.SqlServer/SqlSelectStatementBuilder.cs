@@ -18,30 +18,30 @@ namespace CoPilot.ORM.Providers.SqlServer
 
             if (queryContext.BaseNode.Level == 0)
             {
-                if (queryContext.Predicates != null)
+                if (queryContext.Modifiers != null)
                 {
-                    if (queryContext.Predicates.Distinct)
+                    if (queryContext.Modifiers.Distinct)
                     {
                         qs.AddToSegment(QuerySegment.PreSelect, "DISTINCT");
                     }
-                    if (queryContext.OrderByClause == null || !queryContext.OrderByClause.Any() || !queryContext.Predicates.Skip.HasValue)
+                    if (queryContext.OrderByClause == null || !queryContext.OrderByClause.Any() || !queryContext.Modifiers.Skip.HasValue)
                     {
-                        if (queryContext.Predicates.Skip.HasValue)
+                        if (queryContext.Modifiers.Skip.HasValue)
                             throw new CoPilotUnsupportedException("Need to specify an orderby-clause to use SKIP/TAKE");
-                        if (queryContext.Predicates.Take.HasValue)
-                            qs.AddToSegment(QuerySegment.PreSelect, $"TOP {queryContext.Predicates.Take.Value}");
+                        if (queryContext.Modifiers.Take.HasValue)
+                            qs.AddToSegment(QuerySegment.PreSelect, $"TOP {queryContext.Modifiers.Take.Value}");
                     }
                     else
                     {
-                        if (queryContext.Predicates.Skip != null)
+                        if (queryContext.Modifiers.Skip != null)
                         {
                             qs.AddToSegment(QuerySegment.PostOrdering,
-                                $"OFFSET {queryContext.Predicates.Skip.Value} ROWS");
+                                $"OFFSET {queryContext.Modifiers.Skip.Value} ROWS");
 
-                            if (queryContext.Predicates?.Take != null)
+                            if (queryContext.Modifiers?.Take != null)
                             {
                                 qs.AddToSegment(QuerySegment.PostOrdering,
-                                    $"FETCH NEXT {queryContext.Predicates.Take.Value} ROWS ONLY");
+                                    $"FETCH NEXT {queryContext.Modifiers.Take.Value} ROWS ONLY");
                             }
                         }
                         
@@ -74,7 +74,7 @@ namespace CoPilot.ORM.Providers.SqlServer
             var bin = operand as BinaryOperand;
             if (bin != null)
             {
-                var str = $"{GetFilterOperandAsText(bin.Left)} {bin.Operator} {GetFilterOperandAsText(bin.Right)}";
+                var str = $"{GetFilterOperandAsText(bin.Left)} {Defaults.GetOperatorAsText(bin.Operator)} {GetFilterOperandAsText(bin.Right)}";
                 if (bin.Enclose)
                 {
                     str = $"({str})";
@@ -100,6 +100,8 @@ namespace CoPilot.ORM.Providers.SqlServer
 
             return operand.ToString();
         }
+
+        
 
         private static string GetColumnAsText(ContextColumn col)
         {

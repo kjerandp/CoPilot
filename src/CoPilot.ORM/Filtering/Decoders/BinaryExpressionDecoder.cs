@@ -14,7 +14,6 @@ namespace CoPilot.ORM.Filtering.Decoders
         }
         public IDecodedNode Decode()
         {
-            
             var left = ExpressionTypeResolver.Get(_expression.Left).Decode();
             
             var right = ExpressionTypeResolver.Get(_expression.Right).Decode();
