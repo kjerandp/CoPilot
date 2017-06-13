@@ -92,8 +92,5 @@ namespace CoPilot.ORM.Mapping.Mappers
 
             return mapper;
         }
-        
-
-       
     }
 }

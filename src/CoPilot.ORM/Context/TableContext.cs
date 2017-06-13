@@ -43,11 +43,14 @@ namespace CoPilot.ORM.Context
             SelectTemplate = new Dictionary<string, string>();
 
             MapEntry = Model.GetTableMap(baseType);
-            if(MapEntry == null)
+
+            if (MapEntry == null)
                 throw new CoPilotConfigurationException($"'{baseType.Name}' is not mapped!");
             Index = _index;
             Nodes = new Dictionary<string, TableContextNode>();
+
             CreateLookupNodesIfNotExist(this);
+
             if (include != null)
             {
                 foreach (var path in include)
@@ -129,8 +132,6 @@ namespace CoPilot.ORM.Context
         
         internal List<ContextColumn> GetSelectColumnsFromNode(ITableContextNode node)
         {
-            if(SelectTemplate.Any()) return GetSelectColumnsFromTemplate();
-
             var list = new List<ContextColumn>();
             var nodePath = PathHelper.RemoveFirstElementFromPathString(node.Path);
             var includes = _include.Where(r => r.StartsWith(nodePath));
@@ -170,12 +171,25 @@ namespace CoPilot.ORM.Context
 
             var baseNode = node;
 
-            var selectColumns = GetSelectColumnsFromNode(node);
+            var selectColumns = SelectTemplate != null && SelectTemplate.Any()? 
+                GetSelectColumnsFromTemplate():
+                GetSelectColumnsFromNode(node);
+
+            if (!selectColumns.Any())
+            {
+                throw new CoPilotUnsupportedException("No columns in select list!");
+            }
 
             var referencedNodes = selectColumns.Select(r => r.Node).Select(r => new FromListItem(r, false)).ToList();
             if (filter?.Root != null)
             {
-                referencedNodes.AddRange(filter.MemberExpressions.Select(r => r.ColumnReference.Node).Select(r => new FromListItem(r, true)));
+                var filterNodes = filter.MemberExpressions.Select(r => r.ColumnReference.Node);
+                foreach (var filterNode in filterNodes)
+                {
+                    var tcn = filterNode as TableContextNode;
+                    if(tcn != null && tcn.IsInverted && tcn != baseNode) throw new CoPilotUnsupportedException("Invalid filter expression");
+                    referencedNodes.Add(new FromListItem(filterNode, tcn == null || !tcn.IsInverted));
+                }    
             }
             if (node == this && _ordering != null && _ordering.Any())
             {
@@ -196,8 +210,8 @@ namespace CoPilot.ORM.Context
 
                 currentIndex--;
             }
-
-            if (fromList[0].Node != baseNode)
+            
+            if (fromList[0].Node != baseNode && fromList[0].Node.Level < baseNode.Level)
             {
                 baseNode = fromList[0].Node;
             }
@@ -225,8 +239,7 @@ namespace CoPilot.ORM.Context
                 var node = string.IsNullOrEmpty(splitPath.Item1)?this:FindByPath(splitPath.Item1);
                 var member = node.MapEntry.GetMemberByName(splitPath.Item2);
                 var col = node.MapEntry.GetColumnByMember(member);
-
-
+                
                 selectColumns.Add(GetContextColumn(node, col, "", item.Value));
             }
 
@@ -299,11 +312,8 @@ namespace CoPilot.ORM.Context
             _ordering = new Dictionary<ContextColumn, Ordering>();
             foreach (var item in ordering)
             {
-                var splitPath = PathHelper.SplitLastInPathString(item.Key);
-                var node = FindByPath(splitPath.Item1);
-                if (node == null) throw new CoPilotConfigurationException("No context found!");
-                string lookup = null;
-                if (SelectTemplate != null)
+                string lookup = item.Key;
+                if (SelectTemplate != null && SelectTemplate.Any())
                 {
                     if (string.IsNullOrEmpty(item.Key) || item.Key.Equals("1", StringComparison.Ordinal))
                     {
@@ -311,14 +321,18 @@ namespace CoPilot.ORM.Context
                     }
                     else
                     {
-                        lookup = SelectTemplate.Where(r => r.Value.Equals(splitPath.Item2, StringComparison.Ordinal))
+                        lookup = SelectTemplate.Where(r => r.Value.Equals(item.Key, StringComparison.Ordinal))
                                 .Select(r => r.Key).SingleOrDefault();
                     }
                 }
-                if(lookup == null)
-                    lookup = splitPath.Item2;
-               
-                var member = node.MapEntry.GetMemberByName(lookup);
+
+                var splitPath = PathHelper.SplitLastInPathString(lookup);
+                var node = FindByPath(splitPath.Item1);
+
+                if (node == null) throw new CoPilotConfigurationException("No context found!");
+                
+                var member = node.MapEntry.GetMemberByName(splitPath.Item2);
+
                 if (member == null) throw new CoPilotConfigurationException("No member found!");
                 var col = node.MapEntry.GetColumnByMember(member);
                 if (col != null)
@@ -332,6 +346,7 @@ namespace CoPilot.ORM.Context
         {
             SelectModifiers = modifiers;
         }
+
         public bool Exist(string path)
         {
             return FindByPath(path) != null;
@@ -371,11 +386,6 @@ namespace CoPilot.ORM.Context
             }
 
             return nodes.ToArray();
-        }
-
-        public ITableContextNode[] GetAllNodes()
-        {
-            return _nodeIndex.Values.ToArray();
         }
 
         public ITableContextNode GetNodeByIndex(int idx)
@@ -467,9 +477,8 @@ namespace CoPilot.ORM.Context
                 var rel = mapEntry.GetRelationshipByMember(member);
                 if (rel != null)
                 {
-                    col = member.MemberType.IsReference() ? rel.ForeignKeyColumn : rel.PrimaryKeyColumn;
-                }
-                
+                    col = rel.ForeignKeyColumn; //member.MemberType.IsReference() ? rel.ForeignKeyColumn : rel.PrimaryKeyColumn;
+                }   
             }
             if (col == null) throw new CoPilotRuntimeException("Cannot map expression to a column!");
             if (col.ForeignkeyRelationship != null && col.ForeignkeyRelationship.IsLookupRelationship)
@@ -482,6 +491,9 @@ namespace CoPilot.ORM.Context
                 node = node.Origin;
                 var newCol = node.Table.Columns.FirstOrDefault(r => r.IsForeignKey && r.ForeignkeyRelationship.PrimaryKeyColumn.Equals(col));
                 col = newCol;
+            } else if (col.Table != node.Table)
+            {
+                node = node.Nodes.Single(r => r.Value.Table == col.Table).Value;
             }
 
             if(col == null) throw new CoPilotRuntimeException("Column could not found!");
@@ -495,13 +507,16 @@ namespace CoPilot.ORM.Context
             {
                 var memberExpression = members[key];
 
-                if (memberExpression == null)
-                {
-                    throw new NotSupportedException("Selector object can only contain direct member access!");
-                }
                 var path = PathHelper.RemoveFirstElementFromPathString(memberExpression.ToString());
+                
                 BuildFromPath(key, path);
+                var cmi = ClassMemberInfo.Create(memberExpression.Member);
+                if (cmi.MemberType.IsCollection())
+                {
+                    throw new CoPilotUnsupportedException("Selector cannot return a collection type!");
+                }
             } 
+            
         }
 
         protected void BuildFromPath(string key, string path)
@@ -903,7 +918,10 @@ namespace CoPilot.ORM.Context
                 if (!path.Contains("."))
                 {
                     var classMemberInfo = ClassMemberInfo.Create(ExpressionHelper.GetPropertyFromMemberExpression<T>(memberExpression));
-                    if (classMemberInfo.MemberType.IsCollection()) throw new CoPilotUnsupportedException("The selector cannot return a collection type!");
+                    if (classMemberInfo.MemberType.IsCollection())
+                    {
+                        throw new CoPilotUnsupportedException("Selector cannot return a collection type!");
+                    }
                     if (classMemberInfo.MemberType.IsReference())
                     {
                         var dtoMembers = classMemberInfo.MemberType.GetClassMembers();

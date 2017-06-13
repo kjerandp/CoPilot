@@ -56,6 +56,17 @@ namespace CoPilot.ORM.IntegrationTests
             */
 
         }
+
+        [TestMethod]
+        public void CanCreateUseArithmeticsInWhereClause()
+        {
+            var test = _db.From<Album>()
+                .Where(r => r.Id + 4 == 5)
+                .ToArray();
+
+            Console.WriteLine(test.Length);
+        }
+
         [TestMethod]
         public void CanCreateQueriesWithMultipleLevelsInclude()
         {
@@ -77,8 +88,7 @@ namespace CoPilot.ORM.IntegrationTests
             var band = _db.From<Band>()
                 .Where(r => r.Id == 1)
                 .Select(r => new { BandId = r.Id, BandName = r.Name, Nationality = r.Based.Country.Name })
-                .OrderBy(r => r.BandName, Ordering.Descending)
-                .ThenBy(r => r.BandId)
+                .OrderBy(r => r.Nationality)
                 .Single();
 
             Assert.AreEqual(1, band.BandId);
@@ -113,7 +123,7 @@ namespace CoPilot.ORM.IntegrationTests
             var bands = _db.From<Band>().Select("BandMembers.Person.City", "Based").ToArray();
 
             Assert.IsTrue(bands.Any());
-            Assert.IsTrue(bands.Any(r => r.BandMembers.Any(m => m.Person?.City != null)));
+            Assert.IsTrue(bands.Any(r => r.BandMembers != null && r.BandMembers.Any(m => m.Person?.City != null)));
             Assert.IsTrue(bands.Any(r => r.Based != null));
         }
 

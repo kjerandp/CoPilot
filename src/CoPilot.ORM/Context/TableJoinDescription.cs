@@ -17,13 +17,15 @@ namespace CoPilot.ORM.Context
             {
                 TargetKey = join.Relationship.ForeignKeyColumn;
                 SourceKey = join.Relationship.PrimaryKeyColumn;
+                JoinType = item.ForceInnerJoin ? TableJoinType.InnerJoin : TableJoinType.LeftJoin;
             }
             else
             {
                 TargetKey = join.Relationship.PrimaryKeyColumn;
                 SourceKey = join.Relationship.ForeignKeyColumn;
+                JoinType = item.ForceInnerJoin ? TableJoinType.InnerJoin : join.JoinType;
             }
-            JoinType = item.ForceInnerJoin ? TableJoinType.InnerJoin : join.JoinType;
+            
         }
         
         public TableJoinType JoinType { get; }

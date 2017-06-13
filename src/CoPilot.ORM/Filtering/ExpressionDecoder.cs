@@ -149,16 +149,20 @@ namespace CoPilot.ORM.Filtering
             var binLeft = binOp.Left as BinaryOperand;
             var binRight = binOp.Right as BinaryOperand;
 
+            BinaryOperand result = null;
+
             if (binLeft != null && binRight == null)
             {
                 var valOp = binOp.Right as ValueOperand;
-                binOp = ConvertExpression(binLeft, valOp);
+                result = ConvertExpression(binLeft, valOp);
             }
             else if(binRight != null && binLeft == null)
             {
                 var valOp = binOp.Left as ValueOperand;
-                binOp = ConvertExpression(binRight, valOp);
+                result = ConvertExpression(binRight, valOp);
             }
+
+            if(result != null) binOp = result;
         }
 
         private BinaryOperand ConvertExpression(BinaryOperand binLeft, ValueOperand valOp)
@@ -171,7 +175,7 @@ namespace CoPilot.ORM.Filtering
                 }
                 return binLeft;
             }
-            throw new CoPilotUnsupportedException("Invalid or unsupported expression!");
+            return null;
         }
 
         private static SqlOperator Translate(ExpressionType expressionType) 
