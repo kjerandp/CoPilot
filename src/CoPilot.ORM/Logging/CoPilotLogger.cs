@@ -4,9 +4,21 @@ using CoPilot.ORM.Scripting;
 
 namespace CoPilot.ORM.Logging
 {
-    public class ConsoleLogger : ILogger
+    public class CoPilotLogger : ILogger
     {
         public LoggingLevel LoggingLevel { get; set; }
+
+        public CoPilotLogger()
+        {
+            Output = new ConsoleLogWriter();
+        }
+
+        public CoPilotLogger(ILogOutputWriter outputWriter)
+        {
+            Output = outputWriter;
+        }
+
+        public ILogOutputWriter Output { get; }
 
         public void LogVerbose(string logText, string details = null)
         {
@@ -20,9 +32,9 @@ namespace CoPilot.ORM.Logging
                 block.Add("Details:");
                 block.Add(new ScriptBlock(details.Split('\n')));
             }
-                
-            Console.WriteLine(block.ToString());
-            Console.WriteLine();
+
+            Output.WriteLine(block);
+            Output.WriteLine();
             
         }
 
@@ -38,9 +50,9 @@ namespace CoPilot.ORM.Logging
                 block.Add("Details:");
                 block.Add(new ScriptBlock(details.Split('\n')));
             }
-              
-            Console.WriteLine(block.ToString());
-            Console.WriteLine();
+
+            Output.WriteLine(block);
+            Output.WriteLine();
             
         }
 
@@ -56,8 +68,8 @@ namespace CoPilot.ORM.Logging
                 block.Add("Details:");
                 block.Add(new ScriptBlock(details.Split('\n')));
             }
-            Console.WriteLine(block.ToString());
-            Console.WriteLine();
+            Output.WriteLine(block);
+            Output.WriteLine();
             
 
         }
@@ -74,9 +86,9 @@ namespace CoPilot.ORM.Logging
                 block.Add("Details:");
                 block.Add(new ScriptBlock(details.Split('\n')));
             }
-               
-            Console.WriteLine(block.ToString());
-            Console.WriteLine();
+
+            Output.WriteLine(block);
+            Output.WriteLine();
         }
 
         public void LogException(Exception exception)
@@ -85,5 +97,10 @@ namespace CoPilot.ORM.Logging
         }
 
         public bool SuppressLogging { get; set; }
+    }
+
+    public class ConsoleLogger : CoPilotLogger
+    {
+        public ConsoleLogger():base(new ConsoleLogWriter()) { }
     }
 }
