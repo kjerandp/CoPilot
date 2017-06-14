@@ -1,9 +1,8 @@
 ﻿using CoPilot.ORM.Common;
 using CoPilot.ORM.Config;
 using CoPilot.ORM.Config.Naming;
-using CoPilot.ORM.Database;
 using CoPilot.ORM.IntegrationTests.Models.Northwind;
-using CoPilot.ORM.Providers.SqlServer;
+using CoPilot.ORM.SqlServer;
 
 namespace CoPilot.ORM.IntegrationTests.Config
 {

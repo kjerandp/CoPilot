@@ -2,7 +2,7 @@
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
-using CoPilot.ORM.Providers.SqlServer;
+using CoPilot.ORM.SqlServer;
 using CoPilot.ORM.Scripting;
 using CoPilot.ORM.Tests.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

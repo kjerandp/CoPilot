@@ -1,11 +1,10 @@
 ﻿using System;
 using CoPilot.ORM.Common;
-using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.IntegrationTests.Models.BandSample;
 using CoPilot.ORM.Model;
-using CoPilot.ORM.Providers.MySql;
+using CoPilot.ORM.MySql;
 using CoPilot.ORM.Scripting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

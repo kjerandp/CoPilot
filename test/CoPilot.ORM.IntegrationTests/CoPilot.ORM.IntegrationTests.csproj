@@ -35,15 +35,15 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="CoPilot.ORM, Version=1.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="CoPilot.ORM, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\src\CoPilot.ORM.Providers.SqlServer\bin\Debug\net46\CoPilot.ORM.dll</HintPath>
+      <HintPath>..\..\src\CoPilot.ORM\bin\Debug\net46\CoPilot.ORM.dll</HintPath>
     </Reference>
-    <Reference Include="CoPilot.ORM.Providers.MySql">
-      <HintPath>..\..\src\CoPilot.ORM.Providers.MySql\bin\Debug\net46\CoPilot.ORM.Providers.MySql.dll</HintPath>
+    <Reference Include="CoPilot.ORM.MySql">
+      <HintPath>..\..\src\CoPilot.ORM.MySql\bin\Debug\net46\CoPilot.ORM.MySql.dll</HintPath>
     </Reference>
-    <Reference Include="CoPilot.ORM.Providers.SqlServer">
-      <HintPath>..\..\src\CoPilot.ORM.Providers.SqlServer\bin\Debug\net46\CoPilot.ORM.Providers.SqlServer.dll</HintPath>
+    <Reference Include="CoPilot.ORM.SqlServer">
+      <HintPath>..\..\src\CoPilot.ORM.SqlServer\bin\Debug\net46\CoPilot.ORM.SqlServer.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />

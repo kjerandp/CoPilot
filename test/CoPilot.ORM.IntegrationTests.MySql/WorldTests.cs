@@ -4,7 +4,7 @@ using CoPilot.ORM.Config;
 using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Database;
 using CoPilot.ORM.IntegrationTests.MySql.WorldModels;
-using CoPilot.ORM.Providers.MySql;
+using CoPilot.ORM.MySql;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CoPilot.ORM.IntegrationTests.MySql

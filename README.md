@@ -20,12 +20,12 @@ Note: This is work in progress to enable support for different ado.net database 
 Install the database provider you want to use:
 
 ```
-Install-Package CoPilot.ORM.Providers.SqlServer -Pre
+Install-Package CoPilot.ORM.SqlServer -Pre
 ```
 or
 
 ```
-Install-Package CoPilot.ORM.Providers.MySql -Pre
+Install-Package CoPilot.ORM.MySql -Pre
 ```
 ## How to use
-CoPilot aims to be as simple and intuitive as possible to use and most features are available from a single interface called `IDb`. 
+CoPilot aims to be as simple and intuitive as possible to use and most features are available from a single interface called `IDb`. Please look for examples in the test projects, especially the BandSampleTests.cs
