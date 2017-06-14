@@ -13,7 +13,7 @@ namespace CoPilot.ORM.IntegrationTests.Config
 {
     public class MySqlBandSampleSetup
     {
-        private readonly MySqlProvider _provider = new MySqlProvider(useNationalCharacterSet:false, collation:"latin1_danish_ci",loggingLevel:LoggingLevel.None);
+        private readonly MySqlProvider _provider = new MySqlProvider(useNationalCharacterSet:false, collation:"latin1_danish_ci",loggingLevel:LoggingLevel.Verbose);
         private readonly DbModel _model;
         private const string ConnectionString = @"
                     Server=localhost; 

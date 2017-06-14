@@ -7,37 +7,27 @@ using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Filtering;
-using CoPilot.ORM.Mapping.Mappers;
 using CoPilot.ORM.Scripting;
 
-namespace CoPilot.ORM.Providers.MySql.QueryStrategies
+namespace CoPilot.ORM.Providers.MySql.Writers
 {
-    public class TempTableJoinStrategy : IQueryExecutionStrategy, IQueryScriptCreator
+    public class TempTableJoinWriter : ISingleStatementQueryWriter
     {
         private readonly ISelectStatementBuilder _builder;
         private readonly ISelectStatementWriter _writer;
 
-        public TempTableJoinStrategy(ISelectStatementBuilder builder, ISelectStatementWriter writer)
+        public TempTableJoinWriter(ISelectStatementBuilder builder, ISelectStatementWriter writer)
         {
             _builder = builder;
             _writer = writer;
         }
-        public IEnumerable<object> Execute(ITableContextNode node, FilterGraph filter, DbReader reader)
-        {
-            string[] names;
-
-            var stm = CreateStatement(node, filter, out names);
-
-            var response = reader.Query(stm, names.ToArray());
-
-            return ContextMapper.MapAndMerge(node, response.RecordSets);
-        }
-
+  
         public SqlStatement CreateStatement(ITableContextNode node, FilterGraph filter, out string[] names)
         {
+            var tempTables = new List<string>(3);
             var ctx = node.Context;
             var q = ctx.GetQueryContext(node, filter);
-            var stm = new SqlStatement(GetScript(q));
+            var stm = new SqlStatement(GetScript(q, null, tempTables));
             if (q.Filter != null)
             {
                 stm.Parameters.AddRange(q.Filter.Parameters);
@@ -45,14 +35,19 @@ namespace CoPilot.ORM.Providers.MySql.QueryStrategies
             }
             var namesList = new List<string> { node.Path };
 
-            AddContextNodeQueries(node, stm, namesList);
+            AddContextNodeQueries(node, stm, namesList, tempTables);
 
             names = namesList.ToArray();
+
+            foreach (var tempTable in tempTables)
+            {
+                stm.Script.Append(new ScriptBlock($"\nDROP TABLE IF EXISTS {tempTable};"));
+            }
 
             return stm;
         }
 
-        private ScriptBlock GetScript(QueryContext q, ITableContextNode parantNode = null)
+        private ScriptBlock GetScript(QueryContext q, ITableContextNode parantNode, List<string> tempTables)
         {
             var segments = _builder.Build(q);
             var tempName = "tmp_"+q.BaseNode.Path.Replace(".", "_");
@@ -61,6 +56,7 @@ namespace CoPilot.ORM.Providers.MySql.QueryStrategies
             {
                 segments.AddToSegment(QuerySegment.PreStatement, $"CREATE TEMPORARY TABLE IF NOT EXISTS {tempName} AS (");
                 segments.AddToSegment(QuerySegment.PostStatement,")");
+                tempTables.Add(tempName);
             }
             if (parantNode != null)
             {
@@ -81,19 +77,19 @@ namespace CoPilot.ORM.Providers.MySql.QueryStrategies
             return script;
         }
 
-        private void AddContextNodeQueries(ITableContextNode parentNode, SqlStatement stm, List<string> names)
+        private void AddContextNodeQueries(ITableContextNode parentNode, SqlStatement stm, List<string> names, List<string> tempTables)
         {
             foreach (var rel in parentNode.Nodes.Where(r => !r.Value.Relationship.IsLookupRelationship))
             {
                 var node = rel.Value;
                 if (node.IsInverted)
                 {
-                    stm.Script.Append(GetScript(node.GetQueryContext(), parentNode));
+                    stm.Script.Append(GetScript(node.GetQueryContext(), parentNode, tempTables));
                     names.Add(node.Path);
 
                 }
 
-                AddContextNodeQueries(node, stm, names);
+                AddContextNodeQueries(node, stm, names, tempTables);
             }
         }
     }

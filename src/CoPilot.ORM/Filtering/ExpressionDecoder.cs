@@ -14,11 +14,11 @@ namespace CoPilot.ORM.Filtering
     {
         private ExpressionGraph _graph;
         private int _paramIndex;
-        private readonly IDbProvider _provider;
+        private readonly MethodCallConverters _methodCallConverters;
 
         public ExpressionDecoder(IDbProvider provider)
         {
-            _provider = provider;
+            _methodCallConverters = MethodCallConverters.Create(provider);
         }
 
         public ExpressionGraph Decode(Expression expression)
@@ -96,7 +96,7 @@ namespace CoPilot.ORM.Filtering
                 }
                 if (!string.IsNullOrEmpty(refNode.ReferencedTypeMethodCall))
                 {
-                    var converter = _provider.GetMethodCallConverter(refNode.ReferencedTypeMethodCall);
+                    var converter = _methodCallConverters.GetConverter(refNode.ReferencedTypeMethodCall);
                     var result = new ConversionResult(op);
                     converter.Invoke(refNode.ReferenceTypeMethodCallArgs, result);
 

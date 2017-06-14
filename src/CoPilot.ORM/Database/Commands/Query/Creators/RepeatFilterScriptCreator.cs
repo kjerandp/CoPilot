@@ -1,35 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Filtering;
-using CoPilot.ORM.Mapping.Mappers;
 
-namespace CoPilot.ORM.Database.Commands.Query.Strategies
+namespace CoPilot.ORM.Database.Commands.Query.Creators
 {
-    public class RepeatFilterStrategy : IQueryExecutionStrategy, IQueryScriptCreator
+    public class RepeatFilterScriptCreator : ISingleStatementQueryWriter
     {
         private readonly ISelectStatementBuilder _builder;
         private readonly ISelectStatementWriter _writer;
 
-        public RepeatFilterStrategy(ISelectStatementBuilder builder, ISelectStatementWriter writer)
+        public RepeatFilterScriptCreator(ISelectStatementBuilder builder, ISelectStatementWriter writer)
         {
             _builder = builder;
             _writer = writer;
         }
-        public IEnumerable<object> Execute(ITableContextNode node, FilterGraph filter, DbReader reader)
-        {
-            string[] names;
-            var stm = CreateStatement(node, filter, out names);
-            
-            var response = reader.Query(stm, names);
-
-            return ContextMapper.MapAndMerge(node, response.RecordSets);
-        }
-
+        
         public SqlStatement CreateStatement(ITableContextNode node, FilterGraph filter, out string[] names)
         {
             var ctx = node.Context;

@@ -1,6 +1,7 @@
 ﻿using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
+using System.Linq;
 
 namespace CoPilot.ORM.Providers.MySql.Writers
 {
@@ -20,6 +21,14 @@ namespace CoPilot.ORM.Providers.MySql.Writers
         public ScriptBlock WrapInsideIdentityInsertScript(DbTable table, ScriptBlock sourceScript)
         {
             return sourceScript;
+        }
+
+        public ScriptBlock GetModelValidationScript(DbTable dbTable)
+        {
+            return new ScriptBlock(
+                $"select {string.Join(",", dbTable.Columns.Select(r => "`" + r.ColumnName + "`"))} from `{dbTable.TableName}` limit 1;",
+                $"select * from `{dbTable.TableName}` limit 1"
+            );
         }
     }
 }

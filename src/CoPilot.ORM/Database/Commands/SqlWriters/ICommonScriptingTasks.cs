@@ -8,5 +8,6 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
         ScriptBlock GetSelectKeysFromChildTableScript(DbTable table, string pkCol, string keyCol);
         ScriptBlock SetForeignKeyValueToNullScript(DbTable table, string fkCol, string keyCol);
         ScriptBlock WrapInsideIdentityInsertScript(DbTable table, ScriptBlock sourceScript);
+        ScriptBlock GetModelValidationScript(DbTable dbTable);
     }
 }

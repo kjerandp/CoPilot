@@ -7,7 +7,6 @@ using System.Text.RegularExpressions;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
-using CoPilot.ORM.Database.Commands.Query.Strategies;
 using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Exceptions;
@@ -16,10 +15,8 @@ using System.Linq;
 using CoPilot.ORM.Extensions;
 using System.Reflection;
 using CoPilot.ORM.Common;
-using CoPilot.ORM.Database;
 using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Helpers;
-using CoPilot.ORM.Model;
 using CoPilot.ORM.Providers.SqlServer.Writers;
 
 namespace CoPilot.ORM.Providers.SqlServer
@@ -27,15 +24,12 @@ namespace CoPilot.ORM.Providers.SqlServer
     public class SqlServerProvider : IDbProvider
     {
         private readonly object _lockObj = new object();
-        private readonly MethodCallConverters _converters;
-
+   
         public ILogger Logger { get; set; }
-        public IModelValidator ModelValidator { get; set; }
 
         public SqlServerProvider(bool useNationalCharacterSet = false, LoggingLevel loggingLevel = LoggingLevel.None)
         {
             UseNationalCharacterSet = useNationalCharacterSet;
-            _converters = new MethodCallConverters();
 
             CreateStatementWriter = new SqlCreateStatementWriter(this);
             InsertStatementWriter = new SqlInsertStatementWriter(this);
@@ -44,10 +38,9 @@ namespace CoPilot.ORM.Providers.SqlServer
             SelectStatementWriter = new SqlSelectStatementWriter();
             CommonScriptingTasks = new SqlCommonScriptingTasks();
             SelectStatementBuilder = new SqlSelectStatementBuilder();
-            QueryStrategySelector = new SqlQueryStrategySelector(SelectStatementBuilder, SelectStatementWriter).Get();
+            SingleStatementQueryWriter = new TempTableJoinWriter(SelectStatementBuilder, SelectStatementWriter);
 
             Logger = new ConsoleLogger {LoggingLevel = loggingLevel};
-            ModelValidator = new SimpleModelValidator();
         }
 
         public bool UseNationalCharacterSet { get; }
@@ -227,13 +220,11 @@ namespace CoPilot.ORM.Providers.SqlServer
             return result;
         }
 
-        
-
-        public ICreateStatementWriter CreateStatementWriter { get; }
-
         public ISelectStatementBuilder SelectStatementBuilder { get; }
 
-        public QueryStrategySelector QueryStrategySelector { get; }
+        public ISingleStatementQueryWriter SingleStatementQueryWriter { get; }
+
+        public ICreateStatementWriter CreateStatementWriter { get; }
 
         public ISelectStatementWriter SelectStatementWriter { get; }
 
@@ -249,29 +240,11 @@ namespace CoPilot.ORM.Providers.SqlServer
         {
             return new SqlConnection(connectionString);
         }
-
-        public IDbCommand CreateCommand(IDbConnection connection = null, int timeout = 0)
+        
+        public void RegisterMethodCallConverters(MethodCallConverters converters)
         {
-            var cmd = new SqlCommand(""){CommandTimeout = timeout};
-
-            var con = connection as SqlConnection;
-
-            if (con != null)
-            {
-                cmd.Connection = con;
-            }
-
-            return cmd;
-        }
-
-        public bool ValidateModel(IDb db)
-        {
-            return ModelValidator.Validate(db);
-        }
-
-        public MemberMethodCallConverter GetMethodCallConverter(string methodName)
-        {
-            return _converters.GetConverter(methodName);
+            converters.RegisterDefaults();
+            converters.Register("ToString", (args, result) => result.MemberExpressionOperand.Custom = "CAST({column} as "+(UseNationalCharacterSet? "nvarchar": "varchar") +")");
         }
 
         public string GetDataTypeAsString(DbDataType dataType, int size = 0)
@@ -338,6 +311,7 @@ namespace CoPilot.ORM.Providers.SqlServer
 
             throw new CoPilotUnsupportedException($"Unable to convert {dataType} to a string.");
         }
+
 
         private SqlDbType ToDbType(DbDataType type)
         {

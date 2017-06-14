@@ -1,6 +1,7 @@
 ﻿using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
+using System.Linq;
 
 namespace CoPilot.ORM.Providers.SqlServer.Writers
 {
@@ -24,6 +25,13 @@ namespace CoPilot.ORM.Providers.SqlServer.Writers
                     false);
 
             return sourceScript;
+        }
+
+        public ScriptBlock GetModelValidationScript(DbTable dbTable)
+        {
+            return new ScriptBlock(
+                $"select top 1 {string.Join(",", dbTable.Columns.Select(r => "[" + r.ColumnName + "]"))} from [{dbTable.Schema}].[{dbTable.TableName}]",
+                $"select top 1 * from [{dbTable.Schema}].[{dbTable.TableName}]");
         }
     }
 }

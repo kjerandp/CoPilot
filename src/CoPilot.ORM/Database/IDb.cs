@@ -22,10 +22,11 @@ namespace CoPilot.ORM.Database
         /// CoPilot's internal description of the database and its entities
         /// </summary>
         DbModel Model { get; }
+
         /// <summary>
         /// Get a SqlConnection from the connection string provided to CoPilot
         /// </summary>
-        IDbConnection Connection { get; }
+        IDbConnection CreateConnection();
 
         /// <summary>
         /// Database provider

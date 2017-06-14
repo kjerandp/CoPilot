@@ -19,18 +19,26 @@ namespace CoPilot.ORM.Database.Commands.Query
         internal TableContext<T> Ctx;
 
         private readonly IDbProvider _provider;
-        private readonly DbModel _model;
         private readonly DbReader _dbReader;
+        private readonly string _connectionString;
+        private readonly DbModel _model;
         private Dictionary<string, Ordering> _orderByPaths;
         private SelectModifiers _predicates;
         private Expression<Func<T, bool>> _filterPredicate;
         
 
-        internal QueryBuilder(IDbProvider provider, DbModel model, DbReader dbReader)
+        internal QueryBuilder(IDbProvider provider, DbModel model, DbReader reader)
         {
             _provider = provider;
             _model = model;
-            _dbReader = dbReader;
+            _dbReader = reader;
+        }
+
+        internal QueryBuilder(IDbProvider provider, DbModel model, string connectionString)
+        {
+            _provider = provider;
+            _model = model;
+            _connectionString = connectionString;
         }
 
         public IFilteredQuery<T> Where(Expression<Func<T, bool>> predicate)
@@ -178,7 +186,16 @@ namespace CoPilot.ORM.Database.Commands.Query
 
             UpdateContext();
             var rootFilter = Ctx.GetFilter();
-            return _provider.QueryStrategySelector(Ctx).Execute(Ctx, rootFilter, _dbReader);
+
+            if (_dbReader != null)
+            {
+                return _dbReader.QueryStrategySelector(Ctx).Execute(Ctx, rootFilter, _dbReader);
+            }
+
+            using (var reader = new DbReader(_provider, _provider.CreateConnection(_connectionString), _model))
+            {
+                return reader.QueryStrategySelector(Ctx).Execute(Ctx, rootFilter, reader);
+            }
         }
 
         internal IEnumerable<TTarget> Execute<TTarget>()
@@ -187,7 +204,16 @@ namespace CoPilot.ORM.Database.Commands.Query
             var mapper = (typeof(TTarget) == typeof(object) || typeof(TTarget) == typeof(IDictionary<string, object>)) ?
                     DynamicMapper.Create() :
                     SelectTemplateMapper.Create(Ctx, typeof(TTarget));
-            return _dbReader.Query(Ctx).Map<TTarget>(mapper);
+
+            if (_dbReader != null)
+            {
+                return _dbReader.Query(Ctx).Map<TTarget>(mapper);
+            }
+
+            using (var reader = new DbReader(_provider, _provider.CreateConnection(_connectionString), _model))
+            {
+                return reader.Query(Ctx).Map<TTarget>(mapper);
+            }
         }
     }
 
@@ -248,7 +274,7 @@ namespace CoPilot.ORM.Database.Commands.Query
                 }
 
                 var constExpr = member.Body as ConstantExpression;
-                return constExpr != null ? constExpr.Value.ToString() : "1";
+                return constExpr?.Value.ToString() ?? "1";
                 
             }
             return ExpressionHelper.GetPathFromExpression(member);

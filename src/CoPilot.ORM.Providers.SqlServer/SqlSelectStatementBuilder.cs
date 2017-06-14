@@ -11,7 +11,6 @@ namespace CoPilot.ORM.Providers.SqlServer
 {
     public class SqlSelectStatementBuilder : ISelectStatementBuilder
     {
-        
         public QuerySegments Build(QueryContext queryContext)
         {
             var qs = new QuerySegments();

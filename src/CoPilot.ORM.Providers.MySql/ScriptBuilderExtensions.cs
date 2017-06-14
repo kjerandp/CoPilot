@@ -13,7 +13,7 @@ using CoPilot.ORM.Filtering.Interfaces;
 using CoPilot.ORM.Filtering.Operands;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
-using CoPilot.ORM.Providers.MySql.QueryStrategies;
+using CoPilot.ORM.Providers.MySql.Writers;
 using CoPilot.ORM.Scripting;
 
 namespace CoPilot.ORM.Providers.MySql
@@ -95,7 +95,7 @@ namespace CoPilot.ORM.Providers.MySql
             return script;
         }
 
-        public static ScriptBlock CreateStoredProcedureFromQuery<T>(this ScriptBuilder sb, string name, Expression<Func<T, bool>> filter = null, IQueryScriptCreator scriptCreator = null, params string[] include) where T : class
+        public static ScriptBlock CreateStoredProcedureFromQuery<T>(this ScriptBuilder sb, string name, Expression<Func<T, bool>> filter = null, ISingleStatementQueryWriter scriptCreator = null, params string[] include) where T : class
         {
             var ctx = sb.Model.CreateContext<T>(include);
 
@@ -109,10 +109,10 @@ namespace CoPilot.ORM.Providers.MySql
             return sb.CreateStoredProcedureFromQuery(name, ctx, scriptCreator);
         }
 
-        public static ScriptBlock CreateStoredProcedureFromQuery(this ScriptBuilder sb, string name, TableContext ctx, IQueryScriptCreator scriptCreator = null)
+        public static ScriptBlock CreateStoredProcedureFromQuery(this ScriptBuilder sb, string name, TableContext ctx, ISingleStatementQueryWriter scriptCreator = null)
         {
             if (scriptCreator == null)
-                scriptCreator = new TempTableJoinStrategy(sb.DbProvider.SelectStatementBuilder, sb.DbProvider.SelectStatementWriter);
+                scriptCreator = new TempTableJoinWriter(sb.DbProvider.SelectStatementBuilder, sb.DbProvider.SelectStatementWriter);
 
             var rootFilter = ctx.GetFilter();
             var paramToColumnMap = new Dictionary<string, ContextColumn>();

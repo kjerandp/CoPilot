@@ -21,14 +21,18 @@ namespace CoPilot.ORM.Database
  
         internal Db(IDbProvider provider, string connectionString, DbModel model)
         {
+            _connectionString = connectionString;
             DbProvider = provider;
             Model = model;
-            _connectionString = connectionString;        
+                 
         }
 
         public IDbProvider DbProvider { get; }
 
-        public IDbConnection Connection => DbProvider.CreateConnection(_connectionString);
+        public IDbConnection CreateConnection()
+        {
+            return DbProvider.CreateConnection(_connectionString);
+        }
 
         public DbModel Model { get; }
 
@@ -84,9 +88,9 @@ namespace CoPilot.ORM.Database
         {
             var request = DbRequest.CreateRequest(Model, commandText, args);
             
-            using (var con = Connection)
+            using (var con = CreateConnection())
             {
-                var command = DbProvider.CreateCommand(con);
+                var command = con.CreateCommand();
                 command.CommandType = request.CommandType;
                 request.Command = command;
                 con.Open();
@@ -101,9 +105,9 @@ namespace CoPilot.ORM.Database
         {
             var request = DbRequest.CreateRequest(Model, commandText, args);
 
-            using (var con = Connection)
+            using (var con = CreateConnection())
             {
-                var command = DbProvider.CreateCommand(con);
+                var command = con.CreateCommand();
                 command.CommandType = request.CommandType;
                 request.Command = command;
                 con.Open();
@@ -220,15 +224,13 @@ namespace CoPilot.ORM.Database
 
         public bool ValidateModel()
         {
-            return DbProvider.ValidateModel(this);
+            var validator = new SimpleModelValidator();
+            return validator.Validate(this);
         }
 
         public IQuery<T> From<T>() where T : class
         {
-            using (var rdr = new DbReader(this))
-            {
-                return rdr.From<T>();
-            }
+            return new QueryBuilder<T>(DbProvider, Model, _connectionString);
         }
     } 
 }

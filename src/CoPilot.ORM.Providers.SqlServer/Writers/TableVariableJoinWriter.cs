@@ -8,31 +8,20 @@ using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Filtering;
-using CoPilot.ORM.Mapping.Mappers;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
 
-namespace CoPilot.ORM.Providers.SqlServer.QueryStrategies
+namespace CoPilot.ORM.Providers.SqlServer.Writers
 {
-    public class TableVariableJoinStrategy : IQueryExecutionStrategy, IQueryScriptCreator
+    public class TableVariableJoinWriter : ISingleStatementQueryWriter
     {
         private readonly IDbProvider _provider;
 
-        public TableVariableJoinStrategy(IDbProvider provider)
+        public TableVariableJoinWriter(IDbProvider provider)
         {
             _provider = provider;
         }
-        public IEnumerable<object> Execute(ITableContextNode node, FilterGraph filter, DbReader reader)
-        {
-            string[] names;
-
-            var stm = CreateStatement(node, filter, out names);
-
-            var response = reader.Query(stm, names.ToArray());
-
-            return ContextMapper.MapAndMerge(node, response.RecordSets);
-        }
-
+       
         public SqlStatement CreateStatement(ITableContextNode node, FilterGraph filter, out string[] names)
         {
             var ctx = node.Context;

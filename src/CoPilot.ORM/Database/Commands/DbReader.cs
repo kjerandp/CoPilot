@@ -20,24 +20,32 @@ namespace CoPilot.ORM.Database.Commands
     {
         private readonly IDbCommand _command;
         private readonly IDbConnection _connection;
-        private readonly DbModel _model;
         private readonly IDbProvider _provider;
 
-        public DbReader(IDb db) : this(db.DbProvider, db.DbProvider.CreateCommand(db.Connection), db.Model){}
+        public QueryStrategySelector QueryStrategySelector { get; }
+
+        private readonly DbModel _model;
+
+        public DbReader(IDb db) : this(db.DbProvider, db.CreateConnection(), db.Model){}
+
+        public DbReader(IDbProvider provider, IDbConnection connection, DbModel model) : this(provider, connection.CreateCommand(), model)
+        {
+            _connection = connection;
+        }
 
         internal DbReader(IDbProvider provider, IDbCommand command, DbModel model)
         {
             _model = model;
             _command = command;
+            _command.CommandTimeout = 0;
             _provider = provider;
-            _connection = null;
-
+            
+            QueryStrategySelector = new DefaultQueryExecutionStrategy(_provider).Get();
         }
-        
 
         public object FindByKey(ITableContextNode node, object key)
         {
-            var strategy = _provider.QueryStrategySelector(node.Context);
+            var strategy = QueryStrategySelector(node.Context);
             var filter = FilterGraph.CreateByPrimaryKeyFilter(node, key);
             var item = strategy.Execute(node, filter, this).SingleOrDefault();
             return item;
@@ -113,7 +121,7 @@ namespace CoPilot.ORM.Database.Commands
             var rootFilter = ctx.GetFilter();
             _command.CommandType = CommandType.Text;
 
-            return _provider.QueryStrategySelector(ctx).Execute(ctx, rootFilter, this).OfType<T>();
+            return QueryStrategySelector(ctx).Execute(ctx, rootFilter, this).OfType<T>();
         }
 
         public IEnumerable<dynamic> Query<TEntity>(Expression<Func<TEntity, object>> selector, Expression<Func<TEntity, bool>> filter = null) where TEntity : class

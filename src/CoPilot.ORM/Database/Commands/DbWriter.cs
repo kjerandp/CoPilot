@@ -66,11 +66,12 @@ namespace CoPilot.ORM.Database.Commands
 
             _model = db.Model;
             _provider = db.DbProvider;
-            _connection = db.Connection;
+            _connection = db.CreateConnection();
             _connection.Open();
             //_transactionId = "T" + DateTime.Now.ToFileTime();
             _transaction = _connection.BeginTransaction(isolation);
-            _command = _provider.CreateCommand(_connection, timeout);
+            _command = _connection.CreateCommand();
+            _command.CommandTimeout = timeout;
             _command.CommandType = CommandType.Text;
             _command.Transaction = _transaction;
 

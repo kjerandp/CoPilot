@@ -23,9 +23,9 @@ namespace CoPilot.ORM.IntegrationTests
         public static void BandSampleTestsInitialize(TestContext testContext)
         {
             var model = BandSampleConfig.CreateModel();
-            //var databaseSetup = new MySqlBandSampleSetup(model);
-            var databaseSetup = new SqlServerBandSampleSetup(model);
-            //databaseSetup.DropCreateDatabase();
+            var databaseSetup = new MySqlBandSampleSetup(model);
+            //var databaseSetup = new SqlServerBandSampleSetup(model);
+            databaseSetup.DropCreateDatabase();
             _db = databaseSetup.GetDb();
             
         }
@@ -120,7 +120,7 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanQueryForBands()
         {
-            var bands = _db.From<Band>().Select("BandMembers.Person.City", "Based").ToArray();
+            var bands = _db.From<Band>().Where(r => !r.Name.Contains("Bulk Band")).Select("BandMembers.Person.City", "Based").ToArray();
 
             Assert.IsTrue(bands.Any());
             Assert.IsTrue(bands.Any(r => r.BandMembers != null && r.BandMembers.Any(m => m.Person?.City != null)));
@@ -306,7 +306,7 @@ namespace CoPilot.ORM.IntegrationTests
 
                 for (var i = 0; i < insertCount; i++)
                 {
-                    writer.Command(new {cityId = 1, bandName = "Lazy Band " + i, formed = dt.AddDays(i)});
+                    writer.Command(new {cityId = 1, bandName = "Lazy Bulk Band " + i, formed = dt.AddDays(i)});
                 }
 
                 writer.Commit();

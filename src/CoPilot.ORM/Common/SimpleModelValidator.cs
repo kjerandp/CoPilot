@@ -5,7 +5,7 @@ using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
 
-namespace CoPilot.ORM.Providers.MySql
+namespace CoPilot.ORM.Common
 {
     public class SimpleModelValidator : IModelValidator
     {
@@ -14,12 +14,11 @@ namespace CoPilot.ORM.Providers.MySql
             var isValid = true;
             foreach (var dbTable in db.Model.Tables)
             {
-                Console.WriteLine(FormatMessage($"Validation of table `{dbTable}`..."));
+                Console.WriteLine(FormatMessage($"Validation of table: {dbTable}"));
 
                 try
                 {
-                    var sql =
-                        $"select {string.Join(",", dbTable.Columns.Select(r => "`"+r.ColumnName+ "`"))} from `{dbTable.TableName}` limit 1;select * from `{dbTable.TableName}` limit 1";
+                    var sql = db.DbProvider.CommonScriptingTasks.GetModelValidationScript(dbTable).ToString();
                     var res = db.Query(sql, null);
                     if (res.RecordSets.Last().Records.Length == 0)
                     {

@@ -7,10 +7,8 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Config.DataTypes;
-using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
-using CoPilot.ORM.Database.Commands.Query.Strategies;
 using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Exceptions;
@@ -18,7 +16,6 @@ using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Logging;
-using CoPilot.ORM.Model;
 using CoPilot.ORM.Providers.MySql.Writers;
 using MySql.Data.MySqlClient;
 
@@ -27,17 +24,16 @@ namespace CoPilot.ORM.Providers.MySql
     public class MySqlProvider : IDbProvider
     {
         private readonly object _lockObj = new object();
-        private readonly MethodCallConverters _converters;
 
         public ILogger Logger { get; set; }
-        public IModelValidator ModelValidator { get; set; }
+
         public readonly string Collation;
+        public bool UseNationalCharacterSet { get; }
 
         public MySqlProvider(string collation = null, bool useNationalCharacterSet = false, LoggingLevel loggingLevel = LoggingLevel.None)
         {
             Collation = collation;
             UseNationalCharacterSet = useNationalCharacterSet;
-            _converters = new MethodCallConverters();
 
             CreateStatementWriter = new MySqlCreateStatementWriter(this);
             InsertStatementWriter = new MySqlInsertStatementWriter(this);
@@ -46,18 +42,16 @@ namespace CoPilot.ORM.Providers.MySql
             SelectStatementWriter = new MySqlSelectStatementWriter();
             CommonScriptingTasks = new MySqlCommonScriptingTasks();
             SelectStatementBuilder = new MySqlSelectStatementBuilder();
-            QueryStrategySelector = new MySqlQueryStrategySelector(SelectStatementBuilder, SelectStatementWriter).Get();
+            SingleStatementQueryWriter = new TempTableJoinWriter(SelectStatementBuilder, SelectStatementWriter);
 
             Logger = new ConsoleLogger {LoggingLevel = loggingLevel};
-            ModelValidator = new SimpleModelValidator();
         }
 
-        public bool UseNationalCharacterSet { get; }
+        
+        
 
-        //TODO Move some of this into CORE?
         public DbResponse ExecuteQuery(DbRequest cmd, params string[] names)
         {
-
             var resultSets = new List<DbRecordSet>();
             var timer = Stopwatch.StartNew();
             
@@ -236,8 +230,6 @@ namespace CoPilot.ORM.Providers.MySql
 
         public ISelectStatementBuilder SelectStatementBuilder { get; }
 
-        public QueryStrategySelector QueryStrategySelector { get; }
-
         public ISelectStatementWriter SelectStatementWriter { get; }
 
         public IInsertStatementWriter InsertStatementWriter { get; }
@@ -248,33 +240,18 @@ namespace CoPilot.ORM.Providers.MySql
 
         public ICommonScriptingTasks CommonScriptingTasks { get; }
 
+        public ISingleStatementQueryWriter SingleStatementQueryWriter { get; }
+
         public IDbConnection CreateConnection(string connectionString)
         {
             return new MySqlConnection(connectionString);
         }
+        
 
-        public IDbCommand CreateCommand(IDbConnection connection = null, int timeout = 0)
+        public void RegisterMethodCallConverters(MethodCallConverters converters)
         {
-            var cmd = new MySqlCommand(""){CommandTimeout = timeout};
-
-            var con = connection as MySqlConnection;
-
-            if (con != null)
-            {
-                cmd.Connection = con;
-            }
-
-            return cmd;
-        }
-
-        public bool ValidateModel(IDb db)
-        {
-            return ModelValidator.Validate(db);
-        }
-
-        public MemberMethodCallConverter GetMethodCallConverter(string methodName)
-        {
-            return _converters.GetConverter(methodName);
+            converters.RegisterDefaults();
+            converters.Register("ToString", (args, result) => result.MemberExpressionOperand.Custom = "CAST({column} as " + (UseNationalCharacterSet ? "NCHAR" : "CHAR") + ")");
         }
 
         public string GetDataTypeAsString(DbDataType dataType, int size = 0)
