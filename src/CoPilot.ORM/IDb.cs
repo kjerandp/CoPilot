@@ -3,15 +3,14 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using CoPilot.ORM.Common;
-using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands;
-using CoPilot.ORM.Database.Commands.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Providers;
+using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
 
-namespace CoPilot.ORM.Database
+namespace CoPilot.ORM
 {
     /// <summary>
     /// Interface for interacting with CoPilot
@@ -71,15 +70,13 @@ namespace CoPilot.ORM.Database
         /// Query database using a mapped POCO class to set the context. Sql statement and mapping will be fully handled by CoPilot
         /// </summary>
         /// <typeparam name="T">Mapped POCO class to set the context. <remarks>POCO class must be mapped using the DbMapper class</remarks></typeparam>
-        /// <param name="orderByClause">Create an order by clause for the query by using the OrderByClause-class</param>
-        /// <param name="predicates">Add predicates, such as DESTINCT, TOP, SKIP and TAKE, by crteating an instance of the Predicates-class</param>
         /// <param name="filter">Filterexpression that will be translated into a WHERE clause (can be null).
-        /// <remarks>Basic support for method calls on properties mapping to columns. <see cref="ExpressionDecoderConfig.MemberMethodCallConverter"/> and <see cref="ExpressionDecoderConfig"/></remarks></param>
+        /// <remarks>Basic support for method calls on properties mapping to columns. <see cref="MemberMethodCallConverter"/></remarks></param>
         /// <param name="include">Array of named navigation properties that reference other mapped POCO classes. This will include data from related entities based on the configured relationships. 
         /// <remarks>Use dot notation to include multiple levels, ex: "OrderLines.Product"</remarks></param>
         /// <returns>Query result mapped to an IEnumerable of type T</returns>
         [Obsolete("Use new functional expressions instead to define contextual queries (_db.From<T>()...).")]
-        IEnumerable<T> Query<T>(OrderByClause<T> orderByClause, SelectModifiers predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class;
+        IEnumerable<T> Query<T>(Expression<Func<T, bool>> filter = null, params string[] include) where T : class;
 
 
         /// <summary>
@@ -89,13 +86,11 @@ namespace CoPilot.ORM.Database
         /// <typeparam name="TEntity">Mapped POCO class to set the context. <remarks>POCO class must be mapped using the DbMapper class</remarks></typeparam>
         /// <typeparam name="TDto">POCO class to map the query result to based on the selector</typeparam>
         /// <param name="selector">Expression to select a single property to be returned or a new anonymous object containing the columns wanted. You can also select a related mapped POCO class.</param>
-        /// <param name="orderByClause">Create an order by clause for the query by using the OrderByClause-class</param>
-        /// <param name="predicates">Add predicates, such as DESTINCT, TOP, SKIP and TAKE, by crteating an instance of the Predicates-class</param>
         /// <param name="filter">Filterexpression that will be translated into a WHERE clause (can be null).
-        /// <remarks>Basic support for method calls on properties mapping to columns. <see cref="ExpressionDecoderConfig.MemberMethodCallConverter"/> and <see cref="ExpressionDecoderConfig"/></remarks></param>
+        /// <remarks>Basic support for method calls on properties mapping to columns. <see cref="MemberMethodCallConverter"/></remarks></param>
         /// <returns>Query result mapped to type of TDto</returns>
         [Obsolete("Use new functional expressions instead to define contextual queries (_db.From<T>()...).")]
-        IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, SelectModifiers predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class;
+        IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, Expression<Func<TEntity, bool>> filter = null) where TEntity : class;
 
         /// <summary>
         /// 

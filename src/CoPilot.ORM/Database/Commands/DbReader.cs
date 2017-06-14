@@ -9,7 +9,6 @@ using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Mapping.Mappers;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
-using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Providers;
@@ -102,53 +101,20 @@ namespace CoPilot.ORM.Database.Commands
 
         public IEnumerable<T> Query<T>(Expression<Func<T, bool>> filter = null, params string[] include) where T : class
         {
-            return Query(null, null, filter, include);
-        }
+            var ctx = CreateContext(filter, include);
 
-        public IEnumerable<T> Query<T>(SelectModifiers predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
-        {
-            return Query(null, predicates, filter, include);
-        }
-
-        public IEnumerable<T> Query<T>(OrderByClause<T> orderBy, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
-        {
-            return Query(orderBy, null, filter, include);
-        }
-
-        public IEnumerable<T> Query<T>(OrderByClause<T> orderBy, SelectModifiers predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
-        {
-            var ctx = CreateContext(orderBy, predicates, filter, include);
             var rootFilter = ctx.GetFilter();
             _command.CommandType = CommandType.Text;
 
             return QueryStrategySelector(ctx).Execute(ctx, rootFilter, this).OfType<T>();
         }
 
-        public IEnumerable<dynamic> Query<TEntity>(Expression<Func<TEntity, object>> selector, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
+        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
         {
-            return Query(selector, null, null, filter);
-        }
+            var ctx = CreateContext(filter);
 
-        public IEnumerable<dynamic> Query<TEntity>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
-        {
-            return Query(selector, orderByClause, null, filter);
-        }
+            ctx.ApplySelector(selector);
 
-        public IEnumerable<dynamic> Query<TEntity>(Expression<Func<TEntity, object>> selector, SelectModifiers predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
-        {
-            return Query(selector, null, predicates, filter);
-        }
-
-        public IEnumerable<dynamic> Query<TEntity>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, SelectModifiers predicates,
-            Expression<Func<TEntity, bool>> filter = null) where TEntity : class
-        {
-            return Query<TEntity, object>(selector, orderByClause, predicates, filter);
-        }
-
-        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, SelectModifiers predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
-        {
-            var ctx = CreateContext(selector, orderByClause, predicates, filter);
-           
             var queryResult = Query(ctx);
             
             return queryResult.Map<TDto>();
@@ -162,21 +128,6 @@ namespace CoPilot.ORM.Database.Commands
             stm.Command = _command;
 
             return _provider.ExecuteQuery(stm, ctx.Path);
-        }
-
-        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
-        {
-            return Query<TEntity, TDto>(selector, orderByClause, null, filter);
-        }
-
-        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, SelectModifiers predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
-        {
-            return Query<TEntity, TDto>(selector, null, predicates, filter);
-        }
-
-        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
-        {
-            return Query<TEntity, TDto>(selector, null, null, filter);
         }
 
         public T Single<T>(Expression<Func<T, bool>> filter, params string[] include) where T : class
@@ -207,36 +158,6 @@ namespace CoPilot.ORM.Database.Commands
             }
 
             return ctx;
-        }
-
-        private TableContext<T> CreateContext<T>(OrderByClause<T> orderBy, SelectModifiers predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
-        {
-            var ctx = CreateContext(filter, include);
-            ApplyToContext(ctx, orderBy, predicates);
-
-            return ctx;
-        }
-
-        private TableContext<T> CreateContext<T>(Expression<Func<T, object>> selector, OrderByClause<T> orderBy,SelectModifiers predicates, Expression<Func<T, bool>> filter = null) where T : class
-        {
-            var ctx = CreateContext(filter);
-
-            ctx.ApplySelector(selector);
-            ApplyToContext(ctx, orderBy, predicates);
-
-            return ctx;
-        }
-
-        private static void ApplyToContext<T>(TableContext ctx, OrderByClause<T> orderBy, SelectModifiers predicates) where T : class
-        {
-            if (orderBy != null)
-            {
-                ctx.ApplyOrdering(orderBy.Get());
-            }
-            if (predicates != null)
-            {
-                ctx.SetSelectModifiers(predicates);
-            }
         }
 
         public void Dispose()

@@ -7,7 +7,7 @@
   "packOptions": {
     "owners": [ "Kjerand Pedersen" ],
     "summary": "Sql Server provider for CoPilot.ORM",
-    "releaseNotes": "Now targets netstandard1.6 for core applications and net46. Also added support for bulk commands.",
+    "releaseNotes": "MS Sql Server provider for CoPilot.ORM v2 (alpha)",
     "requireLicenseAcceptance": true,
     "licenseUrl": "https://raw.githubusercontent.com/kjerandp/CoPilot/master/LICENSE",
     "projectUrl": "https://github.com/kjerandp/CoPilot",

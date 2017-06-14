@@ -7,7 +7,7 @@
   "packOptions": {
     "owners": [ "Kjerand Pedersen" ],
     "summary": "Light weight object relational mapper (O/RM) for MS SQL",
-    "releaseNotes": "Now targets netstandard1.6 for core applications and net46. Also added support for bulk commands.",
+    "releaseNotes": "This package now only contains the core lib and does not have a database provider. Providers exist currently for MS Sql Server and MySql (more to come)",
     "requireLicenseAcceptance": true,
     "licenseUrl": "https://raw.githubusercontent.com/kjerandp/CoPilot/master/LICENSE",
     "projectUrl": "https://github.com/kjerandp/CoPilot",

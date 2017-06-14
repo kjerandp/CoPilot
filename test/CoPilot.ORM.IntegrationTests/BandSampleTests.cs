@@ -25,7 +25,7 @@ namespace CoPilot.ORM.IntegrationTests
             var model = BandSampleConfig.CreateModel();
             var databaseSetup = new MySqlBandSampleSetup(model);
             //var databaseSetup = new SqlServerBandSampleSetup(model);
-            databaseSetup.DropCreateDatabase();
+            //databaseSetup.DropCreateDatabase();
             _db = databaseSetup.GetDb();
             
         }

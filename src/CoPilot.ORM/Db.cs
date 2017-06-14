@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using CoPilot.ORM.Common;
-using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
@@ -13,7 +12,7 @@ using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
 
-namespace CoPilot.ORM.Database
+namespace CoPilot.ORM
 {
     internal class Db :  IDb
     {
@@ -60,19 +59,19 @@ namespace CoPilot.ORM.Database
             }
         }
 
-        public IEnumerable<T> Query<T>(OrderByClause<T> orderBy, SelectModifiers predicates, Expression<Func<T, bool>> filter = null, params string[] include) where T : class
+        public IEnumerable<T> Query<T>(Expression<Func<T, bool>> filter = null, params string[] include) where T : class
         {
             using (var rdr = new DbReader(this))
             {
-                return rdr.Query(orderBy, predicates, filter, include);
+                return rdr.Query(filter, include);
             }
         }
 
-        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, OrderByClause<TEntity> orderByClause, SelectModifiers predicates, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
+        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
         {
             using (var rdr = new DbReader(this))
             {
-                return rdr.Query<TEntity, TDto>(selector, orderByClause, predicates, filter);
+                return rdr.Query<TEntity, TDto>(selector, filter);
             }
         }
         
