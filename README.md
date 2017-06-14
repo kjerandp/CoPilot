@@ -29,3 +29,67 @@ Install-Package CoPilot.ORM.MySql -Pre
 ```
 ## How to use
 CoPilot aims to be as simple and intuitive as possible to use and most features are available from a single interface called `IDb`. Please look for examples in the test projects, especially the BandSampleTests.cs
+
+### Quick examples
+
+Showing most of the functions available when writing context queries with the new syntax introduced in v2:
+```
+var bands = _db.From<Band>()
+    .Where(r => !r.Name.StartsWith("B") && !r.Name.StartsWith("L")) 
+    .Include("BandMembers")
+    .OrderBy(r => r.Name)
+    .ThenBy(r => r.Formed, Ordering.Descending)
+    .ThenBy(r => r.Id)
+    .Skip(1)
+    .Take(20)
+    .Distinct()
+    .AsEnumerable();
+```
+Mapping result to anonymous type:
+```
+var bands = _db.From<Band>()
+    .Select(r => new { BandId = r.Id, BandName = r.Name, Nationality = r.Based.Country.Name })
+    .OrderBy(r => r.Nationality)
+	.Take(50)
+    .ToArray();
+```
+Executing and mapping stored procedure:
+```
+var recordings = _db.Query<Recording>(
+    "Get_Recordings_CTE", 
+    new { recorded = new DateTime(2017, 5, 1) },
+    "Base", "Base.AlbumTracks"
+);
+```
+Inserting new record with transaction support:
+```
+using (var writer = new DbWriter(_db))
+{
+    var testBand = new Band
+    {
+        Formed = DateTime.Today,
+        Name = "Test Band",
+        Based = writer.GetReader().FindByKey<City>(1)
+    };
+
+    writer.Save(testBand);
+    writer.Commit();
+}
+```
+Bulk inserting example:
+```
+const int insertCount = 10000;
+
+using (var writer = new DbWriter(_db))
+{
+    var dt = new DateTime(1980,1,1);
+    writer.PrepareCommand("insert into BAND (city_id,band_name,band_formed) values (@cityId, @bandName, @formed)", new {cityId=0, bandName=string.Empty, formed=dt});
+
+    for (var i = 0; i < insertCount; i++)
+    {
+        writer.Command(new {cityId = 1, bandName = "Lazy Bulk Band " + i, formed = dt.AddDays(i)});
+    }
+
+    writer.Commit();
+}
+```

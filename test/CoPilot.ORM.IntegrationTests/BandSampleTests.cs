@@ -33,7 +33,7 @@ namespace CoPilot.ORM.IntegrationTests
         public void CanCreateQueriesWithNewQuerySyntax()
         {
             var bands = _db.From<Band>()
-                .Where(r => r.Id > 0 && !r.Name.Contains("Band")) 
+                .Where(r => !r.Name.StartsWith("B") && !r.Name.StartsWith("L")) 
                 .Include("BandMembers")
                 .OrderBy(r => r.Name)
                 .ThenBy(r => r.Formed, Ordering.Descending)
@@ -41,7 +41,7 @@ namespace CoPilot.ORM.IntegrationTests
                 .Skip(1)
                 .Take(20)
                 .Distinct()
-                .ToArray();
+                .AsEnumerable();
 
             Assert.IsTrue(bands.Any(r => r.BandMembers != null && r.BandMembers.Any()));
             /*
@@ -93,6 +93,14 @@ namespace CoPilot.ORM.IntegrationTests
             Assert.AreEqual(1, band.BandId);
             Assert.IsFalse(string.IsNullOrEmpty(band.BandName));
             Assert.IsFalse(string.IsNullOrEmpty(band.Nationality));
+
+            var bands = _db.From<Band>()
+                .Select(r => new { BandId = r.Id, BandName = r.Name, Nationality = r.Based.Country.Name })
+                .OrderBy(r => r.Nationality)
+                .Take(50)
+                .ToArray();
+            
+            Assert.AreEqual(50, bands.Length);
         }
 
         [TestMethod]
@@ -153,7 +161,11 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanExecuteAndMapStoredProcedure()
         {
-            var recordings = _db.Query<Recording>("Get_Recordings_CTE", new { recorded = new DateTime(2017, 5, 1) },"Base", "Base.AlbumTracks");
+            var recordings = _db.Query<Recording>(
+                "Get_Recordings_CTE", 
+                new { recorded = new DateTime(2017, 5, 1) },
+                "Base", "Base.AlbumTracks"
+            );
 
             Assert.IsTrue(recordings.Any());
 
