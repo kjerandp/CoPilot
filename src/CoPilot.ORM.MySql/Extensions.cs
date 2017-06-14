@@ -18,8 +18,13 @@ using CoPilot.ORM.Database.Commands;
 
 namespace CoPilot.ORM.MySql
 {
-    public static class ScriptBuilderExtensions
+    public static class Extensions
     {
+        public static IDb CreateDb(this DbModel model, string connectionString)
+        {
+            return model.CreateDb(connectionString, new MySqlProvider());
+        }
+
         public static ScriptBlock UseDatabase(this ScriptBuilder sb, string databaseName)
         {
             var block = new ScriptBlock();

@@ -18,8 +18,13 @@ using CoPilot.ORM.SqlServer.Writers;
 
 namespace CoPilot.ORM.SqlServer
 {
-    public static class ScriptBuilderExtensions
+    public static class Extensions
     {
+        public static IDb CreateDb(this DbModel model, string connectionString)
+        {
+            return model.CreateDb(connectionString, new SqlServerProvider());
+        }
+
         public static ScriptBlock InsertIntoTableIfEmpty<T>(this ScriptBuilder sb, ScriptOptions options = null, params T[] entities) where T : class
         {
             options = options ?? ScriptOptions.Default();

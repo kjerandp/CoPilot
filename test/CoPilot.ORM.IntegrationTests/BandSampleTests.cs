@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
 using CoPilot.ORM.Common;
-using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.IntegrationTests.Config;
