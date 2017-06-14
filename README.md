@@ -16,5 +16,16 @@ Note: This is work in progress to enable support for different ado.net database 
 * Generate scripts to build database from model configurations
 * Validate configuration against database schema
 
+## Install
+Install the database provider you want to use:
+
+```
+Install-Package CoPilot.ORM.Providers.SqlServer -Pre
+```
+or
+
+```
+Install-Package CoPilot.ORM.Providers.MySql -Pre
+```
 ## How to use
 CoPilot aims to be as simple and intuitive as possible to use and most features are available from a single interface called `IDb`. 
