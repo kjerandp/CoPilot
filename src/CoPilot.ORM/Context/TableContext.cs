@@ -130,216 +130,9 @@ namespace CoPilot.ORM.Context
             }
         }
         
-        internal List<ContextColumn> GetSelectColumnsFromNode(ITableContextNode node)
-        {
-            var list = new List<ContextColumn>();
-            var nodePath = PathHelper.RemoveFirstElementFromPathString(node.Path);
-            var includes = _include.Where(r => r.StartsWith(nodePath));
-            //if (!string.IsNullOrEmpty(nodePath))
-            //{
-            //    var parts = nodePath.Count(r => r == '.') + 1;
-            //    includes = includes.Select(r => string.Join(".", r.Split('.').Skip(parts))).Where(s => s != string.Empty);
-            //}
-
-            
-            AddSelectColumnsFromNode(node, list, "");
-
-            foreach (var path in includes)
-            {
-                var relatedNodes = GetAllNodesInPath(PathHelper.MaskPath(path, nodePath), node);
-                if (relatedNodes != null)
-                {
-                    foreach (var nodeInPath in relatedNodes)
-                    {
-                        var join = nodeInPath as TableContextNode;
-                        if (join != null && join.IsInverted) break;
-                        AddSelectColumnsFromNode(nodeInPath, list, PathHelper.MaskPath(nodeInPath.Path, node.Path)); //
-                    }
-                }
-            }
-            return list;
-        }
-
-        public QueryContext GetQueryContext(FilterGraph filter)
-        {
-            return GetQueryContext(null, filter);
-        }
-
-        public QueryContext GetQueryContext(ITableContextNode node = null, FilterGraph filter = null)
-        {
-            node = node ?? this;
-
-            var baseNode = node;
-
-            var selectColumns = SelectTemplate != null && SelectTemplate.Any()? 
-                GetSelectColumnsFromTemplate():
-                GetSelectColumnsFromNode(node);
-
-            if (!selectColumns.Any())
-            {
-                throw new CoPilotUnsupportedException("No columns in select list!");
-            }
-
-            var referencedNodes = selectColumns.Select(r => r.Node).Select(r => new FromListItem(r, false)).ToList();
-            if (filter?.Root != null)
-            {
-                var filterNodes = filter.MemberExpressions.Select(r => r.ColumnReference.Node);
-                foreach (var filterNode in filterNodes)
-                {
-                    var tcn = filterNode as TableContextNode;
-                    if(tcn != null && tcn.IsInverted && tcn != baseNode) throw new CoPilotUnsupportedException("Invalid filter expression");
-                    referencedNodes.Add(new FromListItem(filterNode, tcn == null || !tcn.IsInverted));
-                }    
-            }
-            if (node == this && _ordering != null && _ordering.Any())
-            {
-                referencedNodes.AddRange(_ordering.Select(r => new FromListItem(r.Key.Node, false)));        
-            }
-
-            var fromList = new List<FromListItem>(referencedNodes.Distinct().OrderBy(r => r.ForceInnerJoin ? 1 : r.Node.Order).ThenBy(r => r.Node.Level));
-
-            var currentIndex = fromList.Count-1;
-            
-            while (currentIndex > 0)
-            {
-                var currentNode = fromList[currentIndex].Node as TableContextNode;
-                if (currentNode == null) break;
-                var depNodeExist = fromList.Exists(r => r.Node.Index == currentNode.Origin.Index);
-                if (!depNodeExist) 
-                    fromList.Insert(currentIndex, new FromListItem(currentNode.Origin, currentNode.JoinType == TableJoinType.InnerJoin));
-
-                currentIndex--;
-            }
-            
-            if (fromList[0].Node != baseNode && fromList[0].Node.Level < baseNode.Level)
-            {
-                baseNode = fromList[0].Node;
-            }
-
-            fromList.RemoveAll(r => r.Node == baseNode);
-
-            return new QueryContext
-            {
-                SelectColumns = selectColumns.ToArray(),
-                OrderByClause = _ordering,
-                Modifiers = SelectModifiers,
-                BaseNode = baseNode,
-                JoinedNodes = fromList.Select(r => new TableJoinDescription(r)).ToArray(),
-                Filter = filter
-            };
-        }
-
-        private List<ContextColumn> GetSelectColumnsFromTemplate()
-        {
-            var selectColumns = new List<ContextColumn>();
-
-            foreach (var item in SelectTemplate)
-            {
-                var splitPath = PathHelper.SplitLastInPathString(item.Key);
-                var node = string.IsNullOrEmpty(splitPath.Item1)?this:FindByPath(splitPath.Item1);
-                var member = node.MapEntry.GetMemberByName(splitPath.Item2);
-                var col = node.MapEntry.GetColumnByMember(member);
-                
-                selectColumns.Add(GetContextColumn(node, col, "", item.Value));
-            }
-
-            return selectColumns;
-        }
-
-        private void AddSelectColumnsFromNode(ITableContextNode node, List<ContextColumn> list, string joinAlias)
-        {
-            foreach (var column in node.Table.Columns.Where(r => !r.ExcludeFromSelect))
-            {
-                list.Add(GetContextColumn(node, column, joinAlias));
-            }
-        }
-
-        protected static ContextColumn GetContextColumn(ITableContextNode node, DbColumn column, string joinAlias, string alias = null)
-        {
-            ValueAdapter adapter = null;
-            if (node.MapEntry != null)
-            {
-                adapter = node.MapEntry.GetAdapter(column);
-
-            }
-            var givenName = column.ColumnName;
-
-            var selCol = new ContextColumn(node, column, adapter);
-            
-            if (column.ForeignkeyRelationship != null && column.ForeignkeyRelationship.IsLookupRelationship)
-            {
-                selCol.Node = node.Nodes["LOOKUP~" + column.ColumnName];
-                selCol.Column = column.ForeignkeyRelationship.LookupColumn;
-            }
-
-            var aliasPart = "";
-            
-            if (!string.IsNullOrEmpty(alias))
-            {
-                aliasPart = $"{alias}";
-            }
-            else if (!string.IsNullOrEmpty(joinAlias))
-            {
-                aliasPart = $"{joinAlias}.{givenName}";
-            }
-            else if (givenName != selCol.Column.ColumnName)
-            {
-                aliasPart = $"{givenName}";
-            }
-            selCol.ColumnAlias = aliasPart;
-
-            return selCol;
-        }
-        
-        public void ApplyFilter(ExpressionGraph filter)
-        {
-
-            var filterGraph = new FilterGraph
-            {
-                Root = ProcessFilter(filter.Root) as BinaryOperand
-            };
-            RootFilter = filterGraph;
-
-        }
-
         public FilterGraph GetFilter()
         {
             return RootFilter;
-        }
-
-        public void ApplyOrdering(Dictionary<string, Ordering> ordering)
-        {
-            _ordering = new Dictionary<ContextColumn, Ordering>();
-            foreach (var item in ordering)
-            {
-                string lookup = item.Key;
-                if (SelectTemplate != null && SelectTemplate.Any())
-                {
-                    if (string.IsNullOrEmpty(item.Key) || item.Key.Equals("1", StringComparison.Ordinal))
-                    {
-                        lookup = SelectTemplate.First().Key;
-                    }
-                    else
-                    {
-                        lookup = SelectTemplate.Where(r => r.Value.Equals(item.Key, StringComparison.Ordinal))
-                                .Select(r => r.Key).SingleOrDefault();
-                    }
-                }
-
-                var splitPath = PathHelper.SplitLastInPathString(lookup);
-                var node = FindByPath(splitPath.Item1);
-
-                if (node == null) throw new CoPilotConfigurationException("No context found!");
-                
-                var member = node.MapEntry.GetMemberByName(splitPath.Item2);
-
-                if (member == null) throw new CoPilotConfigurationException("No member found!");
-                var col = node.MapEntry.GetColumnByMember(member);
-                if (col != null)
-                {
-                    _ordering.Add(GetContextColumn(node, col, null), item.Value);
-                }
-            }
         }
 
         public void SetSelectModifiers(SelectModifiers modifiers)
@@ -392,17 +185,157 @@ namespace CoPilot.ORM.Context
         {
             return _nodeIndex.ContainsKey(idx) ? _nodeIndex[idx] : null;
         }
-        
+
+
+        #region create query context
+        public QueryContext GetQueryContext(FilterGraph filter)
+        {
+            return GetQueryContext(null, filter);
+        }
+
+        public QueryContext GetQueryContext(ITableContextNode node = null, FilterGraph filter = null)
+        {
+            node = node ?? this;
+
+            var baseNode = node;
+
+            var selectColumns = SelectTemplate != null && SelectTemplate.Any() ?
+                GetSelectColumnsFromTemplate() :
+                GetSelectColumnsFromNode(node);
+
+            if (!selectColumns.Any())
+            {
+                throw new CoPilotUnsupportedException("No columns in select list!");
+            }
+
+            var referencedNodes = selectColumns.Select(r => r.Node).Select(r => new FromListItem(r, false)).ToList();
+            if (filter?.Root != null)
+            {
+                var filterNodes = filter.MemberExpressions.Select(r => r.ColumnReference.Node);
+                foreach (var filterNode in filterNodes)
+                {
+                    var tcn = filterNode as TableContextNode;
+                    if (tcn != null && tcn.IsInverted && tcn != baseNode) throw new CoPilotUnsupportedException("Invalid filter expression");
+                    referencedNodes.Add(new FromListItem(filterNode, tcn == null || !tcn.IsInverted));
+                }
+            }
+            if (node == this && _ordering != null && _ordering.Any())
+            {
+                referencedNodes.AddRange(_ordering.Select(r => new FromListItem(r.Key.Node, false)));
+            }
+
+            var fromList = new List<FromListItem>(referencedNodes.Distinct().OrderBy(r => r.ForceInnerJoin ? 1 : r.Node.Order).ThenBy(r => r.Node.Level));
+
+            var currentIndex = fromList.Count - 1;
+
+            while (currentIndex > 0)
+            {
+                var currentNode = fromList[currentIndex].Node as TableContextNode;
+                if (currentNode == null) break;
+                var depNodeExist = fromList.Exists(r => r.Node.Index == currentNode.Origin.Index);
+                if (!depNodeExist)
+                    fromList.Insert(currentIndex, new FromListItem(currentNode.Origin, currentNode.JoinType == TableJoinType.InnerJoin));
+
+                currentIndex--;
+            }
+
+            if (fromList[0].Node != baseNode && fromList[0].Node.Level < baseNode.Level)
+            {
+                baseNode = fromList[0].Node;
+            }
+
+            fromList.RemoveAll(r => r.Node == baseNode);
+
+            return new QueryContext
+            {
+                SelectColumns = selectColumns.ToArray(),
+                OrderByClause = _ordering,
+                Modifiers = SelectModifiers,
+                BaseNode = baseNode,
+                JoinedNodes = fromList.Select(r => new TableJoinDescription(r)).ToArray(),
+                Filter = filter
+            };
+        }
+
+        private void AddSelectColumnsFromNode(ITableContextNode node, List<ContextColumn> list, string joinAlias)
+        {
+            foreach (var column in node.Table.Columns.Where(r => !r.ExcludeFromSelect))
+            {
+                list.Add(ContextColumn.Create(node, column, joinAlias));
+            }
+        }
+
+        private List<ContextColumn> GetSelectColumnsFromNode(ITableContextNode node)
+        {
+            var list = new List<ContextColumn>();
+            var nodePath = PathHelper.RemoveFirstElementFromPathString(node.Path);
+            var includes = _include.Where(r => r.StartsWith(nodePath));
+            //if (!string.IsNullOrEmpty(nodePath))
+            //{
+            //    var parts = nodePath.Count(r => r == '.') + 1;
+            //    includes = includes.Select(r => string.Join(".", r.Split('.').Skip(parts))).Where(s => s != string.Empty);
+            //}
+
+
+            AddSelectColumnsFromNode(node, list, "");
+
+            foreach (var path in includes)
+            {
+                var relatedNodes = GetAllNodesInPath(PathHelper.MaskPath(path, nodePath), node);
+                if (relatedNodes != null)
+                {
+                    foreach (var nodeInPath in relatedNodes)
+                    {
+                        var join = nodeInPath as TableContextNode;
+                        if (join != null && join.IsInverted) break;
+                        AddSelectColumnsFromNode(nodeInPath, list, PathHelper.MaskPath(nodeInPath.Path, node.Path)); //
+                    }
+                }
+            }
+            return list;
+        }
+
+        private List<ContextColumn> GetSelectColumnsFromTemplate()
+        {
+            var selectColumns = new List<ContextColumn>();
+
+            foreach (var item in SelectTemplate)
+            {
+                var splitPath = PathHelper.SplitLastInPathString(item.Key);
+                var node = string.IsNullOrEmpty(splitPath.Item1) ? this : FindByPath(splitPath.Item1);
+                var member = node.MapEntry.GetMemberByName(splitPath.Item2);
+                var col = node.MapEntry.GetColumnByMember(member);
+
+                selectColumns.Add(ContextColumn.Create(node, col, "", item.Value));
+            }
+
+            return selectColumns;
+        }
+        #endregion
+
+        #region filter processing
+
+        public void ApplyFilter(ExpressionGraph filter)
+        {
+
+            var filterGraph = new FilterGraph
+            {
+                Root = ProcessFilter(filter.Root) as BinaryOperand
+            };
+            RootFilter = filterGraph;
+
+        }
+
         private IExpressionOperand ProcessFilter(IExpressionOperand sourceOp)
         {
-            if(sourceOp is UnsupportedOperand) throw new CoPilotUnsupportedException(sourceOp.ToString());
+            if (sourceOp is UnsupportedOperand) throw new CoPilotUnsupportedException(sourceOp.ToString());
 
             var bop = sourceOp as BinaryOperand;
             if (bop != null)
             {
                 var bin = new BinaryOperand(
-                    ProcessFilter(bop.Left), 
-                    ProcessFilter(bop.Right), 
+                    ProcessFilter(bop.Left),
+                    ProcessFilter(bop.Right),
                     bop.Operator
                 );
 
@@ -443,7 +376,7 @@ namespace CoPilot.ORM.Context
             {
                 return new ValueOperand(vop.ParamName, vop.Value);
             }
-            
+
             return new NullOperand();
         }
 
@@ -469,7 +402,7 @@ namespace CoPilot.ORM.Context
                 mapEntry = node.MapEntry;
             }
             var member = mapEntry.GetMemberByName(splitPath.Item2);
-            
+
             var adapter = mapEntry.GetAdapter(member);
             var col = mapEntry.GetColumnByMember(member);
             if (col == null && !member.MemberType.IsSimpleValueType())
@@ -478,7 +411,7 @@ namespace CoPilot.ORM.Context
                 if (rel != null)
                 {
                     col = rel.ForeignKeyColumn; //member.MemberType.IsReference() ? rel.ForeignKeyColumn : rel.PrimaryKeyColumn;
-                }   
+                }
             }
             if (col == null) throw new CoPilotRuntimeException("Cannot map expression to a column!");
             if (col.ForeignkeyRelationship != null && col.ForeignkeyRelationship.IsLookupRelationship)
@@ -486,21 +419,26 @@ namespace CoPilot.ORM.Context
                 node = GetOrCreateLookupNode(node, col);
                 col = col.ForeignkeyRelationship.LookupColumn;
 
-            } else if (col.IsPrimaryKey && node.Origin != null)
+            }
+            else if (col.IsPrimaryKey && node.Origin != null)
             {
                 node = node.Origin;
                 var newCol = node.Table.Columns.FirstOrDefault(r => r.IsForeignKey && r.ForeignkeyRelationship.PrimaryKeyColumn.Equals(col));
                 col = newCol;
-            } else if (col.Table != node.Table)
+            }
+            else if (col.Table != node.Table)
             {
                 node = node.Nodes.Single(r => r.Value.Table == col.Table).Value;
             }
 
-            if(col == null) throw new CoPilotRuntimeException("Column could not found!");
+            if (col == null) throw new CoPilotRuntimeException("Column could not found!");
 
-            memberExpression.ColumnReference = new ContextColumn(node, col, adapter);
+            memberExpression.ColumnReference = ContextColumn.Create(node, col, adapter);
         }
 
+        #endregion
+
+        #region selector processing
         protected void BuildFromMemberExpressions(Dictionary<string, MemberExpression> members)
         {
             foreach (var key in members.Keys)
@@ -508,15 +446,22 @@ namespace CoPilot.ORM.Context
                 var memberExpression = members[key];
 
                 var path = PathHelper.RemoveFirstElementFromPathString(memberExpression.ToString());
-                
-                BuildFromPath(key, path);
+
+
                 var cmi = ClassMemberInfo.Create(memberExpression.Member);
                 if (cmi.MemberType.IsCollection())
                 {
-                    throw new CoPilotUnsupportedException("Selector cannot return a collection type!");
+                    AddPath(path);
+                    var childNode = FindByPath(path);
+
+                    //throw new CoPilotUnsupportedException("Selector cannot return a collection type!");
                 }
-            } 
-            
+                else
+                {
+                    BuildFromPath(key, path);
+                }
+            }
+
         }
 
         protected void BuildFromPath(string key, string path)
@@ -531,7 +476,46 @@ namespace CoPilot.ORM.Context
 
             SelectTemplate.Add(path, key);
         }
+        #endregion
 
+        #region order clause processing
+        public void ApplyOrdering(Dictionary<string, Ordering> ordering)
+        {
+            _ordering = new Dictionary<ContextColumn, Ordering>();
+            foreach (var item in ordering)
+            {
+                string lookup = item.Key;
+                if (SelectTemplate != null && SelectTemplate.Any())
+                {
+                    if (string.IsNullOrEmpty(item.Key) || item.Key.Equals("1", StringComparison.Ordinal))
+                    {
+                        lookup = SelectTemplate.First().Key;
+                    }
+                    else
+                    {
+                        lookup = SelectTemplate.Where(r => r.Value.Equals(item.Key, StringComparison.Ordinal))
+                                .Select(r => r.Key).SingleOrDefault();
+                    }
+                }
+
+                var splitPath = PathHelper.SplitLastInPathString(lookup);
+                var node = FindByPath(splitPath.Item1);
+
+                if (node == null) throw new CoPilotConfigurationException("No context found!");
+
+                var member = node.MapEntry.GetMemberByName(splitPath.Item2);
+
+                if (member == null) throw new CoPilotConfigurationException("No member found!");
+                var col = node.MapEntry.GetColumnByMember(member);
+                if (col != null)
+                {
+                    _ordering.Add(ContextColumn.Create(node, col), item.Value);
+                }
+            }
+        }
+        #endregion
+
+        #region lookup node processing
         private void CreateLookupNodesIfNotExist(ITableContextNode node)
         {
             var lookupColumns = node.Table.Columns.Where(r => r.ForeignkeyRelationship != null && r.ForeignkeyRelationship.IsLookupRelationship);
@@ -552,26 +536,23 @@ namespace CoPilot.ORM.Context
             }
         }
 
-        public override string ToString()
-        {
-            return $"T{Index} ({Table})";
-        }
-
         private ITableContextNode GetOrCreateLookupNode(ITableContextNode source, DbColumn column)
         {
-            var alias = "LOOKUP~" + column.ColumnName; 
+            var alias = "LOOKUP~" + column.ColumnName;
             if (source.Nodes.ContainsKey(alias))
             {
                 return source.Nodes[alias];
             }
-            
+
             var lookupNode = new TableContextNode(source, column.ForeignkeyRelationship, false, ++_index, null);
             source.Nodes.Add(alias, lookupNode);
             _nodeIndex.Add(_index, lookupNode);
             return lookupNode;
-            
-        }
 
+        }
+        #endregion
+
+        #region context command operations
         public OperationContext Insert(ITableContextNode node, object entity, Dictionary<string, object> additionalValues = null)
         {
             var mappedColumns = node.MapEntry.GetMappedColumns();
@@ -603,7 +584,7 @@ namespace CoPilot.ORM.Context
                     //    value = map.GetValueForColumn(keyForInstance, col.ForeignkeyRelationship.PrimaryKeyColumn);
                     //}
                 }
-                
+
                 if (value == null && !col.IsNullable && col.DefaultValue == null)
                 {
                     if (additionalValues != null && additionalValues.ContainsKey(col.AliasName))
@@ -731,10 +712,10 @@ namespace CoPilot.ORM.Context
                 ctx.Columns.Add(keyCol, parameter);
                 ctx.Args.Add(parameter.Name, keyValue);
             }
-            
-            
 
-            
+
+
+
 
             return ctx;
         }
@@ -748,7 +729,7 @@ namespace CoPilot.ORM.Context
 
             var mappedColumns = node.MapEntry.GetMappedColumns();
             var context = new OperationContext { Node = node };
-            
+
             var index = 1;
             foreach (var col in mappedColumns.Keys)
             {
@@ -773,7 +754,7 @@ namespace CoPilot.ORM.Context
                         value = map.GetValueForColumn(keyForInstance, col.ForeignkeyRelationship.PrimaryKeyColumn);
                     }
                 }
-               
+
                 if (value == null)
                 {
                     if (additionalValues != null && additionalValues.ContainsKey(col.AliasName))
@@ -782,7 +763,7 @@ namespace CoPilot.ORM.Context
                     }
                     else
                     {
-                        if(!col.IsNullable && col.DefaultValue == null)
+                        if (!col.IsNullable && col.DefaultValue == null)
                             throw new CoPilotDataException($"No value specified for required column '{col.ColumnName}'.");
                     }
                 }
@@ -810,7 +791,7 @@ namespace CoPilot.ORM.Context
                         paramName = $"@param{index++}";
                     }
                     var param = new DbParameter(paramName, col.DataType, null, col.IsNullable);
-                    
+
                     context.Args.Add(param.Name, value);
                     context.Columns.Add(col, param);
                 }
@@ -828,7 +809,7 @@ namespace CoPilot.ORM.Context
             var matchedProps =
                 node.MapEntry.EntityType
                     .GetClassMembers()
-                    .Join(props, d => d.Name.ToLower(), e => e.Name.ToLower(), (d, e) => new {entityMember = d, dtoMember = e})
+                    .Join(props, d => d.Name.ToLower(), e => e.Name.ToLower(), (d, e) => new { entityMember = d, dtoMember = e })
                     .ToArray();
 
             if (matchedProps.Length != props.Length)
@@ -841,23 +822,23 @@ namespace CoPilot.ORM.Context
             foreach (var member in matchedProps)
             {
                 var col = node.MapEntry.GetColumnByMember(member.entityMember);
-                if(col == null) throw new CoPilotConfigurationException($"There's no column mapped to member '{member.entityMember.Name}'");
+                if (col == null) throw new CoPilotConfigurationException($"There's no column mapped to member '{member.entityMember.Name}'");
 
                 var value = member.dtoMember.GetValue(entity);
-                
+
                 if (value.GetType() != member.entityMember.MemberType)
                 {
                     object convertedValue;
                     ReflectionHelper.ConvertValueToType(member.entityMember.MemberType, value, out convertedValue);
                     value = convertedValue;
                 }
-               
+
                 var adapter = context.Node.MapEntry.GetAdapter(col);
                 if (adapter != null)
                 {
                     value = adapter.Invoke(MappingTarget.Database, value);
                 }
-                    
+
                 string paramName;
                 if (col.IsPrimaryKey)
                 {
@@ -875,8 +856,8 @@ namespace CoPilot.ORM.Context
                     }
                     paramName = $"@param{(index++)}";
                 }
-               
-                var param = new DbParameter(paramName, col.DataType, col.DefaultValue?.CreateDefaultValue(),col.IsNullable);
+
+                var param = new DbParameter(paramName, col.DataType, col.DefaultValue?.CreateDefaultValue(), col.IsNullable);
                 context.Args.Add(param.Name, value);
                 context.Columns.Add(col, param);
             }
@@ -884,119 +865,17 @@ namespace CoPilot.ORM.Context
             {
                 throw new CoPilotDataException("You have to provide a key value in order to patch an object!");
             }
-            
+
             return context;
         }
+        #endregion
+
+        public override string ToString()
+        {
+            return $"T{Index} ({Table})";
+        }
     }
 
 
-    public class TableContext<T> : TableContext where T : class
-    {
-        public TableContext(DbModel model, params string[] include) : base(model, typeof(T), include){}
-
-        public void ApplySelector<TTarget>(Expression<Func<T, TTarget>> selector) {
-            ApplySelector(selector.Body);
-        }
-
-        public void ApplySelector(Expression<Func<T,object>> selector)
-        {
-            ApplySelector(selector.Body);
-        }
-
-        private void ApplySelector(Expression selectorBody)
-        {
-            var memberExpression = selectorBody as MemberExpression;
-            if (memberExpression == null)
-            {
-                var unaryExpression = selectorBody as UnaryExpression;
-                memberExpression = unaryExpression?.Operand as MemberExpression;
-            }
-            if (memberExpression != null)
-            {
-                var path = PathHelper.RemoveFirstElementFromPathString(memberExpression.ToString());
-
-                if (!path.Contains("."))
-                {
-                    var classMemberInfo = ClassMemberInfo.Create(ExpressionHelper.GetPropertyFromMemberExpression<T>(memberExpression));
-                    if (classMemberInfo.MemberType.IsCollection())
-                    {
-                        throw new CoPilotUnsupportedException("Selector cannot return a collection type!");
-                    }
-                    if (classMemberInfo.MemberType.IsReference())
-                    {
-                        var dtoMembers = classMemberInfo.MemberType.GetClassMembers();
-                        foreach (var memberInfo in dtoMembers)
-                        {
-                            if (memberInfo.MemberType.IsSimpleValueType())
-                            {
-                                BuildFromPath(memberInfo.Name, path + "." + memberInfo.Name);
-                            }
-
-                        }
-                        return;
-                    }
-
-                }
-
-                BuildFromPath(memberExpression.Member.Name, path);
-                return;
-            }
-
-            var members = new Dictionary<string, MemberExpression>();
-
-            var memberInitExpression = selectorBody as MemberInitExpression;
-            if (memberInitExpression != null)
-            {
-                foreach (var binding in memberInitExpression.Bindings.OfType<MemberAssignment>())
-                {
-                    var member = binding.Expression as MemberExpression;
-                    if (member != null)
-                    {
-                        members.Add(binding.Member.Name, member);
-                    }
-                    else
-                    {
-                        throw new CoPilotUnsupportedException("Selector object not supported!");
-                    }
-                }
-
-            }
-            else
-            {
-                var templateExpression = selectorBody as NewExpression;
-
-                if (templateExpression == null) throw new CoPilotUnsupportedException("Only a new anonymous object with named member references are supported!");
-
-                for (var i = 0; i < templateExpression.Members.Count; i++)
-                {
-                    memberExpression = templateExpression.Arguments[i] as MemberExpression;
-                    if (memberExpression == null)
-                    {
-                        throw new CoPilotUnsupportedException("Selector object can only contain direct member access!");
-                    }
-                    members.Add(templateExpression.Members[i].Name, memberExpression);
-                }
-            }
-
-            
-            BuildFromMemberExpressions(members);
-        }
-
-        public OperationContext Insert(T entity)
-        {
-            return Insert(this, entity);
-        }
-        
-        public OperationContext Delete(T entity)
-        {
-            return Delete(this, entity);
-        }
-
-        public OperationContext Update(T entity)
-        {
-            return Update(this, entity);
-        }
-
-        
-    }
+    
 }

@@ -87,7 +87,7 @@ namespace CoPilot.ORM.Filtering
         public static FilterGraph CreateByPrimaryKeyFilter(ITableContextNode node, object key)
         {
             var filter = new FilterGraph();
-            var left = new MemberExpressionOperand(new ContextColumn(node, node.Table.GetSingularKey(), null));
+            var left = new MemberExpressionOperand(ContextColumn.Create(node, node.Table.GetSingularKey()));
             var right = new ValueOperand("@key", key);
             filter.Root = new BinaryOperand(left, right, SqlOperator.Equal);
 

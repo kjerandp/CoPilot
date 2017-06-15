@@ -6,14 +6,59 @@ namespace CoPilot.ORM.Context
 {
     public class ContextColumn
     {
-        public ContextColumn(ITableContextNode node, DbColumn column, ValueAdapter adapter, string alias = null)
+        private ContextColumn(ITableContextNode node, DbColumn column, ValueAdapter adapter, string alias = null)
         {
             Node = node;
             Column = column;
             ColumnAlias = alias;
             Adapter = adapter;
         }
+
+        public static ContextColumn Create(ITableContextNode node, DbColumn column, string joinAlias = null,
+            string alias = null)
+        {
+            ValueAdapter adapter = null;
+            if (node.MapEntry != null)
+            {
+                adapter = node.MapEntry.GetAdapter(column);
+            }
+            return Create(node, column, adapter, joinAlias, alias);
+        }
+
+        public static ContextColumn Create(ITableContextNode node, DbColumn column, ValueAdapter adapter, string joinAlias = null, string alias = null)
+        {
+            
+            var givenName = column.ColumnName;
+
+            var selCol = new ContextColumn(node, column, adapter);
+
+            if (column.ForeignkeyRelationship != null && column.ForeignkeyRelationship.IsLookupRelationship)
+            {
+                selCol.Node = node.Nodes["LOOKUP~" + column.ColumnName];
+                selCol.Column = column.ForeignkeyRelationship.LookupColumn;
+            }
+
+            var aliasPart = "";
+
+            if (!string.IsNullOrEmpty(alias))
+            {
+                aliasPart = $"{alias}";
+            }
+            else if (!string.IsNullOrEmpty(joinAlias))
+            {
+                aliasPart = $"{joinAlias}.{givenName}";
+            }
+            else if (givenName != selCol.Column.ColumnName)
+            {
+                aliasPart = $"{givenName}";
+            }
+            selCol.ColumnAlias = aliasPart;
+
+            return selCol;
+        }
+
         public ITableContextNode Node { get; set; }
+
         public DbColumn Column { get; set; }
 
         public ValueAdapter Adapter { get; internal set; }

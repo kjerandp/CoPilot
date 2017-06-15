@@ -79,7 +79,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
         private static FilterGraph CreateChildFilter(TableContextNode node, object[] keys)
         {
             var filter = new FilterGraph();
-            var left = new MemberExpressionOperand(new ContextColumn(node, node.GetTargetKey, null));
+            var left = new MemberExpressionOperand(ContextColumn.Create(node, node.GetTargetKey));
             var right = new ValueListOperand("@id", keys);
             filter.Root = new BinaryOperand(left, right, SqlOperator.In);
 

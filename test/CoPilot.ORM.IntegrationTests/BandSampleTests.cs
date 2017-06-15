@@ -22,9 +22,9 @@ namespace CoPilot.ORM.IntegrationTests
         public static void BandSampleTestsInitialize(TestContext testContext)
         {
             var model = BandSampleConfig.CreateModel();
-            var databaseSetup = new MySqlBandSampleSetup(model);
-            //var databaseSetup = new SqlServerBandSampleSetup(model);
-            //databaseSetup.DropCreateDatabase();
+            //var databaseSetup = new MySqlBandSampleSetup(model);
+            var databaseSetup = new SqlServerBandSampleSetup(model);
+            databaseSetup.DropCreateDatabase();
             _db = databaseSetup.GetDb();
             
         }
@@ -67,6 +67,40 @@ namespace CoPilot.ORM.IntegrationTests
         }
 
         [TestMethod]
+        public void CanCreateQueriesWithAnonymousObjectsAndOneToManyRelations()
+        {
+            try
+            {
+                var band = _db.From<Band>()
+                    .Where(r => r.Id == 1)
+                    .Select(r => new {r.Name, Artists = r.BandMembers.Select(n => new {n.ArtistName})})
+                    .OrderBy(r => r.Name, Ordering.Descending)
+                    .Single();
+            }
+            catch
+            {
+                //
+            }
+            
+
+            //Want to be able to support select as above
+
+        }
+
+        [TestMethod]
+        public void CanCreateQueriesWithIncludeAndOneToManyRelations()
+        {
+            var band = _db.From<Band>()
+                .Where(r => r.Id == 1)
+                .Select("BandMembers")
+                .OrderBy(r => r.Name, Ordering.Descending)
+                .Single();
+
+
+        }
+
+
+        [TestMethod]
         public void CanCreateQueriesWithMultipleLevelsInclude()
         {
             var band = _db.From<Band>()
@@ -97,10 +131,10 @@ namespace CoPilot.ORM.IntegrationTests
             var bands = _db.From<Band>()
                 .Select(r => new { BandId = r.Id, BandName = r.Name, Nationality = r.Based.Country.Name })
                 .OrderBy(r => r.Nationality)
-                .Take(50)
+                .Take(20)
                 .ToArray();
             
-            Assert.AreEqual(50, bands.Length);
+            Assert.AreEqual(20, bands.Length);
         }
 
         [TestMethod]

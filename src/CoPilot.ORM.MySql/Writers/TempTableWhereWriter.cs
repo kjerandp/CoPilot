@@ -91,7 +91,7 @@ namespace CoPilot.ORM.MySql.Writers
         private static FilterGraph CreateChildFilterUsingTempTable(TableContextNode node, string tempTableName)
         {
             var filter = new FilterGraph();
-            var left = new MemberExpressionOperand(new ContextColumn(node, node.GetTargetKey, null));
+            var left = new MemberExpressionOperand(ContextColumn.Create(node, node.GetTargetKey));
             var right = new CustomOperand($"(Select `{node.GetSourceKey.ColumnName}` from {tempTableName})");
             filter.Root = new BinaryOperand(left, right, SqlOperator.In);
 
