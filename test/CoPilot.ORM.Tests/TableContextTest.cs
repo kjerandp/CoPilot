@@ -1,4 +1,5 @@
 ﻿using System;
+using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Filtering.Operands;
 using CoPilot.ORM.Helpers;
@@ -53,13 +54,13 @@ namespace CoPilot.ORM.Tests
 
             var writer = _provider.SelectStatementWriter;
             var builder = _provider.SelectStatementBuilder;
-            Console.WriteLine(writer.GetStatement(builder.Build(orgCtx.GetQueryContext())));
+            Console.WriteLine(writer.GetStatement(builder.Build(QueryContext.Create(orgCtx))));
             Console.WriteLine();
             var node = orgCtx.FindByPath("OwnedResources");
-            Console.WriteLine(writer.GetStatement(builder.Build(orgCtx.GetQueryContext(node))));
+            Console.WriteLine(writer.GetStatement(builder.Build(QueryContext.Create(node))));
             Console.WriteLine();
             node = orgCtx.FindByPath("UsedResources");
-            Console.WriteLine(writer.GetStatement(builder.Build(orgCtx.GetQueryContext(node))));
+            Console.WriteLine(writer.GetStatement(builder.Build(QueryContext.Create(node))));
         }
 
         [TestMethod]
@@ -97,11 +98,11 @@ namespace CoPilot.ORM.Tests
 
             var writer = _provider.SelectStatementWriter;
             var builder = _provider.SelectStatementBuilder;
-            Console.WriteLine(writer.GetStatement(builder.Build(ctx.GetQueryContext(ctx.GetFilter()))));
+            Console.WriteLine(writer.GetStatement(builder.Build(QueryContext.Create(ctx, ctx.GetFilter()))));
 
             Console.WriteLine();
             ctx.ApplySelector(r => new { r.Id, OwnerId = r.Owner.Id });
-            Console.WriteLine(writer.GetStatement(builder.Build(ctx.GetQueryContext(ctx.GetFilter()))));
+            Console.WriteLine(writer.GetStatement(builder.Build(QueryContext.Create(ctx, ctx.GetFilter()))));
         }
     }
 }

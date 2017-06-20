@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Mapping.Mappers;
 using CoPilot.ORM.Model;
@@ -51,8 +52,8 @@ namespace CoPilot.ORM.Tests
             };
 
             var ctx = _model.CreateContext<Organization>();
-            var mapper = ContextMapper.Create(ctx);
-            var dataset = new DbRecordSet(orgRecord);
+            var mapper = ContextMapper.Create(SelectTemplate.BuildFrom(ctx));
+            var dataset = new DbRecordSet(orgRecord) {Name = "Base"};
             var org2 = mapper.Invoke(dataset).Select(r => r.Instance).OfType<Organization>().Single();
 
             Assert.AreEqual(org.Id, org2.Id);
@@ -137,8 +138,8 @@ namespace CoPilot.ORM.Tests
                 {"UsedBy.City.PUB_CITY_NAME", city2.Name}
             };
             var ctx = _model.CreateContext<Resource>("Owner.City","UsedBy.City");
-            var mapper = ContextMapper.Create(ctx);
-            var dataset = new DbRecordSet(resRecord);
+            var mapper = ContextMapper.Create(SelectTemplate.BuildFrom(ctx));
+            var dataset = new DbRecordSet(resRecord) { Name = "Base" };
             var mappedResource = mapper.Invoke(dataset).Select(r => r.Instance).OfType<Resource>().Single();
 
             Assert.AreEqual(resource.Id, mappedResource.Id);

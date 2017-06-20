@@ -14,9 +14,9 @@ namespace CoPilot.ORM.Filtering.Decoders
         }
         public IDecodedNode Decode()
         {
-            var left = ExpressionTypeResolver.Get(_expression.Left).Decode();
+            var left = FilterExpressionTypeResolver.Get(_expression.Left).Decode();
             
-            var right = ExpressionTypeResolver.Get(_expression.Right).Decode();
+            var right = FilterExpressionTypeResolver.Get(_expression.Right).Decode();
 
             if (left is DecodedReference && right is DecodedExpression)
             {

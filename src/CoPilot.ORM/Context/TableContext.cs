@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using CoPilot.ORM.Common;
-using CoPilot.ORM.Config;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Context.Operations;
@@ -11,12 +9,10 @@ using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Filtering;
-using CoPilot.ORM.Filtering.Interfaces;
-using CoPilot.ORM.Filtering.Operands;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
-using System.Reflection;
+using CoPilot.ORM.Context.Query.Filter;
 using CoPilot.ORM.Exceptions;
 
 namespace CoPilot.ORM.Context
@@ -27,27 +23,25 @@ namespace CoPilot.ORM.Context
         {
             _nodeIndex = new Dictionary<int, ITableContextNode> { { _index, this } };
             Model = model;
-            SelectTemplate = new Dictionary<string, string>();
-
             MapEntry = map;
             Index = _index;
             Nodes = new Dictionary<string, TableContextNode>();
+            IncludedNodes = new List<TableContextNode>();
             CreateLookupNodesIfNotExist(this);
-            
         }
         internal TableContext(DbModel model, Type baseType, params string[] include)
         {
             _nodeIndex = new Dictionary<int, ITableContextNode> { { _index, this } };
-            _include = include;
+            //_include = include;
             Model = model;
-            SelectTemplate = new Dictionary<string, string>();
-
+            //SelectTemplate = new Dictionary<string, string>();
             MapEntry = Model.GetTableMap(baseType);
 
             if (MapEntry == null)
                 throw new CoPilotConfigurationException($"'{baseType.Name}' is not mapped!");
             Index = _index;
             Nodes = new Dictionary<string, TableContextNode>();
+            IncludedNodes = new List<TableContextNode>();
 
             CreateLookupNodesIfNotExist(this);
 
@@ -58,50 +52,43 @@ namespace CoPilot.ORM.Context
                     AddPath(path);
                 }
             }
-        }
 
+        }
         public ITableContextNode Origin => null;
         public Dictionary<string, TableContextNode> Nodes { get; }
-        public readonly Dictionary<string, string> SelectTemplate;
+        public SelectTemplate SelectTemplate { get; internal set; }
         public SelectModifiers SelectModifiers { get; private set; }
-
         protected FilterGraph RootFilter;
-
         private readonly Dictionary<int, ITableContextNode> _nodeIndex;
         private int _index = 1;
-
-        private readonly string[] _include;
+        //private readonly string[] _include;
         public readonly DbModel Model;
-        private Dictionary<ContextColumn, Ordering> _ordering;
-
-        
+        public Dictionary<ContextColumn, Ordering> Ordering;
+        public List<TableContextNode> IncludedNodes { get; }      
         public int Index { get; }
         public int Level => 0;
         public int Order => 0;
         public string Path => "Base";
         public TableContext Context => this;
-
         public ITableContextNode Previous()
         {
             return this;
         }
-
         public TableMapEntry MapEntry { get; }
-
-        public DbTable Table => MapEntry?.Table;
-        
-        protected void AddPath(string path, bool addToSelect = true)
+        public DbTable Table => MapEntry?.Table;      
+        public ITableContextNode AddPath(string path, bool includeAll = true)
         {
-            
             var splitPaths = path.Split('.');
             ITableContextNode currentNode = this;
 
             foreach (var part in splitPaths)
             {
                 var member = currentNode.MapEntry.GetMemberByName(part);
+                if (member.MemberType.IsSimpleValueType()) break;
                 var rel = currentNode.MapEntry.GetRelationshipByMember(member);
                 if (rel == null) throw new CoPilotConfigurationException($"There are no relationships that corresponds to the path '{path}' for type '{currentNode.MapEntry.EntityType.Name}'.");
                 var isInverse = rel.PrimaryKeyColumn.Table == currentNode.Table;
+
                 if (currentNode.Nodes.ContainsKey(part))
                 {
                     currentNode = currentNode.Nodes[part];
@@ -118,33 +105,33 @@ namespace CoPilot.ORM.Context
                     var newNode = new TableContextNode(currentNode, rel, isInverse, ++_index, mapEntry);
                     _nodeIndex.Add(_index, newNode);
 
-                    if (addToSelect)
-                    {
-                        CreateLookupNodesIfNotExist(newNode);
-                    }
-                    
                     currentNode.Nodes.Add(part, newNode);
                     currentNode = newNode;
+
+                    if (includeAll)
+                    {
+                        CreateLookupNodesIfNotExist(currentNode);
+                    }
+
+                    IncludedNodes.Add(newNode);
                 }
                 
             }
-        }
-        
+
+            return currentNode;
+        }      
         public FilterGraph GetFilter()
         {
             return RootFilter;
         }
-
         public void SetSelectModifiers(SelectModifiers modifiers)
         {
             SelectModifiers = modifiers;
         }
-
         public bool Exist(string path)
         {
             return FindByPath(path) != null;
         }
-
         public ITableContextNode FindByPath(string path)
         {
             if (string.IsNullOrEmpty(path)) return this;
@@ -161,7 +148,6 @@ namespace CoPilot.ORM.Context
             return current;
   
         }
-
         public ITableContextNode[] GetAllNodesInPath(string path, ITableContextNode fromNode = null)
         {
             if (string.IsNullOrEmpty(path)) return null;
@@ -180,336 +166,44 @@ namespace CoPilot.ORM.Context
 
             return nodes.ToArray();
         }
-
         public ITableContextNode GetNodeByIndex(int idx)
         {
             return _nodeIndex.ContainsKey(idx) ? _nodeIndex[idx] : null;
         }
-
-
-        #region create query context
-        public QueryContext GetQueryContext(FilterGraph filter)
-        {
-            return GetQueryContext(null, filter);
-        }
-
-        public QueryContext GetQueryContext(ITableContextNode node = null, FilterGraph filter = null)
-        {
-            node = node ?? this;
-
-            var baseNode = node;
-
-            var selectColumns = SelectTemplate != null && SelectTemplate.Any() ?
-                GetSelectColumnsFromTemplate() :
-                GetSelectColumnsFromNode(node);
-
-            if (!selectColumns.Any())
-            {
-                throw new CoPilotUnsupportedException("No columns in select list!");
-            }
-
-            var referencedNodes = selectColumns.Select(r => r.Node).Select(r => new FromListItem(r, false)).ToList();
-            if (filter?.Root != null)
-            {
-                var filterNodes = filter.MemberExpressions.Select(r => r.ColumnReference.Node);
-                foreach (var filterNode in filterNodes)
-                {
-                    var tcn = filterNode as TableContextNode;
-                    if (tcn != null && tcn.IsInverted && tcn != baseNode) throw new CoPilotUnsupportedException("Invalid filter expression");
-                    referencedNodes.Add(new FromListItem(filterNode, tcn == null || !tcn.IsInverted));
-                }
-            }
-            if (node == this && _ordering != null && _ordering.Any())
-            {
-                referencedNodes.AddRange(_ordering.Select(r => new FromListItem(r.Key.Node, false)));
-            }
-
-            var fromList = new List<FromListItem>(referencedNodes.Distinct().OrderBy(r => r.ForceInnerJoin ? 1 : r.Node.Order).ThenBy(r => r.Node.Level));
-
-            var currentIndex = fromList.Count - 1;
-
-            while (currentIndex > 0)
-            {
-                var currentNode = fromList[currentIndex].Node as TableContextNode;
-                if (currentNode == null) break;
-                var depNodeExist = fromList.Exists(r => r.Node.Index == currentNode.Origin.Index);
-                if (!depNodeExist)
-                    fromList.Insert(currentIndex, new FromListItem(currentNode.Origin, currentNode.JoinType == TableJoinType.InnerJoin));
-
-                currentIndex--;
-            }
-
-            if (fromList[0].Node != baseNode && fromList[0].Node.Level < baseNode.Level)
-            {
-                baseNode = fromList[0].Node;
-            }
-
-            fromList.RemoveAll(r => r.Node == baseNode);
-
-            return new QueryContext
-            {
-                SelectColumns = selectColumns.ToArray(),
-                OrderByClause = _ordering,
-                Modifiers = SelectModifiers,
-                BaseNode = baseNode,
-                JoinedNodes = fromList.Select(r => new TableJoinDescription(r)).ToArray(),
-                Filter = filter
-            };
-        }
-
-        private void AddSelectColumnsFromNode(ITableContextNode node, List<ContextColumn> list, string joinAlias)
-        {
-            foreach (var column in node.Table.Columns.Where(r => !r.ExcludeFromSelect))
-            {
-                list.Add(ContextColumn.Create(node, column, joinAlias));
-            }
-        }
-
-        private List<ContextColumn> GetSelectColumnsFromNode(ITableContextNode node)
-        {
-            var list = new List<ContextColumn>();
-            var nodePath = PathHelper.RemoveFirstElementFromPathString(node.Path);
-            var includes = _include.Where(r => r.StartsWith(nodePath));
-            //if (!string.IsNullOrEmpty(nodePath))
-            //{
-            //    var parts = nodePath.Count(r => r == '.') + 1;
-            //    includes = includes.Select(r => string.Join(".", r.Split('.').Skip(parts))).Where(s => s != string.Empty);
-            //}
-
-
-            AddSelectColumnsFromNode(node, list, "");
-
-            foreach (var path in includes)
-            {
-                var relatedNodes = GetAllNodesInPath(PathHelper.MaskPath(path, nodePath), node);
-                if (relatedNodes != null)
-                {
-                    foreach (var nodeInPath in relatedNodes)
-                    {
-                        var join = nodeInPath as TableContextNode;
-                        if (join != null && join.IsInverted) break;
-                        AddSelectColumnsFromNode(nodeInPath, list, PathHelper.MaskPath(nodeInPath.Path, node.Path)); //
-                    }
-                }
-            }
-            return list;
-        }
-
-        private List<ContextColumn> GetSelectColumnsFromTemplate()
-        {
-            var selectColumns = new List<ContextColumn>();
-
-            foreach (var item in SelectTemplate)
-            {
-                var splitPath = PathHelper.SplitLastInPathString(item.Key);
-                var node = string.IsNullOrEmpty(splitPath.Item1) ? this : FindByPath(splitPath.Item1);
-                var member = node.MapEntry.GetMemberByName(splitPath.Item2);
-                var col = node.MapEntry.GetColumnByMember(member);
-
-                selectColumns.Add(ContextColumn.Create(node, col, "", item.Value));
-            }
-
-            return selectColumns;
-        }
-        #endregion
-
-        #region filter processing
-
+        
         public void ApplyFilter(ExpressionGraph filter)
         {
-
-            var filterGraph = new FilterGraph
-            {
-                Root = ProcessFilter(filter.Root) as BinaryOperand
-            };
-            RootFilter = filterGraph;
+            var decoder = new FilterExpressionProcessor(this);
+            
+            RootFilter = decoder.Decode(filter);
 
         }
-
-        private IExpressionOperand ProcessFilter(IExpressionOperand sourceOp)
-        {
-            if (sourceOp is UnsupportedOperand) throw new CoPilotUnsupportedException(sourceOp.ToString());
-
-            var bop = sourceOp as BinaryOperand;
-            if (bop != null)
-            {
-                var bin = new BinaryOperand(
-                    ProcessFilter(bop.Left),
-                    ProcessFilter(bop.Right),
-                    bop.Operator
-                );
-
-                var memberOperand = bin.Left as MemberExpressionOperand;
-                ValueOperand matchingVop;
-                if (memberOperand == null)
-                {
-                    memberOperand = bin.Right as MemberExpressionOperand;
-                    matchingVop = bin.Left as ValueOperand;
-                }
-                else
-                {
-                    matchingVop = bin.Right as ValueOperand;
-                }
-
-                if (matchingVop != null && memberOperand?.ColumnReference.Adapter != null)
-                {
-                    //special case for enums
-                    var member = memberOperand.ColumnReference.Node?.MapEntry?.GetMappedMember(memberOperand.ColumnReference.Column);
-                    if (member != null && member.MemberType.GetTypeInfo().IsEnum)
-                    {
-                        matchingVop.Value = Enum.ToObject(member.MemberType, matchingVop.Value);
-                    }
-                    matchingVop.Value = memberOperand.ColumnReference.Adapter.Invoke(MappingTarget.Database, matchingVop.Value);
-                }
-                return bin;
-            }
-
-            var mop = sourceOp as MemberExpressionOperand;
-            if (mop != null)
-            {
-                ProcessMemberExpression(mop);
-                return mop;
-            }
-
-            var vop = sourceOp as ValueOperand;
-            if (vop != null)
-            {
-                return new ValueOperand(vop.ParamName, vop.Value);
-            }
-
-            return new NullOperand();
-        }
-
-        private void ProcessMemberExpression(MemberExpressionOperand memberExpression)
-        {
-            var path = memberExpression.Path;
-            var splitPath = PathHelper.SplitLastInPathString(path);
-
-            if (!string.IsNullOrEmpty(splitPath.Item1) && !Exist(splitPath.Item1))
-            {
-                AddPath(splitPath.Item1, false);
-            }
-
-            TableMapEntry mapEntry;
-            ITableContextNode node = this;
-            if (string.IsNullOrEmpty(splitPath.Item1))
-            {
-                mapEntry = MapEntry;
-            }
-            else
-            {
-                node = FindByPath(splitPath.Item1);
-                mapEntry = node.MapEntry;
-            }
-            var member = mapEntry.GetMemberByName(splitPath.Item2);
-
-            var adapter = mapEntry.GetAdapter(member);
-            var col = mapEntry.GetColumnByMember(member);
-            if (col == null && !member.MemberType.IsSimpleValueType())
-            {
-                var rel = mapEntry.GetRelationshipByMember(member);
-                if (rel != null)
-                {
-                    col = rel.ForeignKeyColumn; //member.MemberType.IsReference() ? rel.ForeignKeyColumn : rel.PrimaryKeyColumn;
-                }
-            }
-            if (col == null) throw new CoPilotRuntimeException("Cannot map expression to a column!");
-            if (col.ForeignkeyRelationship != null && col.ForeignkeyRelationship.IsLookupRelationship)
-            {
-                node = GetOrCreateLookupNode(node, col);
-                col = col.ForeignkeyRelationship.LookupColumn;
-
-            }
-            else if (col.IsPrimaryKey && node.Origin != null)
-            {
-                node = node.Origin;
-                var newCol = node.Table.Columns.FirstOrDefault(r => r.IsForeignKey && r.ForeignkeyRelationship.PrimaryKeyColumn.Equals(col));
-                col = newCol;
-            }
-            else if (col.Table != node.Table)
-            {
-                node = node.Nodes.Single(r => r.Value.Table == col.Table).Value;
-            }
-
-            if (col == null) throw new CoPilotRuntimeException("Column could not found!");
-
-            memberExpression.ColumnReference = ContextColumn.Create(node, col, adapter);
-        }
-
-        #endregion
-
-        #region selector processing
-        protected void BuildFromMemberExpressions(Dictionary<string, MemberExpression> members)
-        {
-            foreach (var key in members.Keys)
-            {
-                var memberExpression = members[key];
-
-                var path = PathHelper.RemoveFirstElementFromPathString(memberExpression.ToString());
-
-
-                var cmi = ClassMemberInfo.Create(memberExpression.Member);
-                if (cmi.MemberType.IsCollection())
-                {
-                    AddPath(path);
-                    var childNode = FindByPath(path);
-
-                    //throw new CoPilotUnsupportedException("Selector cannot return a collection type!");
-                }
-                else
-                {
-                    BuildFromPath(key, path);
-                }
-            }
-
-        }
-
-        protected void BuildFromPath(string key, string path)
-        {
-            var splitPath = PathHelper.SplitLastInPathString(path);
-            if (!string.IsNullOrEmpty(splitPath.Item1))
-            {
-                AddPath(splitPath.Item1, false);
-            }
-
-            CreateLookupNodeIfNotExist(splitPath.Item1, splitPath.Item2);
-
-            SelectTemplate.Add(path, key);
-        }
-        #endregion
 
         #region order clause processing
         public void ApplyOrdering(Dictionary<string, Ordering> ordering)
         {
-            _ordering = new Dictionary<ContextColumn, Ordering>();
+            if (SelectTemplate == null)
+            {
+                SelectTemplate = SelectTemplate.BuildFrom(this);
+            }
+            const string setName = "Base";
+
+            Ordering = new Dictionary<ContextColumn, Ordering>();
             foreach (var item in ordering)
             {
-                string lookup = item.Key;
-                if (SelectTemplate != null && SelectTemplate.Any())
+                ContextColumn col;
+                if (string.IsNullOrEmpty(item.Key) || item.Key.Equals("1", StringComparison.Ordinal))
                 {
-                    if (string.IsNullOrEmpty(item.Key) || item.Key.Equals("1", StringComparison.Ordinal))
-                    {
-                        lookup = SelectTemplate.First().Key;
-                    }
-                    else
-                    {
-                        lookup = SelectTemplate.Where(r => r.Value.Equals(item.Key, StringComparison.Ordinal))
-                                .Select(r => r.Key).SingleOrDefault();
-                    }
+                    col = SelectTemplate.GetColumnsInSet(setName).First();
                 }
-
-                var splitPath = PathHelper.SplitLastInPathString(lookup);
-                var node = FindByPath(splitPath.Item1);
-
-                if (node == null) throw new CoPilotConfigurationException("No context found!");
-
-                var member = node.MapEntry.GetMemberByName(splitPath.Item2);
-
-                if (member == null) throw new CoPilotConfigurationException("No member found!");
-                var col = node.MapEntry.GetColumnByMember(member);
+                else
+                {
+                    col = SelectTemplate.GetColumn(setName, item.Key);
+                }
+                
                 if (col != null)
                 {
-                    _ordering.Add(ContextColumn.Create(node, col), item.Value);
+                    Ordering.Add(col, item.Value);
                 }
             }
         }
@@ -525,18 +219,7 @@ namespace CoPilot.ORM.Context
             }
         }
 
-        private void CreateLookupNodeIfNotExist(string path, string memberName)
-        {
-            var node = (string.IsNullOrEmpty(path) ? this : FindByPath(path));
-            var member = node.MapEntry.GetMemberByName(memberName);
-            var col = node.Table.GetColumnByMember(member);
-            if (col?.ForeignkeyRelationship != null && col.ForeignkeyRelationship.IsLookupRelationship)
-            {
-                GetOrCreateLookupNode(node, col);
-            }
-        }
-
-        private ITableContextNode GetOrCreateLookupNode(ITableContextNode source, DbColumn column)
+        internal ITableContextNode GetOrCreateLookupNode(ITableContextNode source, DbColumn column)
         {
             var alias = "LOOKUP~" + column.ColumnName;
             if (source.Nodes.ContainsKey(alias))

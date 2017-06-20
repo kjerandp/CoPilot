@@ -17,6 +17,7 @@ namespace CoPilot.ORM.Database.Commands.Query
 
         public DefaultQueryExecutionStrategy(IDbProvider provider)
         {
+
             _basic = new SingleStatementStrategy(new RepeatFilterScriptCreator(provider.SelectStatementBuilder, provider.SelectStatementWriter));
             _secondary = new SingleStatementStrategy(provider.SingleStatementQueryWriter);
         }

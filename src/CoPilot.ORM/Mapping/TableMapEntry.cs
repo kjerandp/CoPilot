@@ -56,6 +56,7 @@ namespace CoPilot.ORM.Mapping
 
             if (m.Value == null)
             {
+                
                 throw new CoPilotConfigurationException($"No relationship found associated with {member.Name}!");
             }
 

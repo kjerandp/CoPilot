@@ -26,7 +26,7 @@ namespace CoPilot.ORM.Filtering
             _graph = new ExpressionGraph();
             _paramIndex = 1;
 
-            var decoder = ExpressionTypeResolver.Get(expression);
+            var decoder = FilterExpressionTypeResolver.Get(expression);
             var root = decoder.Decode();
 
             var result = ConvertNode(root);

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using CoPilot.ORM.Context.Interfaces;
+using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Exceptions;
@@ -21,8 +22,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Creators
         
         public SqlStatement CreateStatement(ITableContextNode node, FilterGraph filter, out string[] names)
         {
-            var ctx = node.Context;
-            var q = ctx.GetQueryContext(node, filter);
+            var q = QueryContext.Create(node, filter);
             var stm = q.GetStatement(_builder, _writer);
             var namesList = new List<string> { node.Path };
 
@@ -35,12 +35,13 @@ namespace CoPilot.ORM.Database.Commands.Query.Creators
         {
             foreach (var rel in parentNode.Nodes.Where(r => !r.Value.Relationship.IsLookupRelationship))
             {
-                if (parentNode.Context.SelectModifiers != null) throw new CoPilotUnsupportedException("This query strategy cannot be used with predicates!");
+                var ctx = parentNode.Context;
+                if (ctx.Nodes.Any(r => r.Value.IsInverted) && (ctx.SelectModifiers != null || ctx.GetFilter() == null)) throw new CoPilotUnsupportedException("This query strategy cannot be used with predicates!");
 
                 var node = rel.Value;
                 if (node.IsInverted)
                 {
-                    var q = node.GetQueryContext(filter);
+                    var q = QueryContext.Create(node,filter);
                     stm.Script.Add();
                     stm.Script.Append(_writer.GetStatement(_builder.Build(q)));
                     names.Add(node.Path);

@@ -5,7 +5,7 @@ using CoPilot.ORM.Filtering.Decoders.Interfaces;
 
 namespace CoPilot.ORM.Filtering.Decoders
 {
-    public static class ExpressionTypeResolver
+    public static class FilterExpressionTypeResolver
     {
         public static IExpressionDecoder Get(Expression expression)
         {

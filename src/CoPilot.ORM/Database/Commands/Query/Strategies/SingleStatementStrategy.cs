@@ -22,7 +22,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
 
             var response = reader.Query(stm, names.ToArray());
 
-            return ContextMapper.MapAndMerge(node, response.RecordSets);
+            return ContextMapper.MapAndMerge(node.Context.SelectTemplate, response.RecordSets);
         }
     }
 }

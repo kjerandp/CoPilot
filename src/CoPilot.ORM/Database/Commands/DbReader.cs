@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
+using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Mapping.Mappers;
 using CoPilot.ORM.Mapping;
@@ -93,7 +94,7 @@ namespace CoPilot.ORM.Database.Commands
             if (mapper == null && _model.IsMapped(typeof(T)))
             {
                 var ctx = _model.CreateContext(typeof(T), response.GetPaths());
-                return ContextMapper.MapAndMerge(ctx, response.RecordSets).OfType<T>();
+                return ContextMapper.MapAndMerge(SelectTemplate.BuildFrom(ctx), response.RecordSets).OfType<T>();
             }
 
             return response.Map<T>(mapper);
@@ -142,7 +143,7 @@ namespace CoPilot.ORM.Database.Commands
 
         private SqlStatement GetStatement(ITableContextNode node, FilterGraph filter)
         {
-            var q = node.Context.GetQueryContext(node, filter);
+            var q = QueryContext.Create(node, filter);
             return q.GetStatement(_provider.SelectStatementBuilder, _provider.SelectStatementWriter);
         }
 

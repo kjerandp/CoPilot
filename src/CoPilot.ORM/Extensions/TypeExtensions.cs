@@ -66,5 +66,13 @@ namespace CoPilot.ORM.Extensions
             }
             return list.ToArray();
         }
+
+        public static ClassMemberInfo GetClassMember(this Type classType, string memberName)
+        {
+            var member = classType.GetTypeInfo().GetMember(memberName, BindingFlags.Instance | BindingFlags.Public)
+                .SingleOrDefault(r => r.MemberType == MemberTypes.Property || r.MemberType == MemberTypes.Field);
+
+            return member != null ? ClassMemberInfo.Create(member) : null;
+        }
     }
 }

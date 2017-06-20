@@ -25,8 +25,7 @@ namespace CoPilot.ORM.MySql.Writers
         public SqlStatement CreateStatement(ITableContextNode node, FilterGraph filter, out string[] names)
         {
             var tempTables = new List<string>(3);
-            var ctx = node.Context;
-            var q = ctx.GetQueryContext(node, filter);
+            var q = QueryContext.Create(node, filter);
             var stm = new SqlStatement(GetScript(q, null, tempTables));
             if (q.Filter != null)
             {
@@ -84,7 +83,7 @@ namespace CoPilot.ORM.MySql.Writers
                 var node = rel.Value;
                 if (node.IsInverted)
                 {
-                    stm.Script.Append(GetScript(node.GetQueryContext(), parentNode, tempTables));
+                    stm.Script.Append(GetScript(QueryContext.Create(node), parentNode, tempTables));
                     names.Add(node.Path);
 
                 }

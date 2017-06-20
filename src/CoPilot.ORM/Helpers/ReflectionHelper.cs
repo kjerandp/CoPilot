@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Linq;
 using System.Reflection;
+using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Extensions;
 
@@ -131,6 +132,28 @@ namespace CoPilot.ORM.Helpers
                             field.SetValue(entity, collection);
                         }
                     }
+                    collection?.Add(item);
+                }
+                catch (ArgumentException ex)
+                {
+                    if (throwOnError) throw new CoPilotRuntimeException($"Unable to add value to collection {member.Name}", ex);
+                }
+            }
+        }
+
+        public static void AddValueToMemberCollection(ClassMemberInfo member, object entity, object item, bool throwOnError = true)
+        {
+            lock (LockObj)
+            {
+                try
+                {
+                    var collection = member.GetValue(entity) as IList;
+                    if (collection == null)
+                    {
+                        collection = Activator.CreateInstance(member.MemberType) as IList;
+                        member.SetValue(entity, collection);
+                    }
+                    
                     collection?.Add(item);
                 }
                 catch (ArgumentException ex)

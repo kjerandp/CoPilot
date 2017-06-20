@@ -200,20 +200,23 @@ namespace CoPilot.ORM.Database.Commands.Query
 
         internal IEnumerable<TTarget> Execute<TTarget>()
         {
-            UpdateContext();
-            var mapper = (typeof(TTarget) == typeof(object) || typeof(TTarget) == typeof(IDictionary<string, object>)) ?
-                    DynamicMapper.Create() :
-                    SelectTemplateMapper.Create(Ctx, typeof(TTarget));
+            return Execute().OfType<TTarget>();
+            
 
-            if (_dbReader != null)
-            {
-                return _dbReader.Query(Ctx).Map<TTarget>(mapper);
-            }
+            //UpdateContext();
+            //var mapper = (typeof(TTarget) == typeof(object) || typeof(TTarget) == typeof(IDictionary<string, object>)) ?
+            //        DynamicMapper.Create() :
+            //        SelectTemplateMapper.Create(Ctx, typeof(TTarget));
 
-            using (var reader = new DbReader(_provider, _provider.CreateConnection(_connectionString), _model))
-            {
-                return reader.Query(Ctx).Map<TTarget>(mapper);
-            }
+            //if (_dbReader != null)
+            //{
+            //    return _dbReader.Query(Ctx).Map<TTarget>(mapper);
+            //}
+
+            //using (var reader = new DbReader(_provider, _provider.CreateConnection(_connectionString), _model))
+            //{
+            //    return reader.Query(Ctx).Map<TTarget>(mapper);
+            //}
         }
     }
 

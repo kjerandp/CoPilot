@@ -1,4 +1,5 @@
 using CoPilot.ORM.Config;
+using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Model;
 
@@ -61,6 +62,8 @@ namespace CoPilot.ORM.Context
 
         public DbColumn Column { get; set; }
 
+        public ClassMemberInfo MappedMember => Node.MapEntry?.GetMappedMember(Column);
+        
         public ValueAdapter Adapter { get; internal set; }
 
         public string ColumnAlias { get; set; }

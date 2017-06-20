@@ -24,7 +24,7 @@ namespace CoPilot.ORM.Filtering.Decoders
                 return new DecodedValue(value.GetType(), value);
             }
 
-            var decoder = ExpressionTypeResolver.Get(_expression.Operand);
+            var decoder = FilterExpressionTypeResolver.Get(_expression.Operand);
             var result = decoder.Decode();
 
             var refResult = result as DecodedReference;

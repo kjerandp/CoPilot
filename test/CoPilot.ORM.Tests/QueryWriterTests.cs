@@ -1,4 +1,5 @@
 ﻿using System;
+using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
@@ -37,7 +38,7 @@ namespace CoPilot.ORM.Tests
             var ctx = _model.CreateContext<Resource>("Owner.City", "UsedBy.City");
             var filterGraph = ExpressionHelper.DecodeExpression<Resource>(r => r.Id == 1, _provider);
             ctx.ApplyFilter(filterGraph);
-            var sql = writer.GetStatement(builder.Build(ctx.GetQueryContext()));
+            var sql = writer.GetStatement(builder.Build(QueryContext.Create(ctx)));
 
             Console.WriteLine(sql);
         }

@@ -3,6 +3,7 @@ using System.Linq;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
+using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Filtering;
@@ -24,18 +25,17 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
         }
         public IEnumerable<object> Execute(ITableContextNode node, FilterGraph filter, DbReader reader)
         {
-            var ctx = node.Context;
             var recordsets = new List<DbRecordSet>();
 
-            var q = ctx.GetQueryContext(node, filter);
+            var q = QueryContext.Create(node, filter);
 
             var stm = q.GetStatement(_builder, _writer);
             var baseRecords = ExecuteStatement(node, stm, reader);
             recordsets.Add(baseRecords);
-
+            
             ExecuteNodeQueries(node, baseRecords, filter, reader, recordsets);
 
-            return ContextMapper.MapAndMerge(ctx, recordsets);
+            return ContextMapper.MapAndMerge(node.Context.SelectTemplate, recordsets.ToArray());
         }
 
         private void ExecuteNodeQueries(ITableContextNode parentNode, DbRecordSet parentSet, FilterGraph filter, DbReader reader, ICollection<DbRecordSet> rs)
@@ -58,7 +58,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
                             childFilter = CreateChildFilter(node, keyValues);
                         }
                     }
-                    var q = node.Context.GetQueryContext(node, childFilter);
+                    var q = QueryContext.Create(node, childFilter);
                     var stm = q.GetStatement(_builder, _writer);
                     var data = ExecuteStatement(node, stm, reader);
                     rs.Add(data);

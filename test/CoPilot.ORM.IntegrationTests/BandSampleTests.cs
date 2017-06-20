@@ -24,9 +24,8 @@ namespace CoPilot.ORM.IntegrationTests
             var model = BandSampleConfig.CreateModel();
             //var databaseSetup = new MySqlBandSampleSetup(model);
             var databaseSetup = new SqlServerBandSampleSetup(model);
-            databaseSetup.DropCreateDatabase();
-            _db = databaseSetup.GetDb();
-            
+            //databaseSetup.DropCreateDatabase();
+            _db = databaseSetup.GetDb();        
         }
 
         [TestMethod]
@@ -55,6 +54,16 @@ namespace CoPilot.ORM.IntegrationTests
             */
 
         }
+        [TestMethod]
+        public void TemplateTest()
+        {
+            var test = _db.From<Band>()
+                .Where(r => r.Id <= 20)
+                .Include("BandMembers.Person.City.Country", "Based.Country", "Recordings.Genre")
+                .AsEnumerable();
+
+       
+        }
 
         [TestMethod]
         public void CanCreateUseArithmeticsInWhereClause()
@@ -69,20 +78,37 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanCreateQueriesWithAnonymousObjectsAndOneToManyRelations()
         {
-            try
-            {
-                var band = _db.From<Band>()
-                    .Where(r => r.Id == 1)
-                    .Select(r => new {r.Name, Artists = r.BandMembers.Select(n => new {n.ArtistName})})
-                    .OrderBy(r => r.Name, Ordering.Descending)
-                    .Single();
-            }
-            catch
-            {
-                //
-            }
-            
-
+           
+            var band = _db.From<Band>()
+                .Where(r => r.Id == 1)
+                .Select(r => new
+                {
+                    BandName = r.Name,
+                    Songs = r.Recordings.Select(a => new
+                    {
+                        Title = a.SongTitle.ToUpper(),
+                        a.Duration.TotalSeconds,
+                        Genre = a.Genre.Name
+                    }),
+                    Artists = r.BandMembers.Select(n => new
+                    {
+                        Name = n.ArtistName ?? n.Person.Name,
+                        Letter = n.Person.Name != null ? n.Person.Name[0]:'?',
+                        HasArtistName = n.ArtistName != null,
+                        n.Instrument,
+                        ArtistInfo = new
+                        {
+                            IdAsString = n.Id.ToString(),
+                            n.Person.Name,
+                            Nationality = n.Person.City.Country
+                        }
+                    })
+                })
+                .OrderBy(r => r.BandName, Ordering.Descending)
+                .Single();
+        
+            Assert.IsTrue(band.Songs.Any());
+            Assert.IsTrue(band.Artists.Any());
             //Want to be able to support select as above
 
         }
@@ -99,6 +125,36 @@ namespace CoPilot.ORM.IntegrationTests
 
         }
 
+        [TestMethod]
+        public void CanProjectToDtoWithConstructor()
+        {
+            
+            var bands = _db.From<Band>().Where(r => r.Id <= 30).Select(r => new Dto(r.Name, r.Id)).AsEnumerable();
+
+
+
+        }
+
+        [TestMethod]
+        public void CanProjectToDtoWithClassInit()
+        {
+
+            var bands = _db.From<Band>().Where(r => r.Id <= 30).Select(r => new Dto(r.Name, r.Id) { Date = r.Formed }).AsEnumerable();
+
+
+
+        }
+
+        public class Dto
+        {
+            public Dto(string name, int id)
+            {
+                Value = name + id;
+            }
+
+            public string Value { get; }
+            public DateTime? Date { get; set; }
+        }
 
         [TestMethod]
         public void CanCreateQueriesWithMultipleLevelsInclude()
@@ -107,6 +163,7 @@ namespace CoPilot.ORM.IntegrationTests
                 .Where(r => r.Id == 1)
                 .Include("Based.Country")
                 .OrderBy(r => r.Name, Ordering.Descending)
+                .ThenBy(r => r.Based.Name)
                 .ThenBy(r => r.Id)
                 .Single();
 
