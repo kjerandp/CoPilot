@@ -1,7 +1,7 @@
 # CoPilot
 CoPilot is an object relational mapper (ORM). In its core it works like a micro ORM, but it has some neat and powerful features added on top of it. 
 
-Please note that version 2 is currently being developed (see [version_2 branch](https://github.com/kjerandp/CoPilot/tree/version_2)) and this version will contain some breaking changes.
+Please note that this version will soon be depricated and replaced by a new version (see [master branch](https://github.com/kjerandp/CoPilot/tree/master)) and this version will contain some breaking changes.
 
 **Key features:**  
 * Map POCO models to tables including relationships (one-to-many and many-to-one relationships). 
