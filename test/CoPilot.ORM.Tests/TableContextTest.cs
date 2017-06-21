@@ -26,13 +26,13 @@ namespace CoPilot.ORM.Tests
         [TestMethod]
         public void CanCreateContext()
         {
-            var resCtx = _model.CreateContext<Resource>(new[] { "Owner", "UsedBy.City"});
+            var resCtx = _model.CreateContext<Resource>("Owner", "UsedBy.City");
             Assert.AreEqual("GOT_ORGANIZATION", resCtx.FindByPath("UsedBy").Table.TableName);
             Assert.AreEqual("PUB_CITY", resCtx.FindByPath("UsedBy.City").Table.TableName);
             Assert.AreEqual("GOT_ORGANIZATION", resCtx.FindByPath("Owner").Table.TableName);
             Assert.AreNotSame(resCtx.FindByPath("UsedBy").Index, resCtx.FindByPath("Owner").Index);
 
-            var orgCtx = _model.CreateContext<Organization>(new[] { "OwnedResources.UsedBy.City", "UsedResources", "City" });
+            var orgCtx = _model.CreateContext<Organization>("OwnedResources.UsedBy.City", "UsedResources", "City");
             Assert.AreEqual("TST_RESOURCE", orgCtx.FindByPath("OwnedResources").Table.TableName);
             Assert.AreEqual("GOT_ORGANIZATION", orgCtx.FindByPath("OwnedResources.UsedBy").Table.TableName);
             Assert.AreEqual("PUB_CITY", orgCtx.FindByPath("OwnedResources.UsedBy.City").Table.TableName);

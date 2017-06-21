@@ -1,9 +1,7 @@
 ﻿using System.Data;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Database.Commands;
-using CoPilot.ORM.Database.Commands.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
-using CoPilot.ORM.Database.Commands.Query.Strategies;
 using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Logging;

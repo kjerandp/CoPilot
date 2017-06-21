@@ -2,8 +2,6 @@
 using System.Linq;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Context.Interfaces;
-using CoPilot.ORM.Context.Query;
-using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
 

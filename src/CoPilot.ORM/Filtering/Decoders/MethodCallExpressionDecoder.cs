@@ -27,7 +27,7 @@ namespace CoPilot.ORM.Filtering.Decoders
             }
 
             var refNode = obj as DecodedReference;
-            if (refNode != null)
+            if (refNode != null && args != null)
             {
                 var objArgs = new List<object>(args.Length);
                 foreach (var arg in args)

@@ -1,4 +1,3 @@
-using System;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Model;

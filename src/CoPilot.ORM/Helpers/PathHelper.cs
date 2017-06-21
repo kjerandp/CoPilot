@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Extensions;

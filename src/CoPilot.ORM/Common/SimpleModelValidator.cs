@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using CoPilot.ORM.Database;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;

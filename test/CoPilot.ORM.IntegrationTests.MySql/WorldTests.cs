@@ -2,7 +2,6 @@
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Config;
 using CoPilot.ORM.Config.Naming;
-using CoPilot.ORM.Database;
 using CoPilot.ORM.IntegrationTests.MySql.WorldModels;
 using CoPilot.ORM.MySql;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -68,7 +67,7 @@ namespace CoPilot.ORM.IntegrationTests.MySql
                 .Take(10).Skip(20)
                 .Distinct().ToArray();
 
-            Assert.AreEqual(10, response.Count());
+            Assert.AreEqual(10, response.Length);
             Assert.IsTrue(response.Any(r => r.Languages.Any()));
         }
 

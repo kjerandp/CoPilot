@@ -1,5 +1,4 @@
-﻿using System;
-using CoPilot.ORM.Config.DataTypes;
+﻿using CoPilot.ORM.Config.DataTypes;
 
 namespace CoPilot.ORM.Database.Commands
 {

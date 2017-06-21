@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using CoPilot.ORM.Config.Naming;
-using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.IntegrationTests.Config;
 using CoPilot.ORM.IntegrationTests.Models.Northwind;

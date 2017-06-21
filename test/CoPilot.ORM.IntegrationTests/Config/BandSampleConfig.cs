@@ -12,14 +12,15 @@ namespace CoPilot.ORM.IntegrationTests.Config
         {
             var mapper = new DbMapper();
 
-            var countryMap = mapper.Map<Country>("COUNTRY");
+            mapper.Map<Country>("COUNTRY");
+            mapper.Map<MusicGenre>("MUSIC_GENRE");
+            mapper.Map<Album>("ALBUM");
+
             var cityMap = mapper.Map<City>("CITY");
             var personMap = mapper.Map<Person>("PERSON");
-            var genreMap = mapper.Map<MusicGenre>("MUSIC_GENRE");
             var bandMap = mapper.Map<Band>("BAND");
             var bandMemberMap = mapper.Map<BandMember>("BAND_MEMBER");
             var recordingMap = mapper.Map<Recording>("RECORDING");
-            var albumMap = mapper.Map<Album>("ALBUM");
             var albumTrackMap = mapper.Map<AlbumTrack>("ALBUM_TRACK");
 
             cityMap.HasOne(r => r.Country, "~COUNTRY_ID").InverseKeyMember(r => r.Cities);

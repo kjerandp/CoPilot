@@ -21,6 +21,7 @@ namespace CoPilot.ORM.IntegrationTests
         /// <summary>
         /// Select the provider by comment/uncomment the proper databaseSetup variable.
         /// If you want to drop/create the sample database, uncomment databaseSetup.DropCreateDatabase();
+        /// To view the resulting SQL statements executed, set logging level to VERBOSE
         /// </summary>
         /// <param name="testContext"></param>
         [ClassInitialize]
@@ -52,50 +53,42 @@ namespace CoPilot.ORM.IntegrationTests
                 .AsEnumerable();
 
             Assert.IsTrue(bands.Any(r => r.BandMembers != null && r.BandMembers.Any()));
-
-            /* Resulting MS SQL script:
-              
-              SELECT
-		            DISTINCT
-		            T1.BAND_ID
-		            ,T1.BAND_NAME
-		            ,T1.BAND_FORMED
-	            INTO #Base
-	            FROM
-		            BAND T1
-	            WHERE
-		            T1.BAND_NAME NOT LIKE @param1 AND T1.BAND_NAME NOT LIKE @param2
-	            ORDER BY
-		            T1.BAND_NAME asc
-		            ,T1.BAND_FORMED desc
-		            ,T1.BAND_ID asc
-	            OFFSET 1 ROWS
-	            FETCH NEXT 20 ROWS ONLY
-	
-	            SELECT * FROM #Base
-	
-	            SELECT
-		            T2.BAND_MEMBER_ID
-		            ,T2.BAND_MEMBER_INSTRUMENT
-		            ,T2.BAND_MEMBER_ARTIST_NAME
-		            ,T2.BAND_MEMBER_JOINED
-		            ,T2.BAND_MEMBER_LEFT
-		            ,T2.BAND_MEMBER_BAND_ID
-	            FROM
-		            BAND_MEMBER T2
-		            INNER JOIN #Base T1 ON T2.BAND_MEMBER_BAND_ID = T1.BAND_ID
-            */
-
         }
+
         [TestMethod]
-        public void CanTemplateTest()
+        public void CanCreateQueriesWithNewQuerySyntaxAndProjection()
+        {
+            var band = _db.From<Band>()
+                .Where(r => r.Id == 1)
+                .Select(r => new { BandId = r.Id, BandName = r.Name, Nationality = r.Based.Country.Name })
+                .OrderBy(r => r.Nationality)
+                .Single();
+
+            Assert.AreEqual(1, band.BandId);
+            Assert.IsFalse(string.IsNullOrEmpty(band.BandName));
+            Assert.IsFalse(string.IsNullOrEmpty(band.Nationality));
+
+            var bands = _db.From<Band>()
+                .Select(r => new { BandId = r.Id, BandName = r.Name, Nationality = r.Based.Country.Name })
+                .OrderBy(r => r.Nationality)
+                .Take(20)
+                .ToArray();
+
+            Assert.AreEqual(20, bands.Length);
+        }
+
+        [TestMethod]
+        public void CanBuildTemplateFromMultipleLevelsOfIncludesAndMapToModel()
         {
             var test = _db.From<Band>()
                 .Where(r => r.Id <= 20)
                 .Include("BandMembers.Person.City.Country", "Based.Country", "Recordings.Genre")
-                .AsEnumerable();
+                .ToArray();
 
-       
+            Assert.IsTrue(test.All(r => r.Id <= 20));  
+            Assert.IsTrue(test.Any(b => b.Based?.Country?.Name != null));
+            Assert.IsTrue(test.Any(r => r.BandMembers != null && r.BandMembers.Any(b => b.Person?.City?.Country?.Name != null)));
+            Assert.IsTrue(test.Any(r => r.Recordings != null && r.Recordings.Any(b => b.Genre?.Name != null)));
         }
 
         [TestMethod]
@@ -109,7 +102,7 @@ namespace CoPilot.ORM.IntegrationTests
         }
 
         [TestMethod]
-        public void CanCreateQueriesWithAnonymousObjectsAndOneToManyRelations()
+        public void CanCreateQueriesAndMapWithComplexProjections()
         {
            
             var band = _db.From<Band>()
@@ -142,7 +135,7 @@ namespace CoPilot.ORM.IntegrationTests
         
             Assert.IsTrue(band.Songs.Any());
             Assert.IsTrue(band.Artists.Any());
-            //Want to be able to support select as above
+
 
         }
 
@@ -155,18 +148,40 @@ namespace CoPilot.ORM.IntegrationTests
                 .OrderBy(r => r.Name, Ordering.Descending)
                 .Single();
 
+            Assert.IsNotNull(band);
+            Assert.AreEqual(1, band.Id);
+            Assert.IsTrue(band.BandMembers != null && band.BandMembers.Any());
 
         }
 
         [TestMethod]
         public void CanProjectToDtoWithConstructor()
-        {
-            
-            var bands = _db.From<Band>().Where(r => r.Id <= 30).Select(r => new Dto(r.Name, r.Id)).AsEnumerable();
+        {  
+            var bands = _db.From<Band>().Where(r => r.Id <= 30).Select(r => new Foo(r.Name, r.Id)).ToArray();
 
-
-
+            Assert.IsTrue(bands.All(r => !string.IsNullOrEmpty(r.Value)));         
         }
+
+        [TestMethod]
+        public void CanProjectToDtoWithClassInit()
+        {
+            var bands = _db.From<Band>().Where(r => r.Id <= 30).Select(r => new Foo(r.Name, r.Id) { Date = r.Formed }).ToArray();
+            Assert.IsTrue(bands.All(r => !string.IsNullOrEmpty(r.Value)));
+            Assert.IsTrue(bands.Any(r => r.Date.HasValue));
+        }
+
+        // class used in above tests
+        private class Foo
+        {
+            public Foo(string name, int id)
+            {
+                Value = name + id;
+            }
+
+            public string Value { get; }
+            public DateTime? Date { get; set; }
+        }
+
 
         [TestMethod]
         public void CanSelectManyWithProjection()
@@ -184,30 +199,10 @@ namespace CoPilot.ORM.IntegrationTests
                 }
                 ).ToArray();
 
-
-
+            Assert.IsTrue(bands.Any(r => r.Discography != null && r.Discography.Any()));
         }
-
-        [TestMethod]
-        public void CanProjectToDtoWithClassInit()
-        {
-
-            var bands = _db.From<Band>().Where(r => r.Id <= 30).Select(r => new Dto(r.Name, r.Id) { Date = r.Formed }).AsEnumerable();
-
-
-
-        }
-
-        public class Dto
-        {
-            public Dto(string name, int id)
-            {
-                Value = name + id;
-            }
-
-            public string Value { get; }
-            public DateTime? Date { get; set; }
-        }
+        
+        
 
         [TestMethod]
         public void CanCreateQueriesWithMultipleLevelsInclude()
@@ -225,27 +220,7 @@ namespace CoPilot.ORM.IntegrationTests
             Assert.IsFalse(string.IsNullOrEmpty(band.Based.Country.Name));
         }
 
-        [TestMethod]
-        public void CanCreateQueriesWithNewQuerySyntaxWithAnonymousType()
-        {
-            var band = _db.From<Band>()
-                .Where(r => r.Id == 1)
-                .Select(r => new { BandId = r.Id, BandName = r.Name, Nationality = r.Based.Country.Name })
-                .OrderBy(r => r.Nationality)
-                .Single();
-
-            Assert.AreEqual(1, band.BandId);
-            Assert.IsFalse(string.IsNullOrEmpty(band.BandName));
-            Assert.IsFalse(string.IsNullOrEmpty(band.Nationality));
-
-            var bands = _db.From<Band>()
-                .Select(r => new { BandId = r.Id, BandName = r.Name, Nationality = r.Based.Country.Name })
-                .OrderBy(r => r.Nationality)
-                .Take(20)
-                .ToArray();
-            
-            Assert.AreEqual(20, bands.Length);
-        }
+        
 
         [TestMethod]
         public void CanCreateQueriesWithNewQuerySyntaxSimpleAndDynamicType()
@@ -281,10 +256,10 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanQueryForBandMembers()
         {
-            //var allBandMembers = _db.All<BandMember>("Person.City", "Band.Based").ToList();
+
             var allBandMembers = _db.From<BandMember>().Select("Person.City", "Band.Based").ToArray();
-            //var someBandMembers = _db.Query<BandMember>(r => r.Band.Name.StartsWith("B"), "Person.City", "Band.Based").ToList();
             var someBandMembers = _db.From<BandMember>().Where(r => r.Band.Name.StartsWith("B")).Select("Person.City", "Band.Based").ToArray();
+
             Assert.IsTrue(allBandMembers.Length > someBandMembers.Length);
             Assert.IsTrue(allBandMembers.Any(r => r.Person?.City != null));
             Assert.IsTrue(someBandMembers.Any(r => r.Band?.Based != null));
@@ -294,7 +269,7 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanQueryForRecordings()
         {
-            //var recordings = _db.All<Recording>(new Predicates { Take = 2000 }, "Genre", "Band", "AlbumTracks").ToList();
+
             var recordings = _db.From<Recording>().Select("Genre", "Band", "AlbumTracks").Take(2000).ToArray();
             Assert.IsTrue(recordings.Any());
             Assert.IsTrue(recordings.Any(r => r.Genre != null));
@@ -308,7 +283,7 @@ namespace CoPilot.ORM.IntegrationTests
             var recordings = _db.Query<Recording>(
                 "Get_Recordings_CTE",                           //stored proc name
                 new { recorded = new DateTime(2017, 5, 1) },    //arguments
-                "Recording", "Recording.AlbumTracks"
+                "r", "r.AlbumTracks"                        //record set names (first part of path "r" is irrelevant and can be anything)
             );
 
             Assert.IsTrue(recordings.Any());

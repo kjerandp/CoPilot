@@ -9,7 +9,6 @@ using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Helpers;
-using CoPilot.ORM.Mapping.Mappers;
 using CoPilot.ORM.Model;
 
 namespace CoPilot.ORM.Database.Commands.Query

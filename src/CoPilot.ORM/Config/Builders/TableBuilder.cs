@@ -121,12 +121,8 @@ namespace CoPilot.ORM.Config.Builders
         {
             if(string.IsNullOrEmpty(columnName)) throw new CoPilotConfigurationException("Column name can't be null!");
             columnName = TransformColumnName(columnName);
-            var col = Table.GetColumnByName(columnName);
+            var col = Table.GetColumnByName(columnName) ?? Table.AddColumn(columnName, DbDataType.Unknown, alias);
 
-            if (col == null)
-            {
-                col = Table.AddColumn(columnName, DbDataType.Unknown, alias);
-            }
             return col;
         }
 

@@ -30,12 +30,7 @@ namespace CoPilot.ORM.Filtering
             var root = decoder.Decode();
 
             var result = ConvertNode(root);
-            var binResult = result as BinaryOperand;
-
-            if (binResult == null)
-            {
-                binResult = ConvertToBinaryOperand(result);
-            }
+            var binResult = result as BinaryOperand ?? ConvertToBinaryOperand(result);
 
             _graph.Root = binResult;
 

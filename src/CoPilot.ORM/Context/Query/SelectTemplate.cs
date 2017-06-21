@@ -36,7 +36,7 @@ namespace CoPilot.ORM.Context.Query
 
             var contextColumn = ContextColumn.Create(node, column, joinAlias, alias);
 
-            var entry = new SelectTemplateEntry(setName, contextColumn);
+            var entry = new SelectTemplateEntry(contextColumn);
 
             if (alias != null || member != null)
             {
@@ -282,9 +282,8 @@ namespace CoPilot.ORM.Context.Query
 
         private struct SelectTemplateEntry
         {
-            public SelectTemplateEntry(string setName, ContextColumn column)
+            public SelectTemplateEntry(ContextColumn column)
             {
-                SetName = setName;
                 SelectColumn = column;
                 LocalId = string.IsNullOrEmpty(SelectColumn.ColumnAlias)
                     ? SelectColumn.Column.ColumnName
@@ -293,7 +292,6 @@ namespace CoPilot.ORM.Context.Query
                 MappedName = LocalId;
             }
 
-            private string SetName { get; }
             public string MappedName { get; set; }
             public ContextColumn SelectColumn { get; }
             public string LocalId { get; } 

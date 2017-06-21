@@ -135,15 +135,8 @@ namespace CoPilot.ORM.Context.Query.Selector
 
             if (!member.MemberType.IsSimpleValueType())
             {
-                if (node.Nodes.ContainsKey(member.Name))
-                {
-                    node = node.Nodes[member.Name];
-                }
-                else
-                {
-                    node = _ctx.AddPath(memberPath);
-                }
-                
+                node = node.Nodes.ContainsKey(member.Name) ? node.Nodes[member.Name] : _ctx.AddPath(memberPath);
+
                 _template.AddNode(node);
             }
             else
@@ -202,7 +195,9 @@ namespace CoPilot.ORM.Context.Query.Selector
                     }
                     else
                     {
-                        newNode = _ctx.AddPath(PathHelper.Combine(PathHelper.RemoveFirstElementFromPathString(sourceNode.Path), memberPath));
+                        newNode = _ctx.AddPath(
+                            PathHelper.Combine(PathHelper.RemoveFirstElementFromPathString(sourceNode.Path), memberPath)
+                        );
                     }
 
                     ProcessLambdaExpression(lambdaExpression, newNode, PathHelper.Combine(joinAlias, alias));

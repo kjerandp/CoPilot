@@ -1,6 +1,4 @@
-﻿using CoPilot.ORM.Database;
-
-namespace CoPilot.ORM.Model
+﻿namespace CoPilot.ORM.Model
 {
     public interface IModelValidator
     {

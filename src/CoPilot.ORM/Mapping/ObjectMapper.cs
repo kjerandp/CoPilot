@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using CoPilot.ORM.Database.Commands;
+﻿using CoPilot.ORM.Database.Commands;
 
 namespace CoPilot.ORM.Mapping
 {

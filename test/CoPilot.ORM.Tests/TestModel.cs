@@ -22,7 +22,7 @@ namespace CoPilot.ORM.Tests
             tb.Column("~TABLE", DbDataType.String, "Table").IsRequired().MaxSize(50);
             tb.Column("~DESCRIPTION", DbDataType.Text, "Description").IsRequired();
 
-            var cb = mapper.Map<City>("PUB_CITY");
+            mapper.Map<City>("PUB_CITY");
 
             var rb = mapper.Map<Resource>("TST_RESOURCE");
 

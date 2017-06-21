@@ -3,8 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CoPilot.ORM.Common;
-using CoPilot.ORM.Context.Query;
-using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.IntegrationTests.Config;
 using CoPilot.ORM.IntegrationTests.Models.Northwind;
@@ -70,7 +68,7 @@ namespace CoPilot.ORM.IntegrationTests
                 .Take(20)
                 .ToArray();
             Assert.IsNotNull(orders);
-            Assert.AreEqual(20, orders.Count());
+            Assert.AreEqual(20, orders.Length);
             Assert.IsTrue(orders.Any(r => r.OrderDetails != null && r.OrderDetails.Any()));
         
         }
@@ -88,7 +86,7 @@ namespace CoPilot.ORM.IntegrationTests
         {
             var products = _db.From<Product>().Where(r => r.UnitPrice > 10f && r.ProductName != "Test product").Select().ToArray();
             Assert.IsNotNull(products);
-            Assert.AreEqual(63, products.Count());
+            Assert.AreEqual(63, products.Length);
 
             //var sortedProducts = _db.Query(OrderByClause<Product>.OrderByAscending(r => r.ProductName), r => r.ProductName != "Test product");
             var sortedProducts = _db.From<Product>().Where(r => r.ProductName != "Test product").Select().OrderBy(r => r.ProductName).AsEnumerable();

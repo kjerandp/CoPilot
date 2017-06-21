@@ -6,7 +6,6 @@ using CoPilot.ORM.Common;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Config.Naming;
 using CoPilot.ORM.Context;
-using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Mapping;
