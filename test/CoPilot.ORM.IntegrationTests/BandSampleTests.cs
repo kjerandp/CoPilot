@@ -182,22 +182,30 @@ namespace CoPilot.ORM.IntegrationTests
             public DateTime? Date { get; set; }
         }
 
-
+        /// <summary>
+        /// Projection works by identifying referenced entity members. The resulting queries will
+        /// only include the required columns, and the values will be mapped to the entity specified
+        /// in the From-function. It will then serve as input to the Lambda expression defined in
+        /// the Select-function.   
+        /// </summary>
         [TestMethod]
         public void CanSelectManyWithProjection()
         {
-
             var bands = _db.From<Band>().Where(r => r.Id <= 5).Select(r => 
                 new {
                     BandName = r.Name,
                     Discography = r.Recordings.SelectMany(b => b.AlbumTracks.Select(t => 
-                    new {
-                        Album = t.Album.Title,
-                        Song = b.SongTitle,
-                        t.TrackNumber   
-                    })).OrderBy(x => x.Album).ThenBy(x => x.TrackNumber)
+                        new {
+                            Album = t.Album.Title,
+                            t.Album.Released,
+                            Song = b.SongTitle,
+                            b.Recorded,
+                            t.TrackNumber,
+                            Duration = $"{b.Duration.Minutes}:{b.Duration.Seconds}"   
+                        }
+                    )).OrderBy(x => x.Released).ThenBy(x => x.TrackNumber) 
                 }
-                ).ToArray();
+            ).ToArray();
 
             Assert.IsTrue(bands.Any(r => r.Discography != null && r.Discography.Any()));
         }

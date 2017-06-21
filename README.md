@@ -8,7 +8,8 @@ Note: This is work in progress to enable support for different ado.net database 
 * Map POCO models to tables including relationships (one-to-many and many-to-one relationships). 
 * Author and execute SQL statements for CRUD operations. Related entities can be included for all operations, as long as they have a singular key defined. 
 * Mapping of data from queries or stored procedures to dynamic objects or POCO classes. 
-* Mapped POCO models allow for a natural, function based, querying syntax and also mapping a subset of columns to anonymous types.
+* Natural, function based, querying syntax when working with mapped entities.
+* Projecting of data to anonymous or defined classes (only referenced columns will be included in the queries)
 * Solves the "1+N"-problem by fetching child records in a single query and then merging the data with the parent records when mapped
 * Perform mulitple write operations, including bulk commands, as a unit-of-work (database transaction)
 * Transform values from and to the database by associating a `ValueAdapter` to relevant POCO properties. Examples of use cases is to serialize/deserialize to and from json, joining/splitting collections of primitive values, converting from/to enums etc.
@@ -45,7 +46,7 @@ var bands = _db.From<Band>()
     .Distinct()
     .AsEnumerable();
 ```
-Mapping result to anonymous type:
+Mapping result to anonymous type (projection):
 ```
 var bands = _db.From<Band>()
     .Select(r => new { BandId = r.Id, BandName = r.Name, Nationality = r.Based.Country.Name })
@@ -53,27 +54,50 @@ var bands = _db.From<Band>()
 	.Take(50)
     .ToArray();
 ```
+More complex projection:
+```
+var band = _db.From<Band>().Where(r => r.Id == 5).Select(r => 
+    new {
+        BandName = r.Name,
+        Discography = r.Recordings.SelectMany(b => b.AlbumTracks.Select(t => 
+        new {
+            Album = t.Album.Title,
+            t.Album.Released,
+            Song = b.SongTitle,
+            b.Recorded,
+            t.TrackNumber,
+            Duration = $"{b.Duration.Minutes}:{b.Duration.Seconds}"   
+        })).OrderBy(x => x.Album).ThenBy(x => x.TrackNumber)
+    }
+).Single();
+```
+
 Executing and mapping stored procedure:
 ```
 var recordings = _db.Query<Recording>(
-    "Get_Recordings_CTE", 
-    new { recorded = new DateTime(2017, 5, 1) },
-    "Base", "Base.AlbumTracks"
+    "Get_Recordings_CTE",							//stored procedure name
+    new { recorded = new DateTime(2017, 5, 1) },	//arguments (for parameter @recorded)
+    "Base", "Base.AlbumTracks"						//naming of record sets
 );
 ```
 Inserting new record with transaction support:
 ```
 using (var writer = new DbWriter(_db))
 {
-    var testBand = new Band
-    {
-        Formed = DateTime.Today,
-        Name = "Test Band",
-        Based = writer.GetReader().FindByKey<City>(1)
-    };
+	try {
+		var testBand = new Band
+		{
+			Formed = DateTime.Today,
+			Name = "Test Band",
+			Based = writer.GetReader().FindByKey<City>(1)
+		};
 
-    writer.Save(testBand);
-    writer.Commit();
+		writer.Save(testBand);
+		writer.Commit();
+	} catch (Exception ex){
+		writer.Rollback();
+		//error handling
+	}
 }
 ```
 Bulk inserting example:
