@@ -1,8 +1,6 @@
 # CoPilot
 
-CoPilot is an object relational mapper (ORM). In its core it works like a micro ORM, but it has some neat and powerful features added on top of it. 
-
-Note: This is work in progress to enable support for different ado.net database providers. Currently Sql Server and MySql providers are available as seperate nuget packages.
+CoPilot is an object relational mapper (ORM). In its core it works like a micro ORM, but it has some neat and powerful features added on top of it, which makes it more of a "middle ground" ORM that sits between most micro ORM and fully featured, enterprise level ORMs. CoPilot is built with performance and flexibillity in mind, and was specifically designed to avoid any leakage into other (non-data access) layers. 
 
 **Key features:**  
 * Map POCO models to tables including relationships (one-to-many and many-to-one relationships). 
@@ -15,6 +13,7 @@ Note: This is work in progress to enable support for different ado.net database 
 * Transform values from and to the database by associating a `ValueAdapter` to relevant POCO properties. Examples of use cases is to serialize/deserialize to and from json, joining/splitting collections of primitive values, converting from/to enums etc.
 * Use lookup tables - meaning that the value of a property can be used to lookup a key value in another table, and then pass that value to the mapped table and then do the same in reverse. Can be handy if you for instance want to use enums in your POCOs, but you want to enforce a foreign key constraint to another table for the mapped column.
 * Generate scripts to build database from model configurations
+* Support for multiple Ado.Net providers (currently implementations for Ms Sql Server and MySql exists)
 * Validate configuration against database schema
 
 ## Install
@@ -49,7 +48,11 @@ var bands = _db.From<Band>()
 Mapping result to anonymous type (projection):
 ```
 var bands = _db.From<Band>()
-    .Select(r => new { BandId = r.Id, BandName = r.Name, Nationality = r.Based.Country.Name })
+    .Select(r => new { 
+		BandId = r.Id, 
+		BandName = r.Name, 
+		Nationality = r.Based.Country.Name 
+	})
     .OrderBy(r => r.Nationality)
 	.Take(50)
     .ToArray();
