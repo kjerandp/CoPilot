@@ -15,11 +15,6 @@ Please note that this version will soon be depricated and replaced by a new vers
 * Generate scripts to build database from model configurations
 * Validate configuration against database schema
 
-## Install
-CoPilot is available as a [Nuget package](https://www.nuget.org/packages/CoPilot.ORM). 
-```
-Install-Package CoPilot.ORM
-```
 ## How to use
 CoPilot aims to be as simple and intuitive as possible to use and most features are available from a single interface called `IDb`. Here's an illustration of a typical CoPilot statement:
 
