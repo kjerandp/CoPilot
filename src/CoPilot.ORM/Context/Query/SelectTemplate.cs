@@ -71,10 +71,13 @@ namespace CoPilot.ORM.Context.Query
 
         public void Complete()
         {
-            foreach (var set in _sets)
+            var keys = _sets.Select(r => r.Key).ToArray();
+            foreach (var key in keys)
             {
-                if(set.Value.JoinNode == null) continue;
-                var node = set.Value.JoinNode;
+                var set = _sets[key];
+
+                if(set.JoinNode == null) continue;
+                var node = set.JoinNode;
 
                 var originSetName = DetermineSetName(node.Origin);
                 //Add primary key of base set if missing
@@ -83,7 +86,7 @@ namespace CoPilot.ORM.Context.Query
                     AddEntry(node.Origin, node.GetSourceKey);
                 }
                 //Add foreign key if missing
-                if (!set.Value.Entries.Any(r => r.SelectColumn.Column.Equals(node.GetTargetKey)))
+                if (!set.Entries.Any(r => r.SelectColumn.Column.Equals(node.GetTargetKey)))
                 {
                     AddEntry(node, node.GetTargetKey);
                 }

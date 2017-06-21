@@ -132,6 +132,7 @@ namespace CoPilot.ORM.Mapping
 
         public ClassMemberInfo GetMappedMember(DbColumn col)
         {
+            if(col == null) throw new CoPilotRuntimeException("Argument missing!");
             return col.MappedMembers.SingleOrDefault(r => r.DeclaringClassType.GetTypeInfo().IsAssignableFrom(EntityType));
         }
 

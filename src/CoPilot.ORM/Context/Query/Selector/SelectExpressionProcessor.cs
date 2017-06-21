@@ -13,11 +13,13 @@ namespace CoPilot.ORM.Context.Query.Selector
         private readonly TableContext _ctx;
         private readonly SelectTemplate _template;
         private readonly HashSet<string> _memberPaths;
+        private readonly Dictionary<string, ITableContextNode> _sourceNodes;
         public SelectExpressionProcessor(TableContext ctx)
         {
             _ctx = ctx;
             _template = new SelectTemplate();
             _memberPaths = new HashSet<string>();
+            _sourceNodes = new Dictionary<string, ITableContextNode>();
         }
          
 
@@ -27,98 +29,97 @@ namespace CoPilot.ORM.Context.Query.Selector
             if (lambda != null)
             {
                 _template.ShapeFunc = lambda.Compile();
-                ProcessLambdaExpression(lambda, null, "");
+                ProcessLambdaExpression(lambda, _ctx, "");
             }
             _template.Complete();
             return _template;
         }
 
-        private void ProcessExpression(Expression expr, ITableContextNode sourceNode, string joinAlias, string alias)
+        private void ProcessExpression(Expression expr, string joinAlias, string alias)
         {
             switch (expr.NodeType)
             {
-                case ExpressionType.Lambda:
-                    ProcessLambdaExpression((LambdaExpression) expr, sourceNode, joinAlias);
-                    break;
                 case ExpressionType.New:
-                    ProcessNewExpression((NewExpression) expr, sourceNode, joinAlias);
+                    ProcessNewExpression((NewExpression) expr, joinAlias);
                     break;
                 case ExpressionType.MemberInit:
-                    ProcessMemberInitExpression((MemberInitExpression)expr, sourceNode, joinAlias);
+                    ProcessMemberInitExpression((MemberInitExpression)expr, joinAlias);
                     break;
                 case ExpressionType.MemberAccess:
-                    ProcessMemberExpression((MemberExpression) expr, sourceNode, joinAlias, alias);
+                    ProcessMemberExpression((MemberExpression) expr, joinAlias, alias);
                     break;
                 case ExpressionType.Call:
-                    ProcessMethodCallExpression((MethodCallExpression) expr, sourceNode, joinAlias, alias);
+                    ProcessMethodCallExpression((MethodCallExpression) expr, joinAlias, alias);
                     break;
                 case ExpressionType.Conditional:
-                    ProcessConditionalExpression((ConditionalExpression) expr, sourceNode, joinAlias, alias);
+                    ProcessConditionalExpression((ConditionalExpression) expr, joinAlias, alias);
                     break;
             }
             var binExpr = expr as BinaryExpression;
             if (binExpr != null)
             {
-                ProcessBinaryExpression(binExpr, sourceNode, joinAlias, alias);
+                ProcessBinaryExpression(binExpr, joinAlias, alias);
 
             } else {
                 var unaryExpr = expr as UnaryExpression;
                 if (unaryExpr != null)
                 {
-                    ProcessUnaryExpression(unaryExpr, sourceNode, joinAlias, alias);
+                    ProcessUnaryExpression(unaryExpr, joinAlias, alias);
                 }
             }
         }
 
-        private void ProcessMemberInitExpression(MemberInitExpression memberInitExpr, ITableContextNode sourceNode, string joinAlias)
+        private void ProcessMemberInitExpression(MemberInitExpression memberInitExpr, string joinAlias)
         {
             foreach (var memberBinding in memberInitExpr.Bindings)
             {
                 var binding = memberBinding as MemberAssignment;
                 if (binding != null)
                 {
-                    ProcessExpression(binding.Expression, sourceNode, joinAlias, null);
+                    ProcessExpression(binding.Expression, joinAlias, null);
                 }
             }
-            ProcessNewExpression(memberInitExpr.NewExpression, sourceNode, joinAlias);
+            ProcessNewExpression(memberInitExpr.NewExpression, joinAlias);
         }
 
-        private void ProcessBinaryExpression(BinaryExpression binExpr, ITableContextNode sourceNode, string joinAlias, string alias)
+        private void ProcessBinaryExpression(BinaryExpression binExpr, string joinAlias, string alias)
         {
-            ProcessExpression(binExpr.Left, sourceNode, joinAlias, alias);
-            ProcessExpression(binExpr.Right, sourceNode, joinAlias, alias);
+            ProcessExpression(binExpr.Left, joinAlias, alias);
+            ProcessExpression(binExpr.Right, joinAlias, alias);
         }
 
         private void ProcessLambdaExpression(LambdaExpression lambda, ITableContextNode sourceNode, string joinAlias)
         {
-            if (sourceNode == null)
+            var source = lambda.Parameters[0].Name;
+            if (!_sourceNodes.ContainsKey(source))
             {
-                sourceNode = _ctx;
+                _sourceNodes.Add(source, sourceNode);
             }
-
-            ProcessExpression(lambda.Body, sourceNode, joinAlias, null);
+            ProcessExpression(lambda.Body, joinAlias, null);
   
         }
 
-        private void ProcessUnaryExpression(UnaryExpression unaryExpression, ITableContextNode sourceNode, string joinAlias, string alias)
+        private void ProcessUnaryExpression(UnaryExpression unaryExpression, string joinAlias, string alias)
         {
-            ProcessExpression(unaryExpression.Operand, sourceNode, joinAlias, alias);
+            ProcessExpression(unaryExpression.Operand, joinAlias, alias);
         }
 
-        private void ProcessMemberExpression(MemberExpression memberExpression, ITableContextNode sourceNode, string joinAlias, string alias)
+        private void ProcessMemberExpression(MemberExpression memberExpression, string joinAlias, string alias)
         {
             if (!_ctx.Model.IsMapped(memberExpression.Member.DeclaringType))
             {
                 if (memberExpression.Expression != null)
                 {
-                    ProcessExpression(memberExpression.Expression, sourceNode, joinAlias, alias);
+                    ProcessExpression(memberExpression.Expression, joinAlias, alias);
                     return;
                 }
                 throw new CoPilotUnsupportedException("Member expression was not understood!");
             }
 
             var splitPath = PathHelper.SplitFirstAndLastInPathString(memberExpression.ToString());
-            
+
+            var sourceNode = _sourceNodes[splitPath.Item1];
+
             var nodePath = PathHelper.Combine(sourceNode.Path, splitPath.Item2);
             var node = sourceNode;
             var path = PathHelper.RemoveFirstElementFromPathString(nodePath);
@@ -132,7 +133,7 @@ namespace CoPilot.ORM.Context.Query.Selector
             var memberPath = PathHelper.Combine(path, member.Name);
             if (_memberPaths.Contains(memberPath)) return;
 
-            if (member.MemberType.IsReference())
+            if (!member.MemberType.IsSimpleValueType())
             {
                 if (node.Nodes.ContainsKey(member.Name))
                 {
@@ -154,35 +155,35 @@ namespace CoPilot.ORM.Context.Query.Selector
             Console.WriteLine("Added "+memberPath);
         }
 
-        public void ProcessNewExpression(NewExpression expr, ITableContextNode sourceNode, string joinAlias)
+        public void ProcessNewExpression(NewExpression expr, string joinAlias)
         {
             if (expr.Members != null)
             {
                 for (var i = 0; i < expr.Members.Count; i++)
                 {
-                    ProcessExpression(expr.Arguments[i], sourceNode, joinAlias, expr.Members[i].Name);
+                    ProcessExpression(expr.Arguments[i], joinAlias, expr.Members[i].Name);
                 }
             }
             else
             {
                 foreach (var arg in expr.Arguments)
                 {
-                    ProcessExpression(arg, sourceNode, joinAlias, null);
+                    ProcessExpression(arg, joinAlias, null);
                 }
             }
             
         }
 
         
-        private void ProcessConditionalExpression(ConditionalExpression conditionalExpression, ITableContextNode sourceNode, string joinAlias, string alias)
+        private void ProcessConditionalExpression(ConditionalExpression conditionalExpression, string joinAlias, string alias)
         {
-            ProcessExpression(conditionalExpression.IfFalse, sourceNode, joinAlias, alias);
-            ProcessExpression(conditionalExpression.IfTrue, sourceNode, joinAlias, alias);
+            ProcessExpression(conditionalExpression.IfFalse, joinAlias, alias);
+            ProcessExpression(conditionalExpression.IfTrue, joinAlias, alias);
         }
 
-        private void ProcessMethodCallExpression(MethodCallExpression methodCallExpression, ITableContextNode sourceNode, string joinAlias, string alias)
+        private void ProcessMethodCallExpression(MethodCallExpression methodCallExpression, string joinAlias, string alias)
         {
-            if (methodCallExpression.Method.Name.Equals("Select", StringComparison.Ordinal))
+            if (methodCallExpression.Method.Name.Equals("Select", StringComparison.Ordinal) || methodCallExpression.Method.Name.Equals("SelectMany", StringComparison.Ordinal))
             {
                 //if (methodCallExpression.Arguments.Count >= 2)
                 //{
@@ -190,7 +191,10 @@ namespace CoPilot.ORM.Context.Query.Selector
                 var lambdaExpression = methodCallExpression.Arguments[1] as LambdaExpression;
                 if (sourceMemberExpression != null && lambdaExpression != null)
                 {
-                    var memberPath = PathHelper.RemoveFirstElementFromPathString(sourceMemberExpression.ToString());
+                    var splitPath = PathHelper.SplitFirstInPathString(sourceMemberExpression.ToString());
+                    var memberPath = splitPath.Item2;
+                    var sourceNode = _sourceNodes[splitPath.Item1];
+
                     ITableContextNode newNode;
                     if (sourceNode.Nodes.ContainsKey(memberPath))
                     {
@@ -198,9 +202,7 @@ namespace CoPilot.ORM.Context.Query.Selector
                     }
                     else
                     {
-                        newNode =
-                            _ctx.AddPath(PathHelper.Combine(
-                                PathHelper.RemoveFirstElementFromPathString(sourceNode.Path), memberPath));
+                        newNode = _ctx.AddPath(PathHelper.Combine(PathHelper.RemoveFirstElementFromPathString(sourceNode.Path), memberPath));
                     }
 
                     ProcessLambdaExpression(lambdaExpression, newNode, PathHelper.Combine(joinAlias, alias));
@@ -211,11 +213,11 @@ namespace CoPilot.ORM.Context.Query.Selector
             {
                 if (methodCallExpression.Object != null)
                 {
-                    ProcessExpression(methodCallExpression.Object, sourceNode, joinAlias, alias);
+                    ProcessExpression(methodCallExpression.Object, joinAlias, alias);
                 }
                 foreach (var expression in methodCallExpression.Arguments)
                 {
-                    ProcessExpression(expression, sourceNode, joinAlias, alias);
+                    ProcessExpression(expression, joinAlias, alias);
                 }
             }
         }

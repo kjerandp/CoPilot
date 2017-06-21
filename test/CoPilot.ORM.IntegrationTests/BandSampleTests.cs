@@ -136,6 +136,26 @@ namespace CoPilot.ORM.IntegrationTests
         }
 
         [TestMethod]
+        public void CanSelectManyWithProjection()
+        {
+
+            var bands = _db.From<Band>().Where(r => r.Id <= 30).Select(r => 
+                new {
+                    BandName = r.Name,
+                    Discography = r.Recordings.SelectMany(b => b.AlbumTracks.Select(t => 
+                    new {
+                        Album = t.Album.Title,
+                        Song = b.SongTitle,
+                        t.TrackNumber   
+                    })).OrderBy(x => x.Album).ThenBy(x => x.TrackNumber)
+                }
+                ).ToArray();
+
+
+
+        }
+
+        [TestMethod]
         public void CanProjectToDtoWithClassInit()
         {
 
@@ -253,9 +273,9 @@ namespace CoPilot.ORM.IntegrationTests
         public void CanExecuteAndMapStoredProcedure()
         {
             var recordings = _db.Query<Recording>(
-                "Get_Recordings_CTE", 
-                new { recorded = new DateTime(2017, 5, 1) },
-                "Base", "Base.AlbumTracks"
+                "Get_Recordings_CTE",                           //stored proc name
+                new { recorded = new DateTime(2017, 5, 1) },    //arguments
+                "Recording", "Recording.AlbumTracks"
             );
 
             Assert.IsTrue(recordings.Any());

@@ -188,12 +188,26 @@ namespace CoPilot.ORM.Mapping.Mappers
 
             if(recordSets.Any(r => r.Name == null))
             {
-                var names = template.GetSetNames();
-                for (var i = 0; i < recordSets.Length; i++)
+                if (recordSets.Length == 1)
                 {
-                    if(recordSets[i].Name == null && i < names.Length)
-                        recordSets[i].Name = names[i];
-                }   
+                    recordSets[0].Name = "Base";
+                }
+                else
+                {
+                    throw new CoPilotUnsupportedException(@"The context mapper requires the record sets to be named. 
+                        If you called a stored procedure, and it contains more than a single record set, 
+                        you'll have to provide a proper name for each set.
+                        Record sets should be named with the path made up from the propery names, that leads back to the base class, where the data will be merged into.");
+                }
+            }
+
+            for (var i = 0; i < recordSets.Length; i++)
+            {
+                var n = PathHelper.SplitFirstInPathString(recordSets[i].Name);
+                if (!n.Item1.Equals("Base", StringComparison.Ordinal))
+                {
+                    recordSets[i].Name = "Base" + (string.IsNullOrEmpty(n.Item2) ? "" : "." + n.Item2);
+                }
             }
 
             var data = new Dictionary<string, MappedRecord[]>();
