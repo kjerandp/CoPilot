@@ -49,12 +49,12 @@ Mapping result to anonymous type (projection):
 ```
 var bands = _db.From<Band>()
     .Select(r => new { 
-		BandId = r.Id, 
-		BandName = r.Name, 
-		Nationality = r.Based.Country.Name 
-	})
+        BandId = r.Id, 
+        BandName = r.Name, 
+        Nationality = r.Based.Country.Name 
+    })
     .OrderBy(r => r.Nationality)
-	.Take(50)
+    .Take(50)
     .ToArray();
 ```
 More complex projection:
@@ -78,29 +78,29 @@ var band = _db.From<Band>().Where(r => r.Id == 5).Select(r =>
 Executing and mapping stored procedure:
 ```
 var recordings = _db.Query<Recording>(
-    "Get_Recordings_CTE",							//stored procedure name
-    new { recorded = new DateTime(2017, 5, 1) },	//arguments (for parameter @recorded)
-    "Base", "Base.AlbumTracks"						//naming of record sets
+    "Get_Recordings_CTE",                           //stored procedure name
+    new { recorded = new DateTime(2017, 5, 1) },    //arguments (for parameter @recorded)
+    "Base", "Base.AlbumTracks"                      //naming of record sets
 );
 ```
 Inserting new record with transaction support:
 ```
 using (var writer = new DbWriter(_db))
 {
-	try {
-		var testBand = new Band
-		{
-			Formed = DateTime.Today,
-			Name = "Test Band",
-			Based = writer.GetReader().FindByKey<City>(1)
-		};
+    try {
+        var testBand = new Band
+        {
+            Formed = DateTime.Today,
+            Name = "Test Band",
+            Based = writer.GetReader().FindByKey<City>(1)
+        };
 
-		writer.Save(testBand);
-		writer.Commit();
-	} catch (Exception ex){
-		writer.Rollback();
-		//error handling
-	}
+        writer.Save(testBand);
+        writer.Commit();
+    } catch (Exception ex){
+        writer.Rollback();
+        //error handling
+    }
 }
 ```
 Bulk inserting example:
