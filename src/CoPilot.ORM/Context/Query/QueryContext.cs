@@ -63,9 +63,15 @@ namespace CoPilot.ORM.Context.Query
                 if (currentNode == null) break;
                 var depNodeExist = fromList.Exists(r => r.Node.Index == currentNode.Origin.Index);
                 if (!depNodeExist)
-                    fromList.Insert(currentIndex, new FromListItem(currentNode.Origin, currentNode.JoinType == TableJoinType.InnerJoin));
-
-                currentIndex--;
+                {
+                    fromList.Insert(currentIndex,
+                        new FromListItem(currentNode.Origin, currentNode.JoinType == TableJoinType.InnerJoin));
+                }
+                else
+                {
+                    currentIndex--;
+                }
+                    
             }
 
             if (fromList[0].Node != baseNode && fromList[0].Node.Level < baseNode.Level)

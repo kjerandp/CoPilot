@@ -12,7 +12,7 @@ namespace CoPilot.ORM.IntegrationTests.Config
 {
     public class MySqlBandSampleSetup
     {
-        private readonly MySqlProvider _provider = new MySqlProvider(useNationalCharacterSet:false, collation:"latin1_danish_ci",loggingLevel:LoggingLevel.Verbose);
+        private readonly MySqlProvider _provider;
         private readonly DbModel _model;
         private const string ConnectionString = @"
                     Server=localhost; 
@@ -20,9 +20,10 @@ namespace CoPilot.ORM.IntegrationTests.Config
                     UID=testuser;
                     Pwd=password";
 
-        public MySqlBandSampleSetup(DbModel model)
+        public MySqlBandSampleSetup(DbModel model, LoggingLevel loggingLevel = LoggingLevel.None)
         {
             _model = model;
+            _provider = new MySqlProvider("latin1_danish_ci", false, loggingLevel);
         }
 
         public void DropCreateDatabase()

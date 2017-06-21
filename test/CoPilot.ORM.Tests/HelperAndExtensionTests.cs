@@ -15,22 +15,38 @@ namespace CoPilot.ORM.Tests
     public class HelperAndExtensionTests
     {
         [TestMethod]
-        public void CanGetRemoveFirstPartOfPath()
+        public void CanGetRemoveFirstOrLastPartOfPath()
         {
             Assert.AreEqual("b.c.d", PathHelper.RemoveFirstElementFromPathString("a.b.c.d"));
             Assert.AreEqual("bcd", PathHelper.RemoveFirstElementFromPathString("a.bcd"));
             Assert.AreEqual("d.e", PathHelper.RemoveFirstElementFromPathString("abc.d.e"));
             Assert.AreEqual("", PathHelper.RemoveFirstElementFromPathString("a"));
             Assert.IsNull(PathHelper.RemoveFirstElementFromPathString(null));
+
+            Assert.AreEqual("a.b.c", PathHelper.RemoveLastElementFromPathString("a.b.c.d"));
+            Assert.AreEqual("a", PathHelper.RemoveLastElementFromPathString("a.bcd"));
+            Assert.AreEqual("abc.d", PathHelper.RemoveLastElementFromPathString("abc.d.e"));
+            Assert.AreEqual("", PathHelper.RemoveLastElementFromPathString("a"));
+            Assert.IsNull(PathHelper.RemoveLastElementFromPathString(null));
         }
 
         [TestMethod]
-        public void CanSplitLastInPath()
+        public void CanSplitFirstOrLastInPath()
         {
             Assert.AreEqual(new Tuple<string,string>("a.b.c","d"), PathHelper.SplitLastInPathString("a.b.c.d"));
             Assert.AreEqual(new Tuple<string, string>("", "abc"), PathHelper.SplitLastInPathString("abc"));
             Assert.AreEqual(new Tuple<string, string>("a", "b"), PathHelper.SplitLastInPathString("a.b"));
             Assert.IsNull(PathHelper.SplitLastInPathString(null));
+
+            Assert.AreEqual(new Tuple<string, string>("a", "b.c.d"), PathHelper.SplitFirstInPathString("a.b.c.d"));
+            Assert.AreEqual(new Tuple<string, string>("abc", ""), PathHelper.SplitFirstInPathString("abc"));
+            Assert.AreEqual(new Tuple<string, string>("a", "b"), PathHelper.SplitFirstInPathString("a.b"));
+            Assert.IsNull(PathHelper.SplitFirstInPathString(null));
+
+            Assert.AreEqual(new Tuple<string, string, string>("a", "b.c","d"), PathHelper.SplitFirstAndLastInPathString("a.b.c.d"));
+            Assert.AreEqual(new Tuple<string, string, string>("abc", "",""), PathHelper.SplitFirstAndLastInPathString("abc"));
+            Assert.AreEqual(new Tuple<string, string, string>("a", "", "b"), PathHelper.SplitFirstAndLastInPathString("a.b"));
+            Assert.IsNull(PathHelper.SplitFirstInPathString(null));
         }
 
         [TestMethod]

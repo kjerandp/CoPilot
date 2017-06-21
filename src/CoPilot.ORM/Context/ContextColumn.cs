@@ -67,6 +67,7 @@ namespace CoPilot.ORM.Context
         public ValueAdapter Adapter { get; internal set; }
 
         public string ColumnAlias { get; set; }
+        public string Name => string.IsNullOrEmpty(ColumnAlias) ? Column.ColumnName : ColumnAlias;
 
         public override string ToString()
         {

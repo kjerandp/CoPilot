@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
+using CoPilot.ORM.Common;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Exceptions;
@@ -16,7 +17,7 @@ namespace CoPilot.ORM.Context.Query.Filter
     public class FilterExpressionProcessor
     {
         private readonly TableContext _ctx;
-
+        private int _filterCost;
         public FilterExpressionProcessor(TableContext ctx)
         {
             _ctx = ctx;
@@ -28,7 +29,8 @@ namespace CoPilot.ORM.Context.Query.Filter
             {
                 Root = ProcessFilter(filter.Root) as BinaryOperand
             };
-
+            _ctx.EstimatedFilterCost = _filterCost;
+            
             return filterGraph;
         }
         private IExpressionOperand ProcessFilter(IExpressionOperand sourceOp)
@@ -66,6 +68,8 @@ namespace CoPilot.ORM.Context.Query.Filter
                     }
                     matchingVop.Value = memberOperand.ColumnReference.Adapter.Invoke(MappingTarget.Database, matchingVop.Value);
                 }
+                _filterCost += GetOperatorCost(bin.Operator);
+                
                 return bin;
             }
 
@@ -85,8 +89,27 @@ namespace CoPilot.ORM.Context.Query.Filter
             return new NullOperand();
         }
 
+        private int GetOperatorCost(SqlOperator op)
+        {
+            switch (op)
+            {
+                case SqlOperator.Like:
+                case SqlOperator.NotLike:
+                case SqlOperator.In:
+                case SqlOperator.NotIn:
+                    return 10;
+                case SqlOperator.AndAlso:
+                case SqlOperator.OrElse:
+                    return 2;
+                default:
+                    return 0;
+            }
+        }
+
         private void ProcessMemberExpression( MemberExpressionOperand memberExpression)
         {
+            _filterCost++;
+
             var path = memberExpression.Path;
             var splitPath = PathHelper.SplitLastInPathString(path);
 
@@ -123,13 +146,15 @@ namespace CoPilot.ORM.Context.Query.Filter
             {
                 node = _ctx.GetOrCreateLookupNode(node, col);
                 col = col.ForeignkeyRelationship.LookupColumn;
-
+                //_ctx.Hints.Add("Filter_Lookup");
+                _filterCost += 20;
             }
             else if (col.IsPrimaryKey && node.Origin != null)
             {
                 node = node.Origin;
                 var newCol = node.Table.Columns.FirstOrDefault(r => r.IsForeignKey && r.ForeignkeyRelationship.PrimaryKeyColumn.Equals(col));
                 col = newCol;
+                //_ctx.Hints.Add("Filter_Reduced");
             }
             else if (col.Table != node.Table)
             {
@@ -137,6 +162,11 @@ namespace CoPilot.ORM.Context.Query.Filter
             }
 
             if (col == null) throw new CoPilotRuntimeException("Column could not found!");
+
+            if (!string.IsNullOrEmpty(memberExpression.WrapWith))
+            {
+                _filterCost += 10;
+            }
 
             memberExpression.ColumnReference = ContextColumn.Create(node, col, adapter);
         }

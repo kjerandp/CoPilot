@@ -17,7 +17,6 @@ namespace CoPilot.ORM.Database.Commands.Query
 
         public DefaultQueryExecutionStrategy(IDbProvider provider)
         {
-
             _basic = new SingleStatementStrategy(new RepeatFilterScriptCreator(provider.SelectStatementBuilder, provider.SelectStatementWriter));
             _secondary = new SingleStatementStrategy(provider.SingleStatementQueryWriter);
         }
@@ -25,7 +24,7 @@ namespace CoPilot.ORM.Database.Commands.Query
         {
             return ctx =>
             {
-                if (ctx.Nodes.Any(r => r.Value.IsInverted) && (ctx.SelectModifiers != null || ctx.GetFilter() == null))
+                if (ctx.Nodes.Any(r => r.Value.IsInverted) && (ctx.SelectModifiers != null || ctx.GetFilter() == null || ctx.EstimatedFilterCost > 10))
                     return _secondary;
 
                 return _basic;

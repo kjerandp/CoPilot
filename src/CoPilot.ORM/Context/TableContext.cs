@@ -54,11 +54,13 @@ namespace CoPilot.ORM.Context
             }
 
         }
+
         public ITableContextNode Origin => null;
         public Dictionary<string, TableContextNode> Nodes { get; }
         public SelectTemplate SelectTemplate { get; internal set; }
         public SelectModifiers SelectModifiers { get; private set; }
         protected FilterGraph RootFilter;
+        //internal HashSet<string> Hints = new HashSet<string>();
         private readonly Dictionary<int, ITableContextNode> _nodeIndex;
         private int _index = 1;
         //private readonly string[] _include;
@@ -75,7 +77,10 @@ namespace CoPilot.ORM.Context
             return this;
         }
         public TableMapEntry MapEntry { get; }
-        public DbTable Table => MapEntry?.Table;      
+        public DbTable Table => MapEntry?.Table;
+
+        public int EstimatedFilterCost { get; internal set; }
+
         public ITableContextNode AddPath(string path, bool includeAll = true)
         {
             var splitPaths = path.Split('.');

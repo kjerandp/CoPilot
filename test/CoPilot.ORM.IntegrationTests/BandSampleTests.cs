@@ -17,17 +17,26 @@ namespace CoPilot.ORM.IntegrationTests
     public class BandSampleTests
     {
         private static IDb _db;
-        
+
+        /// <summary>
+        /// Select the provider by comment/uncomment the proper databaseSetup variable.
+        /// If you want to drop/create the sample database, uncomment databaseSetup.DropCreateDatabase();
+        /// </summary>
+        /// <param name="testContext"></param>
         [ClassInitialize]
         public static void BandSampleTestsInitialize(TestContext testContext)
         {
+            var logginLevel = LoggingLevel.None;
             var model = BandSampleConfig.CreateModel();
-            //var databaseSetup = new MySqlBandSampleSetup(model);
-            var databaseSetup = new SqlServerBandSampleSetup(model);
+            //var databaseSetup = new MySqlBandSampleSetup(model, logginLevel);
+            var databaseSetup = new SqlServerBandSampleSetup(model, logginLevel);
             //databaseSetup.DropCreateDatabase();
             _db = databaseSetup.GetDb();        
         }
 
+        /// <summary>
+        /// This shows most of the query builder functions available
+        /// </summary>
         [TestMethod]
         public void CanCreateQueriesWithNewQuerySyntax()
         {
@@ -43,19 +52,43 @@ namespace CoPilot.ORM.IntegrationTests
                 .AsEnumerable();
 
             Assert.IsTrue(bands.Any(r => r.BandMembers != null && r.BandMembers.Any()));
-            /*
-            var oldWay = _db.Query(
-                    OrderByClause<Band>.OrderByAscending(r => r.Name)
-                        .ThenByDecending(r => r.Formed)
-                        .ThenByAscending(r => r.Id), 
-                    new Predicates {Take = 20, Skip = 1, Distinct = true}, 
-                    r => r.Id <= 40, 
-                    "BandMembers");
+
+            /* Resulting MS SQL script:
+              
+              SELECT
+		            DISTINCT
+		            T1.BAND_ID
+		            ,T1.BAND_NAME
+		            ,T1.BAND_FORMED
+	            INTO #Base
+	            FROM
+		            BAND T1
+	            WHERE
+		            T1.BAND_NAME NOT LIKE @param1 AND T1.BAND_NAME NOT LIKE @param2
+	            ORDER BY
+		            T1.BAND_NAME asc
+		            ,T1.BAND_FORMED desc
+		            ,T1.BAND_ID asc
+	            OFFSET 1 ROWS
+	            FETCH NEXT 20 ROWS ONLY
+	
+	            SELECT * FROM #Base
+	
+	            SELECT
+		            T2.BAND_MEMBER_ID
+		            ,T2.BAND_MEMBER_INSTRUMENT
+		            ,T2.BAND_MEMBER_ARTIST_NAME
+		            ,T2.BAND_MEMBER_JOINED
+		            ,T2.BAND_MEMBER_LEFT
+		            ,T2.BAND_MEMBER_BAND_ID
+	            FROM
+		            BAND_MEMBER T2
+		            INNER JOIN #Base T1 ON T2.BAND_MEMBER_BAND_ID = T1.BAND_ID
             */
 
         }
         [TestMethod]
-        public void TemplateTest()
+        public void CanTemplateTest()
         {
             var test = _db.From<Band>()
                 .Where(r => r.Id <= 20)
@@ -139,7 +172,7 @@ namespace CoPilot.ORM.IntegrationTests
         public void CanSelectManyWithProjection()
         {
 
-            var bands = _db.From<Band>().Where(r => r.Id <= 30).Select(r => 
+            var bands = _db.From<Band>().Where(r => r.Id <= 5).Select(r => 
                 new {
                     BandName = r.Name,
                     Discography = r.Recordings.SelectMany(b => b.AlbumTracks.Select(t => 
@@ -313,7 +346,7 @@ namespace CoPilot.ORM.IntegrationTests
 		        T1.ALBUM_TRACK_ALBUM_ID = @param1     
              */
 
- 
+
         }
 
         [TestMethod]

@@ -152,7 +152,7 @@ namespace CoPilot.ORM.Context.Query.Selector
                 _template.AddEntry(node, column, member, joinAlias, alias);
             }
             _memberPaths.Add(memberPath);
-            Console.WriteLine("Added "+memberPath);
+            //Console.WriteLine("Added "+memberPath);
         }
 
         public void ProcessNewExpression(NewExpression expr, string joinAlias)

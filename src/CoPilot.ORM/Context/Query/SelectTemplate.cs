@@ -16,6 +16,7 @@ namespace CoPilot.ORM.Context.Query
         public Delegate ShapeFunc { get; set; }
         
         private readonly Dictionary<string, Set> _sets;
+
         public SelectTemplate()
         {
             _sets = new Dictionary<string, Set>();
@@ -49,7 +50,7 @@ namespace CoPilot.ORM.Context.Query
 
             var set = _sets[setName];
 
-            var index = set.Entries.FindIndex(r => r.Id == entry.Id);
+            var index = set.Entries.FindIndex(r => r.LocalId == entry.LocalId);
             if (index >= 0)
             {
                 set.Entries[index] = entry;
@@ -92,45 +93,7 @@ namespace CoPilot.ORM.Context.Query
                 }
             }
         }
-
-        public class Set
-        {
-            public ITableContextNode BaseNode { get; }
-
-            public Set(ITableContextNode baseNode)
-            {
-                BaseNode = baseNode;
-                Entries = new List<SelectTemplateEntry>();
-            }
-
-            public List<SelectTemplateEntry> Entries { get; }
-
-            public TableContextNode JoinNode { get; set; }
-        }
-
-        public class SelectTemplateEntry
-        {
-            public SelectTemplateEntry(string setName, ContextColumn column)
-            {
-                SetName = setName;
-                SelectColumn = column;
-                MappedName = LocalId;
-            }
-            public string SetName { get; set; }
-            public string MappedName { get; set; }
-            public ContextColumn SelectColumn { get; set; }
-
-            public string Id => SetName + "." + LocalId;
-            public string LocalId => string.IsNullOrEmpty(SelectColumn.ColumnAlias)
-                    ? SelectColumn.Column.ColumnName
-                    : SelectColumn.ColumnAlias;
-
-            public override string ToString()
-            {
-                return Id;
-            }
-        }
-
+        
         public static string DetermineSetName(ITableContextNode node)
         {
             return DetermineBaseNode(node).Path;
@@ -188,7 +151,7 @@ namespace CoPilot.ORM.Context.Query
 
         public void Merge(IReadOnlyDictionary<string, MappedRecord[]> data)
         {
-            var indexedSets = new Dictionary<string, Dictionary<object, MappedRecord>>();
+            var indexedSets = new Dictionary<string, Dictionary<object, MappedRecord[]>>();
             foreach (var set in _sets.Where(r => r.Value.JoinNode != null))
             {
                 var joinNode = set.Value.JoinNode;
@@ -202,52 +165,142 @@ namespace CoPilot.ORM.Context.Query
                 var targetKeyFunc = CreateKeyFunc(targetKey);
                 var sourceKeyFunc = CreateKeyFunc(sourceKey);
 
-                if (!indexedSets.ContainsKey(targetSetName))
+                var indexedSetName = PathHelper.Combine(targetSetName, targetKey.Name);
+                if (!indexedSets.ContainsKey(indexedSetName))
                 {
-                    indexedSets.Add(targetSetName, targetSet.ToDictionary(r => targetKeyFunc.Invoke(r), r => r));
+                    indexedSets.Add(indexedSetName, CreateIndexedSet(targetSet, targetKeyFunc));
                 }
-                var indexedParents = indexedSets[targetSetName];
+                var indexedParents = indexedSets[indexedSetName];
 
                 var targetCollection = joinNode.Origin.MapEntry.MemberToRelationshipMappings.SingleOrDefault(
                         r => r.Value.ForeignKeyColumn.Equals(sourceKey.Column)).Key;
 
                 if (targetCollection != null)
                 {
-                    //Parallel.ForEach(sourceSet.Where(r => r.Instance != null), mappedRecord =>
-                    //{
-                    //    var fkValue = sourceKeyFunc.Invoke(mappedRecord);
-                    //    var parent = indexedParents[fkValue].Instance;
-                    //    ReflectionHelper.AddValueToMemberCollection(targetCollection, parent, mappedRecord.Instance);
-                    //});
-                    foreach (var mappedRecord in sourceSet.Where(r => r.Instance != null))
+                    Parallel.ForEach(sourceSet.Where(r => r.Instance != null), mappedRecord =>
                     {
                         var fkValue = sourceKeyFunc.Invoke(mappedRecord);
-                        var parent = indexedParents[fkValue].Instance;
-                        ReflectionHelper.AddValueToMemberCollection(targetCollection, parent, mappedRecord.Instance);
-                    }
+                        foreach (var record in indexedParents[fkValue])
+                        {
+                            var targetInstance = GetInstanceFromPath(
+                                record.Instance,
+                                PathHelper.RemoveLastElementFromPathString(targetKey.Name),
+                                targetCollection.Name
+                            );
+                            ReflectionHelper.AddValueToMemberCollection(targetCollection, targetInstance, mappedRecord.Instance);
+                        }
+                    });
+                    //foreach (var mappedRecord in sourceSet.Where(r => r.Instance != null))
+                    //{
+                    //    var fkValue = sourceKeyFunc.Invoke(mappedRecord);
+                    //    foreach (var record in indexedParents[fkValue])
+                    //    {
+                    //        var targetInstance = GetInstanceFromPath(
+                    //            record.Instance, 
+                    //            PathHelper.RemoveLastElementFromPathString(targetKey.Name), 
+                    //            targetCollection.Name
+                    //        );
+                    //        ReflectionHelper.AddValueToMemberCollection(targetCollection, targetInstance, mappedRecord.Instance);
+                    //    }
+                        
+                    //}
                 }
 
             }
+        }
+
+        public ContextColumn GetColumn(string setName, string id)
+        {
+            return _sets[setName].Entries.Where(r => r.MappedName.Equals(id)).Select(r => r.SelectColumn).SingleOrDefault();
+        }
+
+        public string[] GetSetNames()
+        {
+            return _sets.Keys.ToArray();
+        }
+
+        private object GetInstanceFromPath(object baseInstance, string basePath, string memberName)
+        {
+            object instance;
+            if (string.IsNullOrEmpty(basePath))
+            {
+                instance = baseInstance;
+            }
+            else
+            {
+                var objectReference = PathHelper.GetReferenceFromPath(baseInstance, PathHelper.Combine(basePath, memberName));
+                instance = objectReference.Item1;
+            }
+
+            return instance;
+        }
+
+        private Dictionary<object, MappedRecord[]> CreateIndexedSet(MappedRecord[] targetSet, Func<MappedRecord, object> targetKeyFunc)
+        {
+            var indexedRecords = new Tuple<object, MappedRecord>[targetSet.Length];
+
+            Parallel.ForEach(targetSet, (mappedRecord, s, i) =>
+            {
+                indexedRecords[i] = new Tuple<object, MappedRecord>(targetKeyFunc.Invoke(mappedRecord),mappedRecord);
+            });
+            var indexedSet = indexedRecords.GroupBy(r => r.Item1, r => r.Item2, (k, v) => new { Key = k, Records = v.ToArray() })
+                .ToDictionary(r => r.Key, r => r.Records);
+
+            return indexedSet;
         }
 
         private Func<MappedRecord, object> CreateKeyFunc(ContextColumn keyCol)
         {
             if (keyCol.MappedMember != null)
             {
-                return m => keyCol.MappedMember.GetValue(m.Instance);
+                return m =>
+                {
+                    var path = PathHelper.RemoveLastElementFromPathString(keyCol.Name);
+                    var instance = GetInstanceFromPath(m.Instance, path, keyCol.MappedMember.Name);
+                    return keyCol.MappedMember.GetValue(instance);
+                };
             }
             return m => m.UnmappedData[string.IsNullOrEmpty(keyCol.ColumnAlias) ? keyCol.Column.ColumnName : keyCol.ColumnAlias];
         }
 
-        public ContextColumn GetColumn(string setName, string id)
+
+        private class Set
         {
-            var entry = _sets[setName].Entries.SingleOrDefault(r => r.MappedName.Equals(id));
-            return entry?.SelectColumn;
+            public ITableContextNode BaseNode { get; }
+
+            public Set(ITableContextNode baseNode)
+            {
+                BaseNode = baseNode;
+                Entries = new List<SelectTemplateEntry>();
+                JoinNode = null;
+            }
+
+            public List<SelectTemplateEntry> Entries { get; }
+
+            public TableContextNode JoinNode { get; set; }
         }
 
-        public string[] GetSetNames()
+        private struct SelectTemplateEntry
         {
-            return _sets.Keys.ToArray();
+            public SelectTemplateEntry(string setName, ContextColumn column)
+            {
+                SetName = setName;
+                SelectColumn = column;
+                LocalId = string.IsNullOrEmpty(SelectColumn.ColumnAlias)
+                    ? SelectColumn.Column.ColumnName
+                    : SelectColumn.ColumnAlias;
+
+                MappedName = LocalId;
+            }
+
+            private string SetName { get; }
+            public string MappedName { get; set; }
+            public ContextColumn SelectColumn { get; }
+            public string LocalId { get; } 
+            public override string ToString()
+            {
+                return MappedName;
+            }
         }
     }
 }

@@ -12,7 +12,7 @@ namespace CoPilot.ORM.IntegrationTests.Config
 {
     public class SqlServerBandSampleSetup
     {
-        private readonly SqlServerProvider _provider = new SqlServerProvider(useNationalCharacterSet:true, loggingLevel:LoggingLevel.Verbose);
+        private readonly SqlServerProvider _provider;
         private readonly DbModel _model;
         private const string ConnectionString = @"
                     data source=localhost; 
@@ -21,9 +21,10 @@ namespace CoPilot.ORM.IntegrationTests.Config
                     MultipleActiveResultSets=True; 
                     App=CoPilotIntegrationTest;";
 
-        public SqlServerBandSampleSetup(DbModel model)
+        public SqlServerBandSampleSetup(DbModel model, LoggingLevel logginLevel = LoggingLevel.None)
         {
             _model = model;
+            _provider = new SqlServerProvider(true, logginLevel);
         }
 
         public void DropCreateDatabase()
