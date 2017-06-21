@@ -58,7 +58,7 @@ namespace CoPilot.ORM.Config.Builders
         /// <returns>Column builder for chaining column specific configurations</returns>
         public ColumnBuilder MaxSize(int? value = null)
         {
-            _column.MaxSize = value?.ToString();
+            _column.MaxSize = value ?? 0;
             return this;
         }
 

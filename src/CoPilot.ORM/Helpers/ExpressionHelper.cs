@@ -2,6 +2,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using CoPilot.ORM.Config.DataTypes;
+using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Filtering;
 
@@ -56,10 +57,10 @@ namespace CoPilot.ORM.Helpers
             return prop;
         }
         
-        public static ExpressionGraph DecodeExpression<T>(Expression<Func<T,bool>> expression) where T : class
+        public static ExpressionGraph DecodeExpression<T>(Expression<Func<T,bool>> expression, IDbProvider provider) where T : class
         {
             if (expression == null) return null;
-            var decoder = new ExpressionDecoder();
+            var decoder = new ExpressionDecoder(provider);
             return decoder.Decode(expression.Body);
         }
 

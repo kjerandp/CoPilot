@@ -7,7 +7,6 @@ namespace CoPilot.ORM.Model
 {
     public class DbColumn
     {
-        private int? _maxSize;
         private bool _isPrimaryKey;
         private readonly HashSet<ClassMemberInfo> _mappedMembers = new HashSet<ClassMemberInfo>();
 
@@ -27,38 +26,10 @@ namespace CoPilot.ORM.Model
         public DefaultValue DefaultValue { get; internal set; }
         public DbTable Table { get; }
         public NumberPrecision NumberPrecision { get; internal set; }
-        public string MaxSize
-        {
-            get
-            {
-                if (DataType == DbDataType.Char && (!_maxSize.HasValue || _maxSize.Value <= 0))
-                {
-                    return "1";
-                }
-                if ((DataType == DbDataType.String || DataType == DbDataType.Varbinary) && (!_maxSize.HasValue || _maxSize.Value <= 0 || _maxSize.Value > 8000))
-                {
-                    return "max";
-                }
-                return _maxSize?.ToString();
-
-            }
-            internal set
-            {
-                if (value == null)
-                {
-                    _maxSize = null;
-                }
-                else
-                {
-                    int size;
-                    int.TryParse(value, out size);
-                    _maxSize = size;
-                }
-            }
-        }
+        public int MaxSize { get; set; }
         public bool IsNullable { get; internal set; }
         public bool Unique { get; internal set; }
-        internal DbRelationship ForeignkeyRelationship { get; set; }
+        public DbRelationship ForeignkeyRelationship { get; set; }
         public bool IsPrimaryKey
         {
             get

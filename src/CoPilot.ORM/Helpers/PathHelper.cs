@@ -54,7 +54,7 @@ namespace CoPilot.ORM.Helpers
             {
                 return path.Substring(0, idx);
             }
-            return path;
+            return string.Empty;
         }
 
         public static string[] RemoveSimpleTypesFromPaths(Type baseType, params string[] paths)
@@ -231,6 +231,13 @@ namespace CoPilot.ORM.Helpers
                 return masked.Substring(1);
             }
             return masked;
+        }
+
+        public static string Combine(string path1, string path2)
+        {
+            if(string.IsNullOrEmpty(path1)) return path2;
+            if (string.IsNullOrEmpty(path2)) return path1;
+            return path1+"."+path2;
         }
     }
 }

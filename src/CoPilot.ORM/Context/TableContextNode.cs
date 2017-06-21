@@ -42,11 +42,7 @@ namespace CoPilot.ORM.Context
         public string Path => Origin.Path + "." + Origin.Nodes.Single(r => r.Value.Equals(this)).Key;
         public ITableContextNode Origin { get; set; }
         public TableContext Context => Origin.Context;
-        public QueryContext GetQueryContext(FilterGraph filter = null)
-        {
-            return Context.GetQueryContext(this, filter);
-        }
-
+        
         public TableMapEntry MapEntry { get; }
         public DbTable Table => IsInverted ? Relationship.ForeignKeyColumn.Table : Relationship.PrimaryKeyColumn.Table;
         public DbColumn GetTargetKey => IsInverted ? Relationship.ForeignKeyColumn : Relationship.PrimaryKeyColumn;

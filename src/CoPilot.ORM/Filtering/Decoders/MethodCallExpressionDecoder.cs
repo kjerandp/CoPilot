@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using CoPilot.ORM.Exceptions;
@@ -19,8 +18,8 @@ namespace CoPilot.ORM.Filtering.Decoders
         }
         public IDecodedNode Decode()
         {
-            var obj = _expression.Object != null ? ExpressionTypeResolver.Get(_expression.Object).Decode():null;
-            var args = _expression.Arguments?.Select(r => ExpressionTypeResolver.Get(r).Decode()).ToArray();
+            var obj = _expression.Object != null ? FilterExpressionTypeResolver.Get(_expression.Object).Decode():null;
+            var args = _expression.Arguments?.Select(r => FilterExpressionTypeResolver.Get(r).Decode()).ToArray();
 
             if (args.OfType<DecodedReference>().Any())
             {

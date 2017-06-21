@@ -1,17 +1,14 @@
 ﻿using System;
-using System.Data;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Extensions;
 using System.Reflection;
-using CoPilot.ORM.Exceptions;
 
 
 namespace CoPilot.ORM.Helpers
 {
     public static class DbConversionHelper
     {
-        public const bool DefaultUseNvarForString = true;
-        public const string DefaultDbStringSize = "255";
+        public const int DefaultDbStringSize = 255;
 
         public static DbDataType GetDbDataType(ClassMemberInfo member)
         {
@@ -19,7 +16,7 @@ namespace CoPilot.ORM.Helpers
             return MapToDbDataType(type);
         }
 
-        internal static DbDataType MapToDbDataType(Type type)
+        public static DbDataType MapToDbDataType(Type type)
         {
             if (!type.GetTypeInfo().IsValueType)
             {
@@ -78,153 +75,27 @@ namespace CoPilot.ORM.Helpers
             }
         }
 
-        
-
-        public static SqlDbType ToDbType(DbDataType type, bool useNvar = DefaultUseNvarForString)
-        {
-            switch (type)
-            {
-                case DbDataType.Int64: return SqlDbType.BigInt;
-                case DbDataType.Binary: return SqlDbType.Binary;
-                case DbDataType.Varbinary: return SqlDbType.VarBinary;
-                case DbDataType.Boolean: return SqlDbType.Bit;
-                case DbDataType.Char: return useNvar ? SqlDbType.NChar : SqlDbType.Char;
-                case DbDataType.Date: return SqlDbType.Date;
-                case DbDataType.DateTime: return SqlDbType.DateTime2;
-                case DbDataType.DateTimeOffset: return SqlDbType.DateTimeOffset;
-                case DbDataType.Decimal: return SqlDbType.Decimal;
-                case DbDataType.Double: return SqlDbType.Float;
-                case DbDataType.Int32: return SqlDbType.Int;
-                case DbDataType.Currency: return SqlDbType.Money;
-                case DbDataType.Text: return useNvar ? SqlDbType.NText : SqlDbType.Text;
-                case DbDataType.String: return useNvar ? SqlDbType.NVarChar : SqlDbType.VarChar;
-                case DbDataType.Float: return SqlDbType.Real;
-                case DbDataType.Int16: return SqlDbType.SmallInt;
-                case DbDataType.TimeSpan: return SqlDbType.Time;
-                case DbDataType.TimeStamp: return SqlDbType.Timestamp;
-                case DbDataType.Byte: return SqlDbType.TinyInt;
-                case DbDataType.Guid: return SqlDbType.UniqueIdentifier;
-                case DbDataType.Xml: return SqlDbType.Xml;
-                case DbDataType.Enum: return SqlDbType.SmallInt;
-
-                default:
-                    return SqlDbType.Char;
-            }
-        }
-
-        public static string GetAsString(DbDataType dataType, bool useNvar = DefaultUseNvarForString)
-        {
-            return ToDbType(dataType, useNvar).ToString().ToLowerInvariant();
-        }
-
-        public static string GetExpressionAsString(DbExpressionType expression)
-        {
-            switch (expression)
-            {
-                case DbExpressionType.Timestamp:
-                    return "GETDATE()";
-                case DbExpressionType.CurrentDate:
-                    return "GETDATE()";
-                case DbExpressionType.CurrentDateTime:
-                    return "GETDATE()";
-                case DbExpressionType.Guid:
-                    return "NEWID()";
-                case DbExpressionType.SequencialGuid:
-                    return "NEWSEQUENTIALID()";
-                case DbExpressionType.PrimaryKeySequence:
-                    return "IDENTITY(1,1)";
-                default: return null;
-            }
-        }
-
-        public static string GetValueAsString(DbDataType dataType, object value, bool useNvar = DefaultUseNvarForString)
-        {
-            if (value == null) return "NULL";
-
-            if (dataType == DbDataType.Boolean)
-            {
-                return (bool)value ? "1" : "0";
-            }
-            if (dataType == DbDataType.DateTime)
-            {
-                var date = (DateTime)value;
-                return $"'{date:yyyy-MM-dd HH:mm}'";
-            }
-
-            if (dataType == DbDataType.Date)
-            {
-                var date = (DateTime)value;
-                return $"'{date:yyyy-MM-dd HH:mm}'";
-            }
-            if (IsText(dataType))
-            {
-                var str = value.ToString().Replace("'", "''");
-
-                double result;
-                if (double.TryParse(str, out result))
-                {
-                    return "'" + str + "'";
-                }
-
-                return (useNvar?"N'":"'") + str + "'";
-            }
-
-            if (IsNumeric(dataType))
-            {
-
-                if (value.GetType().GetTypeInfo().IsEnum)
-                {
-                    return ((int)value).ToString();
-                }
-
-                return value.ToString()
-                        .Replace("'", "")
-                        .Replace("/*", "")
-                        .Replace("*\\", "")
-                        .Replace("--", "")
-                        .Replace(";", "")
-                        .Replace(" ", "")
-                        .Replace(",", ".");
-
-            }
-
-            throw new CoPilotUnsupportedException($"Unable to convert {dataType} to a string.");
-        }
-
         public static bool IsNumeric(DbDataType dataType)
         {
-            var sqlType = ToDbType(dataType);
-
-            return (
-                sqlType == SqlDbType.TinyInt ||
-                sqlType == SqlDbType.SmallInt ||
-                sqlType == SqlDbType.Int ||
-                sqlType == SqlDbType.BigInt
-            );
+            return (dataType == DbDataType.Int16 || dataType == DbDataType.Int32 || dataType == DbDataType.Int64 ||
+                    dataType == DbDataType.Byte);
         }
 
         public static bool IsText(DbDataType dataType)
         {
-            var sqlType = ToDbType(dataType);
-
             return (
-                sqlType == SqlDbType.Char ||
-                sqlType == SqlDbType.NChar ||
-                sqlType == SqlDbType.Text ||
-                sqlType == SqlDbType.NText ||
-                sqlType == SqlDbType.VarChar ||
-                sqlType == SqlDbType.NVarChar
+                dataType == DbDataType.Char ||
+                dataType == DbDataType.Text ||
+                dataType == DbDataType.String
             );
         }
 
-        public static bool HasSize(DbDataType dataType)
+        public static bool DataTypeHasSize(DbDataType dataType)
         {
-            var sqlType = ToDbType(dataType);
-
             return (
                 IsText(dataType) ||
-                sqlType == SqlDbType.VarBinary ||
-                sqlType == SqlDbType.Binary
+                dataType == DbDataType.Varbinary ||
+                dataType == DbDataType.Binary
             );
         }
     }

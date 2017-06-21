@@ -1,9 +1,10 @@
 ﻿using System;
-using CoPilot.ORM.Database.Commands.Query.Interfaces;
-using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Context.Query;
+using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Filtering.Operands;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
+using CoPilot.ORM.SqlServer;
 using CoPilot.ORM.Tests.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -13,11 +14,13 @@ namespace CoPilot.ORM.Tests
     public class TableContextTest
     {
         private DbModel _model;
+        private IDbProvider _provider;
 
         [TestInitialize]
         public void Init()
         {
             _model = TestModel.GetModel();
+            _provider = new SqlServerProvider();
         }
 
         [TestMethod]
@@ -42,22 +45,22 @@ namespace CoPilot.ORM.Tests
         {
             var orgCtx = _model.CreateContext<Organization>("OwnedResources.UsedBy.City", "UsedResources");
 
-            var filter = ExpressionHelper.DecodeExpression<Organization>(r => r.City.CityCode == "5");
+            var filter = ExpressionHelper.DecodeExpression<Organization>(r => r.City.CityCode == "5", _provider);
 
             orgCtx.ApplyFilter(filter);
 
             Assert.AreEqual("T8.PUB_CITY_CODE = @param1", orgCtx.GetFilter().ToString());
             Assert.AreEqual("5", ((ValueOperand)orgCtx.GetFilter().Root.Right).Value);
 
-            var writer = _model.ResourceLocator.Get<ISelectStatementWriter>();
-            var builder = _model.ResourceLocator.Get<IQueryBuilder>();
-            Console.WriteLine(writer.GetStatement(builder.Build(orgCtx.GetQueryContext())));
+            var writer = _provider.SelectStatementWriter;
+            var builder = _provider.SelectStatementBuilder;
+            Console.WriteLine(writer.GetStatement(builder.Build(QueryContext.Create(orgCtx))));
             Console.WriteLine();
             var node = orgCtx.FindByPath("OwnedResources");
-            Console.WriteLine(writer.GetStatement(builder.Build(orgCtx.GetQueryContext(node))));
+            Console.WriteLine(writer.GetStatement(builder.Build(QueryContext.Create(node))));
             Console.WriteLine();
             node = orgCtx.FindByPath("UsedResources");
-            Console.WriteLine(writer.GetStatement(builder.Build(orgCtx.GetQueryContext(node))));
+            Console.WriteLine(writer.GetStatement(builder.Build(QueryContext.Create(node))));
         }
 
         [TestMethod]
@@ -65,7 +68,7 @@ namespace CoPilot.ORM.Tests
         {
             var orgCtx = _model.CreateContext<Organization>();
 
-            var filter = ExpressionHelper.DecodeExpression<Organization>(r => r.OrganizationType == OrganizationType.TypeB);
+            var filter = ExpressionHelper.DecodeExpression<Organization>(r => r.OrganizationType == OrganizationType.TypeB, _provider);
 
             orgCtx.ApplyFilter(filter);
 
@@ -78,7 +81,7 @@ namespace CoPilot.ORM.Tests
         {
             var orgCtx = _model.CreateContext<Organization>();
 
-            var filter = ExpressionHelper.DecodeExpression<Organization>(r => r.City.Id == 6);
+            var filter = ExpressionHelper.DecodeExpression<Organization>(r => r.City.Id == 6, _provider);
 
             orgCtx.ApplyFilter(filter);
 
@@ -90,16 +93,16 @@ namespace CoPilot.ORM.Tests
         {
             var ctx = _model.CreateContext<Resource>( "Owner.City", "UsedBy" );
 
-            var filter = ExpressionHelper.DecodeExpression<Resource>(r => r.UsedBy.Name.StartsWith("Ko", StringComparison.OrdinalIgnoreCase));
+            var filter = ExpressionHelper.DecodeExpression<Resource>(r => r.UsedBy.Name.StartsWith("Ko", StringComparison.OrdinalIgnoreCase), _provider);
             ctx.ApplyFilter(filter);
 
-            var writer = _model.ResourceLocator.Get<ISelectStatementWriter>();
-            var builder = _model.ResourceLocator.Get<IQueryBuilder>();
-            Console.WriteLine(writer.GetStatement(builder.Build(ctx.GetQueryContext())));
+            var writer = _provider.SelectStatementWriter;
+            var builder = _provider.SelectStatementBuilder;
+            Console.WriteLine(writer.GetStatement(builder.Build(QueryContext.Create(ctx, ctx.GetFilter()))));
 
             Console.WriteLine();
             ctx.ApplySelector(r => new { r.Id, OwnerId = r.Owner.Id });
-            Console.WriteLine(writer.GetStatement(builder.Build(ctx.GetQueryContext())));
+            Console.WriteLine(writer.GetStatement(builder.Build(QueryContext.Create(ctx, ctx.GetFilter()))));
         }
     }
 }

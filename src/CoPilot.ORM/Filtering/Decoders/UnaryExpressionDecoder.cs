@@ -24,7 +24,7 @@ namespace CoPilot.ORM.Filtering.Decoders
                 return new DecodedValue(value.GetType(), value);
             }
 
-            var decoder = ExpressionTypeResolver.Get(_expression.Operand);
+            var decoder = FilterExpressionTypeResolver.Get(_expression.Operand);
             var result = decoder.Decode();
 
             var refResult = result as DecodedReference;
@@ -36,12 +36,19 @@ namespace CoPilot.ORM.Filtering.Decoders
                     {
                         if (string.IsNullOrEmpty(refResult.ReferencedTypeMemberAccess))
                         {
-                            if (refResult.ReferencedType == typeof(bool) || refResult.ReferencedType == typeof(bool?))
-                            {
-                                return ExpressionDecoder.TransformBooleanReferenceToBinaryExpression(refResult, false);
-                            }
+                            //if (refResult.ReferencedType == typeof(bool) || refResult.ReferencedType == typeof(bool?))
+                            //{
+                            //    return ExpressionDecoder.TransformBooleanReferenceToBinaryExpression(refResult, false);
+                            //}
+                            //if(_expression.Type == typeof(bool))
+                            //{
+                            //    refResult.InvertExpression = true;
+                            //    return refResult;
+                            //}
+                            refResult.IsInverted = true;
+                            return refResult;
                         }
-                        else if (refResult.ReferencedTypeMemberAccess == "HasValue")
+                        if (refResult.ReferencedTypeMemberAccess == "HasValue")
                         {
                             var transformedRef = new DecodedReference(refResult.BaseType, refResult.Path);
                             var nullValue = new DecodedNullValue();
@@ -57,7 +64,5 @@ namespace CoPilot.ORM.Filtering.Decoders
             }
             throw new CoPilotUnsupportedException($"Node not supported as part of unary expression! {result.GetType().Name}");
         }
-
-        
     }
 }

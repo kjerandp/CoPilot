@@ -15,9 +15,9 @@ namespace CoPilot.ORM.Database.Commands
         }
 
         public string Name { get; set; }
-        public string[] FieldNames { get; internal set; }
-        public Type[] FieldTypes { get; internal set; }
-        public object[][] Records { get; internal set; }
+        public string[] FieldNames { get; set; }
+        public Type[] FieldTypes { get; set; }
+        public object[][] Records { get; set; }
 
         public int GetIndex(string fieldName)
         {

@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
+using CoPilot.ORM.Common;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
+using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
-using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Filtering.Operands;
 using CoPilot.ORM.Helpers;
@@ -11,30 +13,29 @@ using CoPilot.ORM.Mapping.Mappers;
 
 namespace CoPilot.ORM.Database.Commands.Query.Strategies
 {
-    internal class MultipleQueriesStrategy : IQueryExecutionStrategy
+    public class MultipleQueriesStrategy : IQueryExecutionStrategy
     {
-        private readonly IQueryBuilder _builder;
+        private readonly ISelectStatementBuilder _builder;
         private readonly ISelectStatementWriter _writer;
 
-        public MultipleQueriesStrategy(IQueryBuilder builder, ISelectStatementWriter writer)
+        public MultipleQueriesStrategy(ISelectStatementBuilder builder, ISelectStatementWriter writer)
         {
             _builder = builder;
             _writer = writer;
         }
         public IEnumerable<object> Execute(ITableContextNode node, FilterGraph filter, DbReader reader)
         {
-            var ctx = node.Context;
             var recordsets = new List<DbRecordSet>();
 
-            var q = ctx.GetQueryContext(node, filter);
+            var q = QueryContext.Create(node, filter);
 
             var stm = q.GetStatement(_builder, _writer);
             var baseRecords = ExecuteStatement(node, stm, reader);
             recordsets.Add(baseRecords);
-
+            
             ExecuteNodeQueries(node, baseRecords, filter, reader, recordsets);
 
-            return ContextMapper.MapAndMerge(ctx, recordsets);
+            return ContextMapper.MapAndMerge(node.Context.SelectTemplate, recordsets.ToArray());
         }
 
         private void ExecuteNodeQueries(ITableContextNode parentNode, DbRecordSet parentSet, FilterGraph filter, DbReader reader, ICollection<DbRecordSet> rs)
@@ -57,7 +58,7 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
                             childFilter = CreateChildFilter(node, keyValues);
                         }
                     }
-                    var q = node.Context.GetQueryContext(node, childFilter);
+                    var q = QueryContext.Create(node, childFilter);
                     var stm = q.GetStatement(_builder, _writer);
                     var data = ExecuteStatement(node, stm, reader);
                     rs.Add(data);
@@ -78,9 +79,9 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
         private static FilterGraph CreateChildFilter(TableContextNode node, object[] keys)
         {
             var filter = new FilterGraph();
-            var left = new ContextMemberOperand(null) { ContextColumn = new ContextColumn(node, node.GetTargetKey, null) };
+            var left = new MemberExpressionOperand(ContextColumn.Create(node, node.GetTargetKey));
             var right = new ValueListOperand("@id", keys);
-            filter.Root = new BinaryOperand(left, right, "IN");
+            filter.Root = new BinaryOperand(left, right, SqlOperator.In);
 
             return filter;
         }

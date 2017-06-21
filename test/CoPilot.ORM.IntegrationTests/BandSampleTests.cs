@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Dynamic;
 using System.Linq;
 using CoPilot.ORM.Common;
-using CoPilot.ORM.Context.Query;
-using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.IntegrationTests.Config;
 using CoPilot.ORM.IntegrationTests.Models.BandSample;
-using CoPilot.ORM.Scripting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+
 
 namespace CoPilot.ORM.IntegrationTests
 {
@@ -18,45 +17,242 @@ namespace CoPilot.ORM.IntegrationTests
     public class BandSampleTests
     {
         private static IDb _db;
-
-        private const string ConnectionString = @"
-                data source=localhost; 
-                initial catalog="+BandSampleDatabase.DbName+@"; 
-                Integrated Security=true;
-                MultipleActiveResultSets=True; 
-                App=CoPilotIntegrationTest;";
-
-
+        
         [ClassInitialize]
         public static void BandSampleTestsInitialize(TestContext testContext)
         {
-            //CoPilotGlobalResources.LoggingLevel = LoggingLevel.Verbose;
             var model = BandSampleConfig.CreateModel();
+            //var databaseSetup = new MySqlBandSampleSetup(model);
+            var databaseSetup = new SqlServerBandSampleSetup(model);
+            //databaseSetup.DropCreateDatabase();
+            _db = databaseSetup.GetDb();        
+        }
 
-            BandSampleDatabase.DropCreateDatabase(model);
+        [TestMethod]
+        public void CanCreateQueriesWithNewQuerySyntax()
+        {
+            var bands = _db.From<Band>()
+                .Where(r => !r.Name.StartsWith("B") && !r.Name.StartsWith("L")) 
+                .Include("BandMembers")
+                .OrderBy(r => r.Name)
+                .ThenBy(r => r.Formed, Ordering.Descending)
+                .ThenBy(r => r.Id)
+                .Skip(1)
+                .Take(20)
+                .Distinct()
+                .AsEnumerable();
 
-            _db = model.CreateDb(ConnectionString);
+            Assert.IsTrue(bands.Any(r => r.BandMembers != null && r.BandMembers.Any()));
+            /*
+            var oldWay = _db.Query(
+                    OrderByClause<Band>.OrderByAscending(r => r.Name)
+                        .ThenByDecending(r => r.Formed)
+                        .ThenByAscending(r => r.Id), 
+                    new Predicates {Take = 20, Skip = 1, Distinct = true}, 
+                    r => r.Id <= 40, 
+                    "BandMembers");
+            */
+
+        }
+        [TestMethod]
+        public void TemplateTest()
+        {
+            var test = _db.From<Band>()
+                .Where(r => r.Id <= 20)
+                .Include("BandMembers.Person.City.Country", "Based.Country", "Recordings.Genre")
+                .AsEnumerable();
+
+       
+        }
+
+        [TestMethod]
+        public void CanCreateUseArithmeticsInWhereClause()
+        {
+            var test = _db.From<Album>()
+                .Where(r => r.Id + 4 == 5)
+                .ToArray();
+
+            Console.WriteLine(test.Length);
+        }
+
+        [TestMethod]
+        public void CanCreateQueriesWithAnonymousObjectsAndOneToManyRelations()
+        {
+           
+            var band = _db.From<Band>()
+                .Where(r => r.Id == 1)
+                .Select(r => new
+                {
+                    BandName = r.Name,
+                    Songs = r.Recordings.Select(a => new
+                    {
+                        Title = a.SongTitle.ToUpper(),
+                        a.Duration.TotalSeconds,
+                        Genre = a.Genre.Name
+                    }),
+                    Artists = r.BandMembers.Select(n => new
+                    {
+                        Name = n.ArtistName ?? n.Person.Name,
+                        Letter = n.Person.Name != null ? n.Person.Name[0]:'?',
+                        HasArtistName = n.ArtistName != null,
+                        n.Instrument,
+                        ArtistInfo = new
+                        {
+                            IdAsString = n.Id.ToString(),
+                            n.Person.Name,
+                            Nationality = n.Person.City.Country
+                        }
+                    })
+                })
+                .OrderBy(r => r.BandName, Ordering.Descending)
+                .Single();
+        
+            Assert.IsTrue(band.Songs.Any());
+            Assert.IsTrue(band.Artists.Any());
+            //Want to be able to support select as above
+
+        }
+
+        [TestMethod]
+        public void CanCreateQueriesWithIncludeAndOneToManyRelations()
+        {
+            var band = _db.From<Band>()
+                .Where(r => r.Id == 1)
+                .Select("BandMembers")
+                .OrderBy(r => r.Name, Ordering.Descending)
+                .Single();
+
+
+        }
+
+        [TestMethod]
+        public void CanProjectToDtoWithConstructor()
+        {
             
+            var bands = _db.From<Band>().Where(r => r.Id <= 30).Select(r => new Dto(r.Name, r.Id)).AsEnumerable();
+
+
+
+        }
+
+        [TestMethod]
+        public void CanSelectManyWithProjection()
+        {
+
+            var bands = _db.From<Band>().Where(r => r.Id <= 30).Select(r => 
+                new {
+                    BandName = r.Name,
+                    Discography = r.Recordings.SelectMany(b => b.AlbumTracks.Select(t => 
+                    new {
+                        Album = t.Album.Title,
+                        Song = b.SongTitle,
+                        t.TrackNumber   
+                    })).OrderBy(x => x.Album).ThenBy(x => x.TrackNumber)
+                }
+                ).ToArray();
+
+
+
+        }
+
+        [TestMethod]
+        public void CanProjectToDtoWithClassInit()
+        {
+
+            var bands = _db.From<Band>().Where(r => r.Id <= 30).Select(r => new Dto(r.Name, r.Id) { Date = r.Formed }).AsEnumerable();
+
+
+
+        }
+
+        public class Dto
+        {
+            public Dto(string name, int id)
+            {
+                Value = name + id;
+            }
+
+            public string Value { get; }
+            public DateTime? Date { get; set; }
+        }
+
+        [TestMethod]
+        public void CanCreateQueriesWithMultipleLevelsInclude()
+        {
+            var band = _db.From<Band>()
+                .Where(r => r.Id == 1)
+                .Include("Based.Country")
+                .OrderBy(r => r.Name, Ordering.Descending)
+                .ThenBy(r => r.Based.Name)
+                .ThenBy(r => r.Id)
+                .Single();
+
+            Assert.AreEqual(1, band.Id);
+            Assert.IsFalse(string.IsNullOrEmpty(band.Name));
+            Assert.IsFalse(string.IsNullOrEmpty(band.Based.Country.Name));
+        }
+
+        [TestMethod]
+        public void CanCreateQueriesWithNewQuerySyntaxWithAnonymousType()
+        {
+            var band = _db.From<Band>()
+                .Where(r => r.Id == 1)
+                .Select(r => new { BandId = r.Id, BandName = r.Name, Nationality = r.Based.Country.Name })
+                .OrderBy(r => r.Nationality)
+                .Single();
+
+            Assert.AreEqual(1, band.BandId);
+            Assert.IsFalse(string.IsNullOrEmpty(band.BandName));
+            Assert.IsFalse(string.IsNullOrEmpty(band.Nationality));
+
+            var bands = _db.From<Band>()
+                .Select(r => new { BandId = r.Id, BandName = r.Name, Nationality = r.Based.Country.Name })
+                .OrderBy(r => r.Nationality)
+                .Take(20)
+                .ToArray();
+            
+            Assert.AreEqual(20, bands.Length);
+        }
+
+        [TestMethod]
+        public void CanCreateQueriesWithNewQuerySyntaxSimpleAndDynamicType()
+        {
+            var bandNames = _db.From<Band>()
+                .Where(r => r.Id <= 40)
+                .Select(r => r.Name)
+                .OrderBy(r => r)
+                .AsEnumerable()
+            ;
+            Assert.IsTrue(bandNames.Any());
+
+            var dynamicBands = _db.From<Band>()
+                .Where(r => r.Id <= 40)
+                .Select<dynamic>(r => new { BandId = r.Id, BandName = r.Name })
+                .OrderBy(r => "BandName", Ordering.Descending)
+                .ThenBy(r => "BandId")
+                .ToArray();
+
+            Assert.IsNotNull(dynamicBands.All(r => r is ExpandoObject));
         }
 
         [TestMethod]
         public void CanQueryForBands()
         {
-            var bands = _db.All<Band>("BandMembers.Person.City", "Based").ToList();
+            var bands = _db.From<Band>().Where(r => !r.Name.Contains("Bulk Band")).Select("BandMembers.Person.City", "Based").ToArray();
 
             Assert.IsTrue(bands.Any());
-            Assert.IsTrue(bands.Any(r => r.BandMembers.Any(m => m.Person?.City != null)));
+            Assert.IsTrue(bands.Any(r => r.BandMembers != null && r.BandMembers.Any(m => m.Person?.City != null)));
             Assert.IsTrue(bands.Any(r => r.Based != null));
         }
 
         [TestMethod]
         public void CanQueryForBandMembers()
         {
-            var allBandMembers = _db.All<BandMember>("Person.City", "Band.Based").ToList();
-
-            var someBandMembers = _db.Query<BandMember>(r => r.Band.Name.StartsWith("B"), "Person.City", "Band.Based").ToList();
-
-            Assert.IsTrue(allBandMembers.Count() > someBandMembers.Count);
+            //var allBandMembers = _db.All<BandMember>("Person.City", "Band.Based").ToList();
+            var allBandMembers = _db.From<BandMember>().Select("Person.City", "Band.Based").ToArray();
+            //var someBandMembers = _db.Query<BandMember>(r => r.Band.Name.StartsWith("B"), "Person.City", "Band.Based").ToList();
+            var someBandMembers = _db.From<BandMember>().Where(r => r.Band.Name.StartsWith("B")).Select("Person.City", "Band.Based").ToArray();
+            Assert.IsTrue(allBandMembers.Length > someBandMembers.Length);
             Assert.IsTrue(allBandMembers.Any(r => r.Person?.City != null));
             Assert.IsTrue(someBandMembers.Any(r => r.Band?.Based != null));
 
@@ -65,8 +261,8 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanQueryForRecordings()
         {
-            var recordings = _db.All<Recording>(new Predicates { Top = 2000 }, "Genre", "Band", "AlbumTracks").ToList();
-
+            //var recordings = _db.All<Recording>(new Predicates { Take = 2000 }, "Genre", "Band", "AlbumTracks").ToList();
+            var recordings = _db.From<Recording>().Select("Genre", "Band", "AlbumTracks").Take(2000).ToArray();
             Assert.IsTrue(recordings.Any());
             Assert.IsTrue(recordings.Any(r => r.Genre != null));
             Assert.IsTrue(recordings.Any(r => r.Band != null));
@@ -74,20 +270,22 @@ namespace CoPilot.ORM.IntegrationTests
         }
 
         [TestMethod]
-        public void CanCreateStoredProcedureFromQuery()
+        public void CanExecuteAndMapStoredProcedure()
         {
-            var builder = new ScriptBuilder(_db.Model);
-            
-            var proc = builder.CreateStoredProcedureFromQuery<Recording>("Get_Recordings_CTE", r => r.Recorded > DateTime.MinValue, null, "Genre", "Band", "AlbumTracks").ToString();
+            var recordings = _db.Query<Recording>(
+                "Get_Recordings_CTE",                           //stored proc name
+                new { recorded = new DateTime(2017, 5, 1) },    //arguments
+                "Recording", "Recording.AlbumTracks"
+            );
 
-            Console.WriteLine(proc);
+            Assert.IsTrue(recordings.Any());
 
         }
 
         [TestMethod]
         public void CanQueryForAlbums()
         {
-            var albums = _db.Query<Album>(null, "Tracks.Recording").ToList();
+            var albums = _db.From<Album>().Include("Tracks.Recording").ToArray();
             Assert.IsTrue(albums.Any());
             Assert.IsTrue(albums.Any(r => r.Tracks.Any(t => t.Recording != null)));
             
@@ -96,7 +294,7 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanQueryForAllRecordingsFromASpecificAlbumUsingSelectorSyntax()
         {
-            var recordings = _db.Query<AlbumTrack, Recording>(r => r.Recording, r => r.Album.Id == 1);
+            var recordings = _db.From<AlbumTrack>().Where(r => r.Album.Id == 1).Select(r => r.Recording).AsEnumerable();
 
             Assert.IsTrue(recordings.Any());
 
@@ -104,25 +302,24 @@ namespace CoPilot.ORM.IntegrationTests
 
             /* 
             SELECT
-		        T3.RECORDING_ID as [Id]
-		        ,T3.RECORDING_SONG_TITLE as [SongTitle]
-		        ,T3.RECORDING_DURATION as [Duration]
-		        ,T3.RECORDING_RECORDED as [Recorded]
+		        T2.RECORDING_ID as [Id]
+		        ,T2.RECORDING_SONG_TITLE as [SongTitle]
+		        ,T2.RECORDING_DURATION as [Duration]
+		        ,T2.RECORDING_RECORDED as [Recorded]
 	        FROM
 		        ALBUM_TRACK T1
-		        INNER JOIN RECORDING T3 ON T3.RECORDING_ID=T1.ALBUM_TRACK_RECORDING_ID
+		        INNER JOIN RECORDING T2 ON T2.RECORDING_ID=T1.ALBUM_TRACK_RECORDING_ID
 	        WHERE
 		        T1.ALBUM_TRACK_ALBUM_ID = @param1     
              */
 
-            // The reason there is no T2 in this case is that the filter is referencing the ALBUM's id column (PK)
-            // but CoPilot optimized this to use the FK of ALBUM_TRACK instead.  
+ 
         }
 
         [TestMethod]
         public void CanQueryForAllRecordingTitlesFromASpecificAlbumUsingSelectorSyntax()
         {
-            var recordings = _db.Query<AlbumTrack, string>(r => r.Recording.SongTitle, r => r.Album.Id == 1);
+            var recordings = _db.From<AlbumTrack>().Where(r => r.Album.Id == 1).Select(r => r.Recording.SongTitle).AsEnumerable();
 
             Assert.IsTrue(recordings.Any());
 
@@ -131,10 +328,10 @@ namespace CoPilot.ORM.IntegrationTests
 
             /*
             SELECT
-		        T3.RECORDING_SONG_TITLE as [SongTitle]
+		        T2.RECORDING_SONG_TITLE as [SongTitle]
 	        FROM
 		        ALBUM_TRACK T1
-		        INNER JOIN RECORDING T3 ON T3.RECORDING_ID=T1.ALBUM_TRACK_RECORDING_ID
+		        INNER JOIN RECORDING T2 ON T2.RECORDING_ID=T1.ALBUM_TRACK_RECORDING_ID
 	        WHERE
 		        T1.ALBUM_TRACK_ALBUM_ID = @param1 
             */
@@ -193,7 +390,8 @@ namespace CoPilot.ORM.IntegrationTests
         [TestMethod]
         public void CanDoBulkInserts()
         {
-            const int insertCount = 10000;
+            _db.DbProvider.Logger.SuppressLogging = true;
+            const int insertCount = 1000;
             
             var bands = new List<object>();
             var dt = new DateTime(1980, 1, 1);
@@ -207,32 +405,36 @@ namespace CoPilot.ORM.IntegrationTests
             using (var writer = new DbWriter(_db))
             {
                 writer.BulkCommand(
-                    "insert into dbo.BAND (city_id,band_name,band_formed) values (@cityId, @bandName, @formed)", bands);
+                    "insert into BAND (city_id,band_name,band_formed) values (@cityId, @bandName, @formed)", bands);
 
                 writer.Commit();
             }
             sw.Stop();
+            _db.DbProvider.Logger.SuppressLogging = false;
             Console.WriteLine(sw.ElapsedMilliseconds);
         }
 
         [TestMethod]
         public void CanDoLazyBulkInserts()
         {
-            const int insertCount = 10000;
+            _db.DbProvider.Logger.SuppressLogging = true;
+
+            const int insertCount = 1000;
             var sw = Stopwatch.StartNew();
             using (var writer = new DbWriter(_db))
             {
                 var dt = new DateTime(1980,1,1);
-                writer.PrepareCommand("insert into dbo.BAND (city_id,band_name,band_formed) values (@cityId, @bandName, @formed)", new {cityId=0, bandName=string.Empty, formed=dt});
+                writer.PrepareCommand("insert into BAND (city_id,band_name,band_formed) values (@cityId, @bandName, @formed)", new {cityId=0, bandName=string.Empty, formed=dt});
 
                 for (var i = 0; i < insertCount; i++)
                 {
-                    writer.Command(new {cityId = 1, bandName = "Lazy Band " + i, formed = dt.AddDays(i)});
+                    writer.Command(new {cityId = 1, bandName = "Lazy Bulk Band " + i, formed = dt.AddDays(i)});
                 }
 
                 writer.Commit();
             }
             sw.Stop();
+            _db.DbProvider.Logger.SuppressLogging = false;
             Console.WriteLine(sw.ElapsedMilliseconds);
         }
 

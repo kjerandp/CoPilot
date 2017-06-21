@@ -5,111 +5,44 @@ using System.Threading.Tasks;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
+using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands;
-using CoPilot.ORM.Helpers;
-using CoPilot.ORM.Model;
-using System.Reflection;
 using CoPilot.ORM.Exceptions;
+using CoPilot.ORM.Extensions;
+using CoPilot.ORM.Helpers;
 
 namespace CoPilot.ORM.Mapping.Mappers
 {
+
     /// <summary>
     /// Maps to POCO object mapped with the DbMapper 
     /// </summary>
-    public static class ContextMapper
+    public class ContextMapper
     {
-        /// <summary>
-        /// Create a mapping delegate using the ContextMapper
-        /// </summary>
-        /// <param name="node">The table context node to map</param>
-        /// <returns>Mapping delegate</returns>
-        public static ObjectMapper Create(ITableContextNode node)
+        public static ObjectMapper Create(SelectTemplate template)
         {
             ObjectMapper mapper = dataset =>
             {
-                var mapping = BuildMapping(node, dataset.FieldNames.Select((f, i) => new IndexedFieldName(i, f)).ToArray());
-                var records = ExecuteMappingNode(mapping, dataset);
+                if (dataset.Name == null)
+                {
+                    dataset.Name = template.GetSetNames()[0];
+                }
+                var records = new MappedRecord[dataset.Records.Length];
+                var baseNode = template.GetBaseNode(dataset.Name);
+                var columns = template.GetDictionaryFromSet(dataset.Name);
+                Parallel.ForEach(dataset.Records, (r, n, i) =>
+                {
+                    records[i] = MapSingleInstance(baseNode, dataset.FieldNames, r, columns);
+                });
                 return records;
             };
             return mapper;
         }
-
-        private static ContextMappingNode BuildMapping(ITableContextNode node, IndexedFieldName[] fieldNames)
+        
+        private static MappedRecord MapSingleInstance(ITableContextNode baseNode, string[] fields, object[] values, IReadOnlyDictionary<string, ContextColumn> mapping)
         {
-            var cmNode = new ContextMappingNode
-            {
-                Node = node,
-                ColumnToMemberDictionary = new Dictionary<FieldColumEntry, ClassMemberInfo>(),
-                SubNodes = new Dictionary<ClassMemberInfo, ContextMappingNode>()
-            };
+            var objects = new Dictionary<string, object>();
 
-            var relatedEntities = new Dictionary<string, List<IndexedFieldName>>();
-
-            foreach (var entry in fieldNames)
-            {
-                var firstDot = entry.FieldName.IndexOf(".", StringComparison.Ordinal);
-                if (firstDot > 0)
-                {
-                    var rKey = entry.FieldName.Substring(0, firstDot);
-                    var rPropKey = entry.FieldName.Substring(firstDot + 1, entry.FieldName.Length - (firstDot + 1));
-                    if (!relatedEntities.ContainsKey(rKey))
-                    {
-                        relatedEntities.Add(rKey, new List<IndexedFieldName>());
-                    }
-                    relatedEntities[rKey].Add(new IndexedFieldName(entry.Index, rPropKey));
-                }
-                else
-                {
-                    var col = node.Table.GetColumnByName(entry.FieldName);
-                    if (col == null)
-                    {
-                        continue;
-                    }
-                    var member = node.MapEntry.GetMappedMember(col);
-                    cmNode.ColumnToMemberDictionary.Add(new FieldColumEntry(entry.Index, col), member);
-                }
-            }
-
-            foreach (var rKey in relatedEntities.Keys)
-            {
-                if (!node.Nodes.ContainsKey(rKey))
-                {
-                    continue;
-                }
-                var rNode = node.Nodes[rKey];
-                var members = node.MapEntry.EntityType.GetTypeInfo().GetMember(rKey);
-                var rRecord = relatedEntities[rKey];
-
-                if (members.Length == 1)
-                {
-                    var member = ClassMemberInfo.Create(members.Single());
-                    cmNode.SubNodes.Add(member, BuildMapping(rNode, rRecord.ToArray()));
-                }
-                else
-                {
-                    throw new CoPilotConfigurationException($"Unable to match a single member with name '{rKey}' on object '{node.MapEntry.EntityType.Name}'");
-                }
-            }
-
-            return cmNode;
-        }
-
-        private static MappedRecord[] ExecuteMappingNode(ContextMappingNode mappingNode, DbRecordSet dataset)
-        {
-            var records = new MappedRecord[dataset.Records.Length];
-            Parallel.ForEach(dataset.Records, (r, n, i) =>
-            {
-                records[i] = MapSingleInstance(mappingNode, r);
-            });
-            //for (var r = 0; r < dataset.Records.Length; r++)
-            //{
-            //    records[r] = MapSingleInstance(mappingNode, dataset.Records[r]);
-            //}
-            return records;
-        }
-
-        private static MappedRecord MapSingleInstance(ContextMappingNode mappingNode, object[] values)
-        {
             var rec = new MappedRecord()
             {
                 UnmappedData = new Dictionary<string, object>(),
@@ -121,164 +54,190 @@ namespace CoPilot.ORM.Mapping.Mappers
                 return rec;
             }
 
-            rec.Instance = ReflectionHelper.CreateInstance(mappingNode.Node.MapEntry.EntityType);
+            var basePath = PathHelper.RemoveFirstElementFromPathString(baseNode.Path);
 
-            foreach (var col in mappingNode.ColumnToMemberDictionary.Keys)
+            rec.Instance = ReflectionHelper.CreateInstance(baseNode.MapEntry.EntityType);
+
+            for (var i = 0; i < fields.Length; i++)
             {
-                var value = values[col.FieldIndex];
-                
-                var member = mappingNode.ColumnToMemberDictionary[col];
-                if (member == null)
+                var field = fields[i];
+                var value = values[i];
+
+                if (value is DBNull) continue;
+
+                if (!mapping.ContainsKey(field))
+                    continue; //throw new CoPilotRuntimeException("Field not found in template mapping!");
+
+                var col = mapping[field];
+
+                if (col.Adapter != null)
                 {
-                    rec.UnmappedData.Add(col.Column.ColumnName, value);
+                    value = col.Adapter(MappingTarget.Object, value);
+                }
+
+                ClassMemberInfo member;
+                string objectPath;
+                Type entityType;
+
+                var relNode = col.Node as TableContextNode;
+                if (relNode != null && relNode.Relationship.IsLookupRelationship)
+                {
+                    member = relNode.Origin.MapEntry.GetMappedMember(relNode.Relationship.ForeignKeyColumn);
+                    objectPath = PathHelper.RemoveFirstElementFromPathString(relNode.Origin.Path);
+                    entityType = relNode.Origin.MapEntry.EntityType;
                 }
                 else
                 {
-                    mappingNode.Node.MapEntry.SetValueOnMappedMember(member, rec.Instance, value);
+                    member = col.MappedMember;
+                    objectPath = PathHelper.RemoveFirstElementFromPathString(col.Node.Path);
+                    entityType = col.Node.MapEntry.EntityType;
                 }
+                
+                object instance;
+
+                if (objectPath.Equals(basePath, StringComparison.Ordinal))
+                {
+                    instance = rec.Instance;
+
+                }
+                else
+                {
+                    if (objects.ContainsKey(objectPath))
+                    {
+                        instance = objects[objectPath];
+                    }
+                    else
+                    {
+                        instance = ReflectionHelper.CreateInstance(entityType);
+                        objects.Add(objectPath, instance);
+                    }
+                }
+
+                if (member != null)
+                {
+                    member.SetValue(instance, value);
+                }
+                else
+                {
+                    rec.UnmappedData.Add(field, value);
+                }
+
             }
 
-            if (mappingNode.SubNodes.Any())
+            foreach (var obj in objects)
             {
-                foreach (var member in mappingNode.SubNodes.Keys)
+                var splitPath = PathHelper.SplitLastInPathString(obj.Key);
+
+                object parent = null;
+
+                if (splitPath.Item1.Equals(basePath, StringComparison.Ordinal))
                 {
-                    var subNode = mappingNode.SubNodes[member];
-                    var subRec = MapSingleInstance(subNode, values);
-                    mappingNode.Node.MapEntry.SetValueOnMappedMember(member, rec.Instance, subRec.Instance);
+                    parent = rec.Instance;
                 }
+                else if (objects.ContainsKey(splitPath.Item1))
+                {
+                    parent = objects[splitPath.Item1];
+                }
+
+                if (parent == null)
+                {
+                    parent = CreateParent(splitPath.Item1, objects, rec.Instance);
+                }
+                var member = parent.GetType().GetClassMember(splitPath.Item2);
+                if (member == null) throw new CoPilotRuntimeException("Unable to find member in parent object for mapped instance");
+
+                member.SetValue(parent, obj.Value);
             }
 
             return rec;
         }
-        
-        private struct ContextMappingNode
-        {
-            public ITableContextNode Node { get; set; }
-            public Dictionary<FieldColumEntry, ClassMemberInfo> ColumnToMemberDictionary { get; set; }
-            public Dictionary<ClassMemberInfo, ContextMappingNode> SubNodes { get; set; }
-        }
 
-        private struct IndexedFieldName
+        private static object CreateParent(string path, IReadOnlyDictionary<string, object> objects, object root)
         {
-            public IndexedFieldName(int index, string fieldName)
+            var splitPath = PathHelper.SplitLastInPathString(path);
+            object itsParent;
+            if (string.IsNullOrEmpty(splitPath.Item1))
             {
-                Index = index;
-                FieldName = fieldName;
+                itsParent = root;
             }
-            public int Index { get; }
-            public string FieldName { get; }
-        }
-
-        private struct FieldColumEntry
-        {
-            public FieldColumEntry(int index, DbColumn col)
+            else if (objects.ContainsKey(splitPath.Item1))
             {
-                FieldIndex = index;
-                Column = col;
+                itsParent = objects[splitPath.Item1];
             }
-            public int FieldIndex { get; }
-            public DbColumn Column { get; }
+            else
+            {
+                itsParent = CreateParent(splitPath.Item1, objects, root);
+            }
+
+            var member = itsParent.GetType().GetClassMember(splitPath.Item2);
+
+            if (member == null)
+                throw new CoPilotRuntimeException("Unable to link mapped instance to a parent object");
+
+            var parent = ReflectionHelper.CreateInstance(member.MemberType);
+            member.SetValue(itsParent, parent);
+            return parent;
         }
 
-        public static IEnumerable<T> MapAndMerge<T>(TableContext<T> baseNode, IEnumerable<DbRecordSet> recordSets)
-            where T : class
+        public static IEnumerable<object> MapAndMerge(SelectTemplate template, DbRecordSet[] recordSets)
         {
-            return MapAndMerge(baseNode as ITableContextNode, recordSets).OfType<T>();
-        }
-
-        public static IEnumerable<object> MapAndMerge(ITableContextNode baseNode, IEnumerable<DbRecordSet> recordSets)
-        {
-            //var w = Stopwatch.StartNew();
+            
             if (recordSets == null) return new object[0];
 
-            var dbRecordSets = recordSets.ToArray();
-            for (var i=0; i<dbRecordSets.Length;i++)
+            if (recordSets.Length == 0) return new object[0];
+
+            if(recordSets.Any(r => r.Name == null))
             {
-                var n = PathHelper.SplitFirstInPathString(dbRecordSets[i].Name ?? "Q"+i);
-                if (!n.Item1.Equals("Base", StringComparison.Ordinal))
+                if (recordSets.Length == 1)
                 {
-                    dbRecordSets[i].Name = "Base" + (string.IsNullOrEmpty(n.Item2)?"":"."+n.Item2);
-                }
-            }
-            var sets = dbRecordSets.ToDictionary(k => k.Name, v => v);
-
-            if(sets.Count == 0) return new object[0];
-            
-            var mapper = Create(baseNode);
-            var baseSet = sets[baseNode.Path];
-            var mapped = mapper.Invoke(baseSet);
-            
-            ProcessNode(baseNode, "", baseSet, mapped, sets);
-            
-            //Console.WriteLine("Mapping took: " +w.ElapsedMilliseconds);
-            return mapped.Select(r => r.Instance);
-           
-        }
-
-        private static void ProcessNode(ITableContextNode node, string prefix, DbRecordSet parentSet, MappedRecord[] parentRecords, IDictionary<string, DbRecordSet> sets)
-        {
-            Parallel.ForEach(node.Nodes.Where(r => !r.Value.Relationship.IsLookupRelationship), rel =>
-            {
-                var relNode = rel.Value;
-                if (relNode.IsInverted)
-                {
-                    var pkName = prefix + relNode.GetSourceKey.ColumnName;
-                    var pkIndex = parentSet.GetIndex(pkName);
-
-                    var indexed = new Dictionary<object, MappedRecord>();
-                    for (var i = 0; i < parentRecords.Length; i++)
-                    {
-                        var keyValue = parentSet.Records[i][pkIndex];
-                        indexed.Add(keyValue, parentRecords[i]);
-                    }
-
-                    var fkName = relNode.GetTargetKey.ColumnName;
-
-                    if (sets.ContainsKey(relNode.Path))
-                    {
-                        var childSet = sets[relNode.Path];
-                        var fkIndex = childSet.GetIndex(fkName);
-                        var mapper = Create(relNode);
-                        var mapped = mapper.Invoke(childSet).ToArray();
-                        //merge
-                        for (var i = 0; i < mapped.Length; i++)
-                        {
-                            var keyValue = childSet.Records[i][fkIndex];
-                            if (indexed.ContainsKey(keyValue))
-                            {
-                                var instance = indexed[keyValue].Instance;
-                                var target = PathHelper.GetReferenceFromPath(instance, prefix + rel.Key);
-                                ReflectionHelper.AddValueToMemberCollection(target.Item2, target.Item1, mapped[i].Instance, false);
-                            }
-
-                        }
-
-                        ProcessNode(relNode, "", childSet, mapped, sets);
-                    }
-
+                    recordSets[0].Name = "Base";
                 }
                 else
                 {
-                    var newPrefix = prefix;
-                    if (string.IsNullOrEmpty(newPrefix))
-                    {
-                        newPrefix = rel.Key + ".";
-                    }
-                    else
-                    {
-                        newPrefix = newPrefix + rel.Key + ".";
-                    }
-                    ProcessNode(relNode, newPrefix, parentSet, parentRecords, sets);
+                    throw new CoPilotUnsupportedException(@"The context mapper requires the record sets to be named. 
+                        If you called a stored procedure, and it contains more than a single record set, 
+                        you'll have to provide a proper name for each set.
+                        Record sets should be named with the path made up from the propery names, that leads back to the base class, where the data will be merged into.");
                 }
-            });
-            //foreach (var rel in node.Nodes.Where(r => !r.Value.Relationship.IsLookupRelationship))
-            //{
-                
-            //}
-        }
+            }
 
-       
+            for (var i = 0; i < recordSets.Length; i++)
+            {
+                var n = PathHelper.SplitFirstInPathString(recordSets[i].Name);
+                if (!n.Item1.Equals("Base", StringComparison.Ordinal))
+                {
+                    recordSets[i].Name = "Base" + (string.IsNullOrEmpty(n.Item2) ? "" : "." + n.Item2);
+                }
+            }
+
+            var data = new Dictionary<string, MappedRecord[]>();
+            var mapper = Create(template);
+
+            //var _lock = new object();
+            //Parallel.ForEach(recordSets, set =>
+            //{
+            //    var mapped = mapper.Invoke(set);
+            //    lock (_lock)
+            //    {
+            //        data.Add(set.Name, mapped);
+            //    }
+            //});
+
+            foreach (var set in recordSets)
+            {
+                var mapped = mapper.Invoke(set);
+                data.Add(set.Name, mapped);
+            }
+
+            template.Merge(data);
+
+            if (template.ShapeFunc != null)
+            {
+                return data["Base"].Select(r => template.ShapeFunc.DynamicInvoke(r.Instance));
+            }
+            return data["Base"].Select(r => r.Instance);
+        }
     }
 
-    
+
 }

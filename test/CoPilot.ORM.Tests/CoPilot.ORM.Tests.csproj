@@ -35,8 +35,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="CoPilot.ORM">
-      <HintPath>..\..\src\CoPilot.ORM\bin\Debug\net46\CoPilot.ORM.dll</HintPath>
+    <Reference Include="CoPilot.ORM, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\src\CoPilot.ORM.SqlServer\bin\Debug\net46\CoPilot.ORM.dll</HintPath>
+    </Reference>
+    <Reference Include="CoPilot.ORM.SqlServer">
+      <HintPath>..\..\src\CoPilot.ORM.SqlServer\bin\Debug\net46\CoPilot.ORM.SqlServer.dll</HintPath>
     </Reference>
     <Reference Include="System" />
   </ItemGroup>

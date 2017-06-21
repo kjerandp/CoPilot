@@ -35,8 +35,15 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="CoPilot.ORM">
+    <Reference Include="CoPilot.ORM, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\src\CoPilot.ORM\bin\Debug\net46\CoPilot.ORM.dll</HintPath>
+    </Reference>
+    <Reference Include="CoPilot.ORM.MySql">
+      <HintPath>..\..\src\CoPilot.ORM.MySql\bin\Debug\net46\CoPilot.ORM.MySql.dll</HintPath>
+    </Reference>
+    <Reference Include="CoPilot.ORM.SqlServer">
+      <HintPath>..\..\src\CoPilot.ORM.SqlServer\bin\Debug\net46\CoPilot.ORM.SqlServer.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />
@@ -56,8 +63,9 @@
   <ItemGroup>
     <Compile Include="BandSampleTests.cs" />
     <Compile Include="Config\BandSampleConfig.cs" />
-    <Compile Include="Config\BandSampleDatabase.cs" />
+    <Compile Include="Config\MySqlBandSampleSetup.cs" />
     <Compile Include="Config\NorthwndConfig.cs" />
+    <Compile Include="Config\SqlServerBandSampleSetup.cs" />
     <Compile Include="Models\BandSample\Album.cs" />
     <Compile Include="Models\BandSample\AlbumTrack.cs" />
     <Compile Include="Models\BandSample\Band.cs" />

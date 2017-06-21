@@ -15,7 +15,7 @@ namespace CoPilot.ORM.Model
         internal static Tuple<string, string> SanitizeTableName(string tableName)
         {
             string schema = null;
-
+            
             tableName = tableName.Replace("[", "").Replace("]", "");
             var s = tableName.Split('.');
 
@@ -32,7 +32,6 @@ namespace CoPilot.ORM.Model
             {
                 throw new CoPilotConfigurationException($"'{tableName}' is an invalid table name.");
             }
-            //if (tableName.Contains(" ")) tableName = "[" + tableName + "]";
             return new Tuple<string, string>(schema, tableName);
         } 
 
@@ -110,9 +109,9 @@ namespace CoPilot.ORM.Model
 
         public override string ToString()
         {
-            return $"[{Schema}].[{TableName}]";
+            return $"<{Schema}>.<{TableName}>";
         }
-        
+
         public Dictionary<DbColumn, ClassMemberInfo> GetColumnsByAlias(ClassMemberInfo[] props)
         {
             return _columns.Join(props, c => c.AliasName.ToLower(), p => p.Name.ToLower(), (c, p) => new {c, p})

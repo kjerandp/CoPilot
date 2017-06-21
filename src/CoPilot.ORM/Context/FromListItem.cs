@@ -22,7 +22,7 @@ namespace CoPilot.ORM.Context
             if (obj != null)
             {
                 var other = (FromListItem)obj;
-                return Node.Equals(other.Node);
+                return Node != null && Node.Equals(other.Node);
             }
             return false;
 
@@ -30,9 +30,10 @@ namespace CoPilot.ORM.Context
 
         public override string ToString()
         {
+
             var tblName = Node.Table.TableName;
             //if (tblName.Contains(" ")) tblName = "[" + tblName + "]";
-            return $"{tblName} T{Node.Index}";
+            return $"{tblName} <T{Node.Index}>";
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using CoPilot.ORM.Common;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Database.Commands;
@@ -11,11 +12,11 @@ namespace CoPilot.ORM.Filtering
     {
         private Dictionary<string, object> _args;
         private List<DbParameter> _parameters;
-        private List<ContextMemberOperand> _contextMembers;
+        private List<MemberExpressionOperand> _contextMembers;
         public BinaryOperand Root { get; set; }
 
 
-        public ContextMemberOperand[] MemberExpressions
+        public MemberExpressionOperand[] MemberExpressions
         {
             get
             {
@@ -46,7 +47,7 @@ namespace CoPilot.ORM.Filtering
 
         private void Collect()
         {
-            _contextMembers = new List<ContextMemberOperand>();
+            _contextMembers = new List<MemberExpressionOperand>();
             _parameters = new List<DbParameter>();
             _args = new Dictionary<string, object>();
 
@@ -62,7 +63,7 @@ namespace CoPilot.ORM.Filtering
                 Collect(bop.Right);
             }
 
-            var mop = op as ContextMemberOperand;
+            var mop = op as MemberExpressionOperand;
             if (mop != null)
             {
                 _contextMembers.Add(mop);
@@ -86,9 +87,9 @@ namespace CoPilot.ORM.Filtering
         public static FilterGraph CreateByPrimaryKeyFilter(ITableContextNode node, object key)
         {
             var filter = new FilterGraph();
-            var left = new ContextMemberOperand(null) { ContextColumn = new ContextColumn(node, node.Table.GetSingularKey(), null) };
+            var left = new MemberExpressionOperand(ContextColumn.Create(node, node.Table.GetSingularKey()));
             var right = new ValueOperand("@key", key);
-            filter.Root = new BinaryOperand(left, right, "=");
+            filter.Root = new BinaryOperand(left, right, SqlOperator.Equal);
 
             return filter;
         }

@@ -46,5 +46,6 @@ namespace CoPilot.ORM.Filtering.Decoders.DecodedNodeTypes
         public string ReferencedTypeMemberAccess { get; private set; }
         public string ReferencedTypeMethodCall { get; internal set; }
         public object[] ReferenceTypeMethodCallArgs { get; set; }
+        public bool IsInverted { get; set; }
     }
 }

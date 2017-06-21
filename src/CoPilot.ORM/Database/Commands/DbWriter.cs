@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using CoPilot.ORM.Common;
@@ -11,7 +10,7 @@ using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Context.Operations;
 using CoPilot.ORM.Database.Commands.Options;
-using CoPilot.ORM.Database.Commands.SqlWriters.Interfaces;
+using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Helpers;
@@ -23,7 +22,7 @@ namespace CoPilot.ORM.Database.Commands
     /// <summary>
     /// Use this class to perform database write operations as a unit of work (using database transaction) 
     /// </summary>
-    public class DbWriter : UnitOfWork
+    public class DbWriter: IDisposable
     {
         /// <summary>
         /// Set which operations CoPilot is allowed to execute. Default is all.
@@ -32,43 +31,50 @@ namespace CoPilot.ORM.Database.Commands
         private readonly Dictionary<object,object> _entities = new Dictionary<object, object>();
         private readonly DbModel _model;
 
+        private bool _isCommited;
+
+        private readonly IDbProvider _provider;
+        private readonly IDbConnection _connection;
+        private readonly IDbTransaction _transaction;
+        private readonly IDbCommand _command;
+
         /// <summary>
         /// <see cref="ScriptOptions"/>
         /// </summary>
         public ScriptOptions Options;
 
-        private readonly IInsertStatementWriter _insertWriter;
-        private readonly IDeleteStatementWriter _deleteWriter;
-        private readonly IUpdateStatementWriter _updateWriter;
-        private readonly ICommonScriptingTasks _commonScriptingTasks;
+        
+
 
         /// <summary>
         /// Create an instance of the DbWriter with default behaviours
         /// </summary>
         /// <param name="db">CoPilot interface implementation</param>
-        public DbWriter(IDb db) : this(db.Model, db.Connection, ScriptOptions.Default()) {}
+        public DbWriter(IDb db) : this(db, ScriptOptions.Default()){}
 
         /// <summary>
         /// Internal use only
         /// </summary>
-        /// <param name="model">The DbModel is available from the IDb interface</param>
-        /// <param name="connection">SqlConnection instance</param>
+        /// <param name="db">CoPilot interface implementation</param>
         /// <param name="options">Options allows to control parameterization, identity insert etc <see cref="ScriptOptions"/></param>
-        internal DbWriter(DbModel model, SqlConnection connection, ScriptOptions options = null) : base(connection)
+        /// <param name="isolation"></param>
+        /// <param name="timeout"></param>
+        internal DbWriter(IDb db, ScriptOptions options, IsolationLevel isolation = IsolationLevel.ReadCommitted, int timeout = 30) 
         {
-            _model = model;
-
-            _insertWriter = _model.ResourceLocator.Get<IInsertStatementWriter>();
-            _deleteWriter = _model.ResourceLocator.Get<IDeleteStatementWriter>();
-            _updateWriter = _model.ResourceLocator.Get<IUpdateStatementWriter>();
-            _commonScriptingTasks = _model.ResourceLocator.Get<ICommonScriptingTasks>();
-
             Options = options ?? ScriptOptions.Default();
-
             Operations = (OperationType.Insert | OperationType.Update | OperationType.Delete);
 
-            SqlCommand.CommandType = CommandType.Text;
-            
+            _model = db.Model;
+            _provider = db.DbProvider;
+            _connection = db.CreateConnection();
+            _connection.Open();
+            //_transactionId = "T" + DateTime.Now.ToFileTime();
+            _transaction = _connection.BeginTransaction(isolation);
+            _command = _connection.CreateCommand();
+            _command.CommandTimeout = timeout;
+            _command.CommandType = CommandType.Text;
+            _command.Transaction = _transaction;
+
         }
 
         /// <summary>
@@ -80,21 +86,23 @@ namespace CoPilot.ORM.Database.Commands
         public int Command(string commandText, object args = null)
         {
             var request = DbRequest.CreateRequest(_model, commandText, args);
-            return CommandExecutor.ExecuteNonQuery(SqlCommand, request);
+            request.Command = _command;
+            return _provider.ExecuteNonQuery(request);
         }
 
         public void PrepareCommand(string commandText, object template)
         {
             var request = DbRequest.CreateRequest(_model, commandText, template);
-            CommandExecutor.PrepareNonQuery(SqlCommand, request);
+            request.Command = _command;
+            _provider.PrepareNonQuery(request);
         }
 
         public int Command(object args)
         {
-            if(SqlCommand.Parameters == null || string.IsNullOrEmpty(SqlCommand.CommandText))
+            if(_command.Parameters == null || string.IsNullOrEmpty(_command.CommandText))
                 throw new CoPilotUnsupportedException("Cannot re-run a command without parameters and/or statement set!");
 
-            return CommandExecutor.ReRunCommand(SqlCommand, args);
+            return _provider.ReRunCommand(_command, args);
         }
 
         public int BulkCommand(string commandText, IList<object> args)
@@ -103,10 +111,11 @@ namespace CoPilot.ORM.Database.Commands
                 throw new CoPilotUnsupportedException("Can't execute bulk command without any arguments!");
 
             var request = DbRequest.CreateRequest(_model, commandText, args[0]);
-            var result = CommandExecutor.ExecuteNonQuery(SqlCommand, request);
+            request.Command = _command;
+            var result = _provider.ExecuteNonQuery(request);
             for (var i = 1; i < args.Count; i++)
             {
-                var r = CommandExecutor.ReRunCommand(SqlCommand, args[i]);
+                var r = _provider.ReRunCommand(_command, args[i]);
                 if (result >= 0 && r > -1) result += r;
                 if (r < 0) result = r;
             }
@@ -122,7 +131,8 @@ namespace CoPilot.ORM.Database.Commands
         public object Scalar(string commandText, object args = null)
         {
             var request = DbRequest.CreateRequest(_model, commandText, args);
-            return CommandExecutor.ExecuteScalar(SqlCommand, request);
+            request.Command = _command;
+            return _provider.ExecuteScalar(request);
         }
 
         /// <summary>
@@ -313,9 +323,8 @@ namespace CoPilot.ORM.Database.Commands
 
         public DbReader GetReader()
         {
-            return new DbReader(SqlCommand, _model);
+            return new DbReader(_provider, _command, _model);
         }
-
 
         private void SaveNode(ITableContextNode node, object instance, Dictionary<string,object> unmappedValues = null)
         {
@@ -381,7 +390,8 @@ namespace CoPilot.ORM.Database.Commands
             object pk;
 
             
-            var stm = _insertWriter.GetStatement(opCtx, Options);
+            var stm = _provider.InsertStatementWriter.GetStatement(opCtx, Options);
+            stm.Command = _command;
 
             if (keys.Length == 1 && keys[0].DefaultValue?.Expression == DbExpressionType.PrimaryKeySequence &&
                 Options.EnableIdentityInsert &&
@@ -391,14 +401,14 @@ namespace CoPilot.ORM.Database.Commands
                 ))
             {
                 
-                stm.Script = _commonScriptingTasks.WrapInsideIdentityInsertScript(table.ToString(), stm.Script);
+                stm.Script = _provider.CommonScriptingTasks.WrapInsideIdentityInsertScript(table, stm.Script);
                 
-                CommandExecutor.ExecuteNonQuery(SqlCommand, stm);
+                _provider.ExecuteNonQuery(stm);
                 pk = opCtx.Args["@key"];
             }
             else
             {
-                pk = CommandExecutor.ExecuteScalar(SqlCommand, stm);
+                pk = _provider.ExecuteScalar(stm);
             }
 
             return pk;
@@ -419,8 +429,9 @@ namespace CoPilot.ORM.Database.Commands
             {
                 
                 var opCtx = node.Context.Update(node, instance, unmappedValues);
-                var stm = _updateWriter.GetStatement(opCtx, Options);
-                CommandExecutor.ExecuteNonQuery(SqlCommand, stm);
+                var stm = _provider.UpdateStatementWriter.GetStatement(opCtx, Options);
+                stm.Command = _command;
+                _provider.ExecuteNonQuery(stm);
             }
             if (node.Table.HasKey && !node.Table.HasCompositeKey)
             {
@@ -445,8 +456,9 @@ namespace CoPilot.ORM.Database.Commands
             {
                 
                 var opCtx = node.Context.Delete(node, instance);
-                var stm = _deleteWriter.GetStatement(opCtx, Options);
-                CommandExecutor.ExecuteNonQuery(SqlCommand, stm);
+                var stm = _provider.DeleteStatementWriter.GetStatement(opCtx, Options);
+                stm.Command = _command;
+                _provider.ExecuteNonQuery(stm);
             }
         }
 
@@ -456,8 +468,9 @@ namespace CoPilot.ORM.Database.Commands
             {
 
                 var opCtx = node.Context.Patch(node, instance);
-                var stm = _updateWriter.GetStatement(opCtx, Options);
-                CommandExecutor.ExecuteNonQuery(SqlCommand, stm);
+                var stm = _provider.UpdateStatementWriter.GetStatement(opCtx, Options);
+                stm.Command = _command;
+                _provider.ExecuteNonQuery(stm);
             }
         }
 
@@ -568,10 +581,12 @@ namespace CoPilot.ORM.Database.Commands
             var fkCol = node.Relationship.ForeignKeyColumn;
             var pkCol = node.Table.GetSingularKey();
             var parameter = new DbParameter("@key", pkCol.DataType, null, false);
-            var stm = new SqlStatement(_commonScriptingTasks.SetForeignKeyValueToNullScript(node.Table.ToString(), fkCol.ColumnName, pkCol.ColumnName));
+            var stm = new SqlStatement(_provider.CommonScriptingTasks.SetForeignKeyValueToNullScript(node.Table,
+                    fkCol.ColumnName, pkCol.ColumnName)) {Command = _command};
             stm.Parameters.Add(parameter);
             stm.AddArgument(parameter.Name, pk);
-            CommandExecutor.ExecuteNonQuery(SqlCommand, stm);
+
+            _provider.ExecuteNonQuery(stm);
         }
 
         private object[] SelectKeysFromChildTable(TableContextNode node, object pk)
@@ -580,13 +595,33 @@ namespace CoPilot.ORM.Database.Commands
             var pkCol = node.Table.GetSingularKey();
 
             var parameter = new DbParameter("@key", pkCol.DataType, null, false);
-            var stm = new SqlStatement(_commonScriptingTasks.GetSelectKeysFromChildTableScript(node.Table.ToString(), pkCol.ColumnName, fkCol.ColumnName));
+            var stm = new SqlStatement(_provider.CommonScriptingTasks.GetSelectKeysFromChildTableScript(
+                    node.Table, pkCol.ColumnName, fkCol.ColumnName)) {Command = _command};
             stm.Parameters.Add(parameter);
             stm.Args.Add(parameter.Name, pk);
 
-            var res = CommandExecutor.ExecuteQuery(SqlCommand, stm);
+            var res = _provider.ExecuteQuery(stm);
 
             return res.RecordSets.Single().Vector(0);
+        }
+        public void Commit()
+        {
+            if (_isCommited) return;
+
+            _transaction.Commit();
+            _isCommited = true;
+        }
+
+        public void Rollback()
+        {
+            _transaction.Rollback();
+        }
+        public void Dispose()
+        {
+            _connection.Close();
+            _command.Dispose();
+            _transaction.Dispose();
+            _connection.Dispose();
         }
     }
 }

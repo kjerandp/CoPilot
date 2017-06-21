@@ -1,84 +1,74 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using CoPilot.ORM.Context.Query;
-using CoPilot.ORM.Exceptions;
+using System.Linq.Expressions;
+using CoPilot.ORM.Common;
 
 namespace CoPilot.ORM.Database.Commands.Query.Interfaces
 {
     public interface IQueryBuilder
     {
-        QuerySegments Build(QueryContext ctx);
+        IQuery<T> From<T>() where T : class;
     }
 
-    public class QuerySegments
-    {   
-        private readonly Dictionary<QuerySegment, List<string>> _segments = new Dictionary<QuerySegment, List<string>>(6);
-
-        
-        public string[] Get(QuerySegment segment)
-        {
-            return _segments.ContainsKey(segment) ? _segments[segment].ToArray() : null;
-        }
-
-        public bool Exist(QuerySegment segment)
-        {
-            return _segments.ContainsKey(segment) && _segments[segment].Any();
-        }
-
-        public string Get(QuerySegment segment, int index)
-        {
-            return _segments.ContainsKey(segment) ? null : _segments[segment][index];
-        }
-
-        public void AddToSegment(QuerySegment segment, params string[] values)
-        {
-            if (values == null) return;
-            if (!_segments.ContainsKey(segment))
-            {
-                _segments.Add(segment, new List<string>());
-            }
-            _segments[segment].AddRange(values);
-        }
-
-        public string Print(QuerySegment segment, string joinWith = "\n\t", string prefixWith = "\n\t", bool required = false)
-        {
-            if (Exist(segment))
-            {
-                return prefixWith + string.Join(joinWith, Get(segment));
-            }
-            if (required)
-            {
-                throw new CoPilotRuntimeException($"{segment.ToString().ToUpper()} segment missing!");
-            }
-            return null;
-        }
-
-        public void Remove(QuerySegment segement)
-        {
-            if (_segments.ContainsKey(segement))
-            {
-                _segments.Remove(segement);
-            }
-        }
-    }
-
-    public enum QuerySegment
+    public interface IOrderedQuery<T> : IPreparedQuery<T> where T : class
     {
-        Select,
-        PreSelect,
-        PostSelect,
-        BaseTable,
-        PreBaseTable,
-        PostBaseTable,
-        PreJoins,
-        Joins,
-        PostJoins,
-        Filter,
-        PreFilter,
-        PostFilter,
-        Ordering,
-        PreOrdering,
-        PostOrdering
+        IOrderedQuery<T> ThenBy(string path, Ordering ordering = Ordering.Ascending);
+        IOrderedQuery<T> ThenBy(Expression<Func<T, object>> member, Ordering ordering = Ordering.Ascending);
+    }
+
+    public interface IOrderedQuery<out T, TTarget> : IPreparedQuery<T, TTarget> where T : class
+    {
+        IOrderedQuery<T, TTarget> ThenBy(string path, Ordering ordering = Ordering.Ascending);
+        IOrderedQuery<T, TTarget> ThenBy(Expression<Func<TTarget, object>> member, Ordering ordering = Ordering.Ascending);
+    }
+
+    public interface IIncludableQuery<T> : IOrderableQuery<T> where T : class
+    {
+        IOrderableQuery<T> Include(params string[] paths);
+    }
+
+    public interface IOrderableQuery<T> : IPreparedQuery<T> where T : class
+    {
+        IOrderedQuery<T> OrderBy(string path, Ordering ordering = Ordering.Ascending);
+        IOrderedQuery<T> OrderBy(Expression<Func<T, object>> member, Ordering ordering = Ordering.Ascending);
+    }
+
+    public interface IOrderableQuery<out T, TTarget> : IPreparedQuery<T, TTarget> where T : class
+    {
+        IOrderedQuery<T, TTarget> OrderBy(string path, Ordering ordering = Ordering.Ascending);
+        IOrderedQuery<T, TTarget> OrderBy(Expression<Func<TTarget, object>> member, Ordering ordering = Ordering.Ascending);
+    }
+
+    public interface IPreparedQuery<out T> where T : class
+    {
+        IPreparedQuery<T> Take(int take);
+        IPreparedQuery<T> Skip(int skip);
+        IPreparedQuery<T> Distinct();
+        T Single();
+        T[] ToArray();
+        IEnumerable<T> AsEnumerable();
+    }
+
+    public interface IPreparedQuery<out T, out TTarget> where T : class
+    {
+        IPreparedQuery<T, TTarget> Take(int take);
+        IPreparedQuery<T, TTarget> Skip(int skip);
+        IPreparedQuery<T, TTarget> Distinct();
+        TTarget Single();
+        TTarget[] ToArray();
+        IEnumerable<TTarget> AsEnumerable();
+    }
+
+    public interface IFilteredQuery<T> : IIncludableQuery<T> where T : class
+    {
+        IIncludableQuery<T> Select();
+        IOrderableQuery<T> Select(params string[] include);
+        IOrderableQuery<T, TTarget> Select<TTarget>(Expression<Func<T, TTarget>> selector);
+    }
+
+    public interface IQuery<T> : IFilteredQuery<T> where T : class
+    {
+        IFilteredQuery<T> Where(Expression<Func<T, bool>> predicate);
+
     }
 }

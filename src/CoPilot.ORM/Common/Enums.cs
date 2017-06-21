@@ -8,13 +8,6 @@ namespace CoPilot.ORM.Common
         LeftJoin
     }
 
-    [Obsolete]
-    public enum SqlCommandType
-    {
-        SqlStatement,
-        StoredProcedure
-    }
-
     public enum Ordering
     {
         Ascending,
@@ -38,5 +31,25 @@ namespace CoPilot.ORM.Common
         Warning = 2,
         Info = 3,
         Verbose = 4
+    }
+
+    public enum SqlOperator
+    {
+        AndAlso,
+        OrElse,
+        Equal,
+        NotEqual,
+        GreaterThan,
+        GreaterThanOrEqual,
+        LessThan,
+        LessThanOrEqual,
+        Add,
+        Subtract,
+        Like,
+        NotLike,
+        Is,
+        IsNot,
+        In,
+        NotIn
     }
 }

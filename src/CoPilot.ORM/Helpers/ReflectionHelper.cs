@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Linq;
 using System.Reflection;
+using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Extensions;
 
@@ -67,6 +68,11 @@ namespace CoPilot.ORM.Helpers
                 output = null;
                 return false;
             }
+        }
+
+        internal static object CreateInstance(Type type, object[] values)
+        {
+            return Activator.CreateInstance(type, values);
         }
 
         public static void SetValueOnMember(MemberInfo member, object entity, object value, bool throwOnError = true)
@@ -135,6 +141,28 @@ namespace CoPilot.ORM.Helpers
             }
         }
 
+        public static void AddValueToMemberCollection(ClassMemberInfo member, object entity, object item, bool throwOnError = true)
+        {
+            lock (LockObj)
+            {
+                try
+                {
+                    var collection = member.GetValue(entity) as IList;
+                    if (collection == null)
+                    {
+                        collection = Activator.CreateInstance(member.MemberType) as IList;
+                        member.SetValue(entity, collection);
+                    }
+                    
+                    collection?.Add(item);
+                }
+                catch (ArgumentException ex)
+                {
+                    if (throwOnError) throw new CoPilotRuntimeException($"Unable to add value to collection {member.Name}", ex);
+                }
+            }
+        }
+
         //public static object InvokeGenericMethod(object source, Type genericType, string methodName, params object[] args)
         //{
         //    var method = source.GetType().GetMethod(methodName);
@@ -163,12 +191,16 @@ namespace CoPilot.ORM.Helpers
             {
                 return string.Empty;
             }
+            
             var constructor = parameter.GetTypeInfo().GetConstructor(Type.EmptyTypes);
             if (constructor != null)
             {
                 return constructor.Invoke(new object[] {});
             }
-
+            if (parameter.IsNullable(true))
+            {
+                return GetDefaultValue(parameter.GenericTypeArguments.Single());
+            }
             return GetDefaultValue(parameter);
         }
         public static object GetDefaultValue(Type parameter)
