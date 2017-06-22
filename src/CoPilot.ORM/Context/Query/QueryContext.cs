@@ -7,6 +7,7 @@ using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Commands.SqlWriters;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Filtering;
+using CoPilot.ORM.Filtering.Operands;
 
 namespace CoPilot.ORM.Context.Query
 {
@@ -37,23 +38,34 @@ namespace CoPilot.ORM.Context.Query
                 throw new CoPilotUnsupportedException("No columns in select list!");
             }
 
-            var referencedNodes = selectColumns.Select(r => r.Node).Select(r => new FromListItem(r, false)).ToList();
+            var referencedNodes = new List<FromListItem>();
             if (filter?.Root != null)
             {
-                var filterNodes = filter.MemberExpressions.Select(r => r.ColumnReference.Node);
-                foreach (var filterNode in filterNodes)
+                foreach (var memberExpression in filter.MemberExpressions)
                 {
+                    var filterNode = memberExpression.ColumnReference.Node;
                     var tcn = filterNode as TableContextNode;
-                    if (tcn != null && tcn.IsInverted && tcn != baseNode) throw new CoPilotUnsupportedException("Invalid filter expression");
-                    referencedNodes.Add(new FromListItem(filterNode, tcn == null || !tcn.IsInverted));
+                    if (tcn != null && tcn.IsInverted && tcn != baseNode)
+                        throw new CoPilotUnsupportedException("Invalid filter expression");
+
+                    referencedNodes.Add(new FromListItem(filterNode, tcn == null || !(memberExpression.Operator == SqlOperator.Is && memberExpression.PairedOperand is NullOperand)));
                 }
             }
+
+            var selectNodes = selectColumns.Select(r => r.Node);
             if (node == ctx && ctx.Ordering != null && ctx.Ordering.Any())
             {
-                referencedNodes.AddRange(ctx.Ordering.Select(r => new FromListItem(r.Key.Node, false)));
+                selectNodes = selectNodes.Union(ctx.Ordering.Select(r => r.Key.Node));
+            }
+            foreach (var selectNode in selectNodes.Distinct())
+            {
+                if (!referencedNodes.Any(r => r.Node.Equals(selectNode)))
+                {
+                    referencedNodes.Add(new FromListItem(selectNode, selectNode.Equals(node)));
+                }
             }
 
-            var fromList = new List<FromListItem>(referencedNodes.Distinct().OrderBy(r => r.ForceInnerJoin ? 1 : r.Node.Order).ThenBy(r => r.Node.Level));
+            var fromList = new List<FromListItem>(referencedNodes.OrderBy(r => r.ForceInnerJoin ? 1 : r.Node.Order).ThenBy(r => r.Node.Level));
 
             var currentIndex = fromList.Count - 1;
 

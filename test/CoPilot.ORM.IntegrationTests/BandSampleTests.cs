@@ -27,7 +27,7 @@ namespace CoPilot.ORM.IntegrationTests
         [ClassInitialize]
         public static void BandSampleTestsInitialize(TestContext testContext)
         {
-            var logginLevel = LoggingLevel.None;
+            var logginLevel = LoggingLevel.Verbose;
             var model = BandSampleConfig.CreateModel();
             //var databaseSetup = new MySqlBandSampleSetup(model, logginLevel);
             var databaseSetup = new SqlServerBandSampleSetup(model, logginLevel);
@@ -96,6 +96,16 @@ namespace CoPilot.ORM.IntegrationTests
         {
             var test = _db.From<Album>()
                 .Where(r => r.Id + 4 == 5)
+                .ToArray();
+
+            Console.WriteLine(test.Length);
+        }
+
+        [TestMethod]
+        public void CanUseProperJoinTypeInSelectStatement()
+        {
+            var test = _db.From<AlbumTrack>()
+                .Where(r => r.Album.Title == null)
                 .ToArray();
 
             Console.WriteLine(test.Length);
@@ -422,6 +432,17 @@ namespace CoPilot.ORM.IntegrationTests
                     .ToArray();
             }
 
+        }
+
+        [TestMethod]
+        public void CanQueryManyToManyRelationshipsWithProjection()
+        {
+            var albums = _db.From<Band>()
+                .Where(r => r.Id == 7)
+                .Select(r => r.Recordings.SelectMany(a => a.AlbumTracks.Select(t => t.Album.Title)))
+                .ToArray();
+
+            
         }
 
         [TestMethod]

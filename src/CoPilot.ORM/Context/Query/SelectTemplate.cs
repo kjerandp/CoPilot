@@ -22,7 +22,7 @@ namespace CoPilot.ORM.Context.Query
             _sets = new Dictionary<string, Set>();
         }
 
-        public void AddEntry(ITableContextNode node, DbColumn column, ClassMemberInfo member = null, string joinAlias = null, string alias = null)
+        public string AddEntry(ITableContextNode node, DbColumn column, ClassMemberInfo member = null, string joinAlias = null, string alias = null)
         {
             var baseNode = DetermineBaseNode(node);
             var setName = baseNode.Path;
@@ -45,7 +45,7 @@ namespace CoPilot.ORM.Context.Query
 
             if (!_sets.ContainsKey(setName))
             {
-                _sets.Add(setName, new Set(baseNode));    
+                _sets.Add(setName, new Set(baseNode));
             }
 
             var set = _sets[setName];
@@ -60,14 +60,7 @@ namespace CoPilot.ORM.Context.Query
                 set.Entries.Add(entry);
             }
 
-            if (node.Level > 0)
-            {
-                var tableContextNode = node as TableContextNode;
-                if (tableContextNode != null && tableContextNode.IsInverted)
-                {
-                    set.JoinNode = tableContextNode;
-                }
-            }
+            return setName;
         }
 
         public void Complete()
@@ -75,22 +68,32 @@ namespace CoPilot.ORM.Context.Query
             var keys = _sets.Select(r => r.Key).ToArray();
             foreach (var key in keys)
             {
-                var set = _sets[key];
+                CompleteSet(key);
+            }
+        }
 
-                if(set.JoinNode == null) continue;
-                var node = set.JoinNode;
+        private void CompleteSet(string setName)
+        {
+            var set = _sets[setName];
 
-                var originSetName = DetermineSetName(node.Origin);
-                //Add primary key of base set if missing
-                if (!_sets.ContainsKey(originSetName) || !_sets[originSetName].Entries.Any(r => r.SelectColumn.Column.Equals(node.GetSourceKey)))
+            if (set.JoinNode == null) return;
+            var node = set.JoinNode;
+            
+            var originSetName = DetermineSetName(node.Origin);
+            //Add primary key of base set if missing
+            if (!_sets.ContainsKey(originSetName) || !_sets[originSetName].Entries.Any(r => r.SelectColumn.Column.Equals(node.GetSourceKey)))
+            {
+                var setCount = _sets.Count;
+                var addedToSetName = AddEntry(node.Origin, node.GetSourceKey);
+                if (_sets.Count != setCount)
                 {
-                    AddEntry(node.Origin, node.GetSourceKey);
+                    CompleteSet(addedToSetName);
                 }
-                //Add foreign key if missing
-                if (!set.Entries.Any(r => r.SelectColumn.Column.Equals(node.GetTargetKey)))
-                {
-                    AddEntry(node, node.GetTargetKey);
-                }
+            }
+            //Add foreign key if missing
+            if (!set.Entries.Any(r => r.SelectColumn.Column.Equals(node.GetTargetKey)))
+            {
+                AddEntry(node, node.GetTargetKey);
             }
         }
         
@@ -273,7 +276,15 @@ namespace CoPilot.ORM.Context.Query
             {
                 BaseNode = baseNode;
                 Entries = new List<SelectTemplateEntry>();
-                JoinNode = null;
+                if (baseNode.Level > 0)
+                {
+                    var tableContextNode = baseNode as TableContextNode;
+                    if (tableContextNode != null) //&& tableContextNode.IsInverted)
+                    {
+                        JoinNode = tableContextNode;
+                    }
+                }
+                
             }
 
             public List<SelectTemplateEntry> Entries { get; }

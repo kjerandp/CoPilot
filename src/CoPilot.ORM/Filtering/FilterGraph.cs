@@ -61,12 +61,21 @@ namespace CoPilot.ORM.Filtering
             {
                 Collect(bop.Left);
                 Collect(bop.Right);
-            }
-
-            var mop = op as MemberExpressionOperand;
-            if (mop != null)
-            {
-                _contextMembers.Add(mop);
+                var mopLeft = bop.Left as MemberExpressionOperand;
+                if (mopLeft != null)
+                {
+                    mopLeft.PairedOperand = bop.Right;
+                    mopLeft.Operator = bop.Operator;
+                    _contextMembers.Add(mopLeft);
+                }
+                
+                var mopRight = bop.Right as MemberExpressionOperand;
+                if (mopRight != null)
+                {
+                    mopRight.PairedOperand = bop.Left;
+                    mopRight.Operator = bop.Operator;
+                    _contextMembers.Add(mopRight);
+                }
             }
 
             var vop = op as ValueOperand;

@@ -1,3 +1,4 @@
+using CoPilot.ORM.Common;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Filtering.Interfaces;
 
@@ -14,6 +15,8 @@ namespace CoPilot.ORM.Filtering.Operands
         {
             ColumnReference = columnReference;
         }
+        public IExpressionOperand PairedOperand { get; set; }
+        public SqlOperator Operator { get; set; }
 
         public string Path { get; internal set; }
         public string WrapWith { get; set; }
