@@ -95,7 +95,7 @@ namespace CoPilot.ORM.Database.Commands
             if (mapper == null && _model.IsMapped(typeof(T)))
             {
                 var ctx = _model.CreateContext(typeof(T), response.GetPaths());
-                return ContextMapper.MapAndMerge(SelectTemplate.BuildFrom(ctx), response.RecordSets).OfType<T>();
+                return ContextMapper.MapAndMerge<T>(SelectTemplate.BuildFrom(ctx), response.RecordSets);
             }
 
             return response.Map<T>(mapper);

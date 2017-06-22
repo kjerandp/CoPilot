@@ -25,6 +25,11 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
         }
         public IEnumerable<object> Execute(ITableContextNode node, FilterGraph filter, DbReader reader)
         {
+            return Execute<object>(node, filter, reader);
+        }
+
+        public IEnumerable<T> Execute<T>(ITableContextNode node, FilterGraph filter, DbReader reader)
+        {
             var recordsets = new List<DbRecordSet>();
 
             var q = QueryContext.Create(node, filter);
@@ -32,10 +37,10 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
             var stm = q.GetStatement(_builder, _writer);
             var baseRecords = ExecuteStatement(node, stm, reader);
             recordsets.Add(baseRecords);
-            
+
             ExecuteNodeQueries(node, baseRecords, filter, reader, recordsets);
 
-            return ContextMapper.MapAndMerge(node.Context.SelectTemplate, recordsets.ToArray());
+            return ContextMapper.MapAndMerge<T>(node.Context.SelectTemplate, recordsets.ToArray());
         }
 
         private void ExecuteNodeQueries(ITableContextNode parentNode, DbRecordSet parentSet, FilterGraph filter, DbReader reader, ICollection<DbRecordSet> rs)

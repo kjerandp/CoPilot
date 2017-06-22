@@ -17,12 +17,17 @@ namespace CoPilot.ORM.Database.Commands.Query.Strategies
         }
         public IEnumerable<object> Execute(ITableContextNode node, FilterGraph filter, DbReader reader)
         {
+            return Execute<object>(node, filter, reader);
+        }
+
+        public IEnumerable<T> Execute<T>(ITableContextNode node, FilterGraph filter, DbReader reader)
+        {
             string[] names;
             var stm = _scriptCreator.CreateStatement(node, filter, out names);
 
             var response = reader.Query(stm, names.ToArray());
 
-            return ContextMapper.MapAndMerge(node.Context.SelectTemplate, response.RecordSets);
+            return ContextMapper.MapAndMerge<T>(node.Context.SelectTemplate, response.RecordSets);
         }
     }
 }

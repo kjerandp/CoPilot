@@ -152,11 +152,15 @@ namespace CoPilot.ORM.Database.Commands.Query
         {
             return AsEnumerable().ToArray();
         }
-        
+        public List<T> ToList()
+        {
+            return AsEnumerable().ToList();
+        }
 
         public IEnumerable<T> AsEnumerable()
         {
-            return Execute().OfType<T>();
+            var result = Execute<T>();
+            return result;
         }
 
         internal void UpdateContext()
@@ -180,6 +184,11 @@ namespace CoPilot.ORM.Database.Commands.Query
 
         internal IEnumerable<object> Execute()
         {
+            return Execute<object>();
+        }
+
+        internal IEnumerable<TTarget> Execute<TTarget>()
+        {
             if (Ctx == null)
                 Ctx = _model.CreateContext<T>();
 
@@ -188,34 +197,13 @@ namespace CoPilot.ORM.Database.Commands.Query
 
             if (_dbReader != null)
             {
-                return _dbReader.QueryStrategySelector(Ctx).Execute(Ctx, rootFilter, _dbReader);
+                return _dbReader.QueryStrategySelector(Ctx).Execute<TTarget>(Ctx, rootFilter, _dbReader);
             }
 
             using (var reader = new DbReader(_provider, _provider.CreateConnection(_connectionString), _model))
             {
-                return reader.QueryStrategySelector(Ctx).Execute(Ctx, rootFilter, reader);
+                return reader.QueryStrategySelector(Ctx).Execute<TTarget>(Ctx, rootFilter, reader);
             }
-        }
-
-        internal IEnumerable<TTarget> Execute<TTarget>()
-        {
-            return Execute().OfType<TTarget>();
-            
-
-            //UpdateContext();
-            //var mapper = (typeof(TTarget) == typeof(object) || typeof(TTarget) == typeof(IDictionary<string, object>)) ?
-            //        DynamicMapper.Create() :
-            //        SelectTemplateMapper.Create(Ctx, typeof(TTarget));
-
-            //if (_dbReader != null)
-            //{
-            //    return _dbReader.Query(Ctx).Map<TTarget>(mapper);
-            //}
-
-            //using (var reader = new DbReader(_provider, _provider.CreateConnection(_connectionString), _model))
-            //{
-            //    return reader.Query(Ctx).Map<TTarget>(mapper);
-            //}
         }
     }
 
@@ -303,6 +291,11 @@ namespace CoPilot.ORM.Database.Commands.Query
         public TTarget[] ToArray()
         {
             return AsEnumerable().ToArray();
+        }
+
+        public List<TTarget> ToList()
+        {
+            return AsEnumerable().ToList();
         }
 
         public IEnumerable<TTarget> AsEnumerable()

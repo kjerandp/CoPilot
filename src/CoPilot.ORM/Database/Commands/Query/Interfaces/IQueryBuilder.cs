@@ -49,13 +49,14 @@ namespace CoPilot.ORM.Database.Commands.Query.Interfaces
         IEnumerable<T> AsEnumerable();
     }
 
-    public interface IPreparedQuery<out T, out TTarget> where T : class
+    public interface IPreparedQuery<out T, TTarget> where T : class
     {
         IPreparedQuery<T, TTarget> Take(int take);
         IPreparedQuery<T, TTarget> Skip(int skip);
         IPreparedQuery<T, TTarget> Distinct();
         TTarget Single();
         TTarget[] ToArray();
+        List<TTarget> ToList();
         IEnumerable<TTarget> AsEnumerable();
     }
 

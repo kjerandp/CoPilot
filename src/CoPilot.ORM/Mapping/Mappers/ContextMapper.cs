@@ -179,14 +179,10 @@ namespace CoPilot.ORM.Mapping.Mappers
             return parent;
         }
 
-        public static IEnumerable<object> MapAndMerge(SelectTemplate template, DbRecordSet[] recordSets)
+        public static IEnumerable<T> MapAndMerge<T>(SelectTemplate template, DbRecordSet[] recordSets)
         {
-            
-            if (recordSets == null) return new object[0];
-
-            if (recordSets.Length == 0) return new object[0];
-
-            if(recordSets.Any(r => r.Name == null))
+            if (recordSets == null || recordSets.Length <= 0) yield break;
+            if (recordSets.Any(r => r.Name == null))
             {
                 if (recordSets.Length == 1)
                 {
@@ -194,7 +190,8 @@ namespace CoPilot.ORM.Mapping.Mappers
                 }
                 else
                 {
-                    throw new CoPilotUnsupportedException(@"The context mapper requires the record sets to be named. 
+                    throw new CoPilotUnsupportedException(
+                        @"The context mapper requires the record sets to be named. 
                         If you called a stored procedure, and it contains more than a single record set, 
                         you'll have to provide a proper name for each set.
                         Record sets should be named with the path made up from the propery names, that leads back to the base class, where the data will be merged into.");
@@ -212,17 +209,7 @@ namespace CoPilot.ORM.Mapping.Mappers
 
             var data = new Dictionary<string, MappedRecord[]>();
             var mapper = Create(template);
-
-            //var _lock = new object();
-            //Parallel.ForEach(recordSets, set =>
-            //{
-            //    var mapped = mapper.Invoke(set);
-            //    lock (_lock)
-            //    {
-            //        data.Add(set.Name, mapped);
-            //    }
-            //});
-
+               
             foreach (var set in recordSets)
             {
                 var mapped = mapper.Invoke(set);
@@ -231,13 +218,19 @@ namespace CoPilot.ORM.Mapping.Mappers
 
             template.Merge(data);
 
-            if (template.ShapeFunc != null)
+            
+            foreach (var mappedRecord in data["Base"])
             {
-                return data["Base"].Select(r => template.ShapeFunc.DynamicInvoke(r.Instance));
-            }
-            return data["Base"].Select(r => r.Instance);
+                if (template.ShapeFunc != null)
+                {
+                    yield return (T) template.ShapeFunc.DynamicInvoke(mappedRecord.Instance);
+                }
+                else
+                {
+                    yield return (T) mappedRecord.Instance;
+                }
+            }       
         }
     }
-
-
+    
 }
