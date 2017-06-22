@@ -29,7 +29,7 @@ or
 Install-Package CoPilot.ORM.MySql -Pre
 ```
 ## How to use
-CoPilot aims to be as simple and intuitive as possible to use and most features are available from a single interface called `IDb`. Please look for examples in the test projects, especially the BandSampleTests.cs
+CoPilot aims to be as simple and intuitive as possible to use and most features are available from a single interface called `IDb`. Please look for examples in the test projects, especially the [BandSampleTests.cs](/test/CoPilot.ORM.IntegrationTests/BandSampleTests.cs).
 
 ### Quick examples
 
