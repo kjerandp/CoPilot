@@ -2,7 +2,7 @@
   "title": "CoPilot.ORM.SqlServer",
   "authors": [ "Kjerand Pedersen" ],
   "description": "Sql Server provider for CoPilot.ORM",
-  "version": "2.0.0-alpha",
+  "version": "2.0.1-alpha",
   "copyright": "Copyright 2017",
   "packOptions": {
     "owners": [ "Kjerand Pedersen" ],
@@ -14,7 +14,7 @@
     "tags": [ "Sql Server", "CoPilot", "micro", "ORM", "O/RM", "core", "netstandard", "mapper", "sql", "data", "DAL", "ado.net" ]
   },
   "dependencies": {
-    "CoPilot.ORM": "2.0.0-alpha",
+    "CoPilot.ORM": "2.0.1-alpha",
     "System.Data.SqlClient": "4.3.0"
   },
   "frameworks": {

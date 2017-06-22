@@ -152,7 +152,46 @@ var updatedBand = _db.Query<Band>(
 var count = _db.Scalar<int>("SELECT COUNT(*) FROM BAND"); 
 
 ```
+You can do the same thing using a single connection by using the `DbWriter` class, which also gives you
+transaction support:
+```
+using (var writer = new DbWriter(_db))
+{
+    var reader = writer.GetReader(); //for queries
+    var rowsUpdated = writer.Command(
+        "UPDATE BAND SET BAND_NAME=@name WHERE BAND_ID=@band_id", 
+        new { band_id = 1, name = "Muse" }
+    );
 
+    var updatedBand = reader.Query<Band>(
+        "SELECT * FROM BAND WHERE BAND_ID=@id", 
+        new { id = 1 }
+    ).Single();
+
+    var count = reader.Scalar<int>(
+        "SELECT COUNT(*) FROM BAND"
+    );
+
+    writer.Commit();
+}
+```
+If you only need to do queries, you can achieve the same thing by simply using the `DbReader`:
+```
+using (var reader = new DbReader(_db))
+{
+    var band = reader.FindByKey<Band>(1);
+
+    var updatedBand = reader.Query<Band>("SELECT * FROM BAND WHERE BAND_ID=@Id", band).Single();
+
+    var count = reader.Scalar<int>("SELECT COUNT(*) FROM BAND");
+
+    var songs = reader.From<Recording>()
+        .Where(r => r.Band.Id == band.Id)
+        .Select(r => r.SongTitle)
+        .Distinct()
+        .ToArray();
+}
+```
 
 ## Configuration
 The above examples has the following configuration:

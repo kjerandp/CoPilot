@@ -380,6 +380,51 @@ namespace CoPilot.ORM.IntegrationTests
         }
 
         [TestMethod]
+        public void CanQueryWithScalarAndConvertToType()
+        {
+            var count = _db.Scalar<int>("SELECT COUNT(*) FROM BAND");
+
+            Assert.IsTrue(count > 0);
+        }
+
+        [TestMethod]
+        public void CanDoBasicOperationsUsingSingleConnection()
+        {
+            using (var writer = new DbWriter(_db))
+            {
+                var reader = writer.GetReader();
+                var rowsUpdated = writer.Command("UPDATE BAND SET BAND_NAME=@name WHERE BAND_ID=@band_id", new { band_id = 1, name = "Muse" });
+
+                var updatedBand = reader.Query<Band>("SELECT * FROM BAND WHERE BAND_ID=@id", new { id = 1 }).Single();
+
+                var count = reader.Scalar<int>("SELECT COUNT(*) FROM BAND");
+
+                writer.Commit();
+            }
+
+        }
+
+        [TestMethod]
+        public void CanDoBasicOperationsUsingOnlyReader()
+        {
+            using (var reader = new DbReader(_db))
+            {
+                var band = reader.FindByKey<Band>(1);
+
+                var updatedBand = reader.Query<Band>("SELECT * FROM BAND WHERE BAND_ID=@Id", band).Single();
+
+                var count = reader.Scalar<int>("SELECT COUNT(*) FROM BAND");
+
+                var songs = reader.From<Recording>()
+                    .Where(r => r.Band.Id == band.Id)
+                    .Select(r => r.SongTitle)
+                    .Distinct()
+                    .ToArray();
+            }
+
+        }
+
+        [TestMethod]
         public void CanInsertWithIdentityInsertEnabled()
         {
             var options = new ScriptOptions
@@ -402,6 +447,8 @@ namespace CoPilot.ORM.IntegrationTests
                 writer.Rollback();
             }
         }
+
+        
 
         [TestMethod]
         public void CanDoBulkInserts()

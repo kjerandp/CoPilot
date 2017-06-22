@@ -136,6 +136,7 @@ namespace CoPilot.ORM.Context.Query
 
         public ContextColumn[] GetColumnsInSet(string setName)
         {
+            if(!_sets.ContainsKey(setName)) return new ContextColumn[0];
             return _sets[setName].Entries.Select(r => r.SelectColumn).ToArray();
         }
 

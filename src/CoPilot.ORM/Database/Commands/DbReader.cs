@@ -13,6 +13,7 @@ using CoPilot.ORM.Model;
 using CoPilot.ORM.Database.Commands.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Providers;
+using CoPilot.ORM.Helpers;
 
 namespace CoPilot.ORM.Database.Commands
 {
@@ -140,6 +141,34 @@ namespace CoPilot.ORM.Database.Commands
         {
             return Query<TEntity, TDto>(selector, filter).SingleOrDefault();
         }
+
+        /// <summary>
+        /// Same as Scalar-method in the IDb interface <seealso cref="IDb.Scalar"/>
+        /// </summary>
+        /// <param name="commandText">Parameterized sql statement</param>
+        /// <param name="args">Anonymous object for passing arguments to named parameters</param>
+        /// <returns>Scalar value</returns>
+        public object Scalar(string commandText, object args = null)
+        {
+            var request = DbRequest.CreateRequest(_model, commandText, args);
+            request.Command = _command;
+            return _provider.ExecuteScalar(request);
+        }
+
+        /// <summary>
+        /// Same as Scalar-method in the IDb interface <seealso cref="IDb.Scalar"/>
+        /// </summary>
+        /// <param name="commandText">Parameterized sql statement</param>
+        /// <param name="args">Anonymous object for passing arguments to named parameters</param>
+        /// <returns>Scalar value converted to type of T</returns>
+        public T Scalar<T>(string commandText, object args = null)
+        {
+            object convertedValue;
+            ReflectionHelper.ConvertValueToType(typeof(T), Scalar(commandText, args), out convertedValue);
+
+            return (T)convertedValue;
+        }
+
 
         private SqlStatement GetStatement(ITableContextNode node, FilterGraph filter)
         {
