@@ -39,16 +39,15 @@ namespace CoPilot.ORM.MySql
             InsertStatementWriter = new MySqlInsertStatementWriter(this);
             UpdateStatementWriter = new MySqlUpdateStatementWriter(this);
             DeleteStatementWriter = new MySqlDeleteStatementWriter(this);
+            CommonScriptingTasks = new MySqlCommonScriptingTasks(this);
             SelectStatementWriter = new MySqlSelectStatementWriter();
-            CommonScriptingTasks = new MySqlCommonScriptingTasks();
             SelectStatementBuilder = new MySqlSelectStatementBuilder();
             SingleStatementQueryWriter = new TempTableJoinWriter(SelectStatementBuilder, SelectStatementWriter);
 
             Logger = new ConsoleLogger {LoggingLevel = loggingLevel};
         }
+        
 
-        
-        
 
         public DbResponse ExecuteQuery(DbRequest cmd, params string[] names)
         {
@@ -225,7 +224,6 @@ namespace CoPilot.ORM.MySql
         }
 
         
-
         public ICreateStatementWriter CreateStatementWriter { get; }
 
         public ISelectStatementBuilder SelectStatementBuilder { get; }
@@ -318,6 +316,29 @@ namespace CoPilot.ORM.MySql
 
             throw new CoPilotUnsupportedException($"Unable to convert {dataType} to a string.");
         }
+
+        public string GetSystemDatabaseName()
+        {
+            return "sys";
+        }
+
+        public string GetParameterAsString(DbParameter prm)
+        {
+            var dataTypeText = GetDataTypeAsString(prm.DataType, prm.Size);
+            if (prm.NumberPrecision != null && dataTypeText.EndsWith("<precision>"))
+            {
+                dataTypeText = dataTypeText.Replace("<precision>", $"({prm.NumberPrecision.Scale},{prm.NumberPrecision.Precision})");
+            }
+            var str = prm.Name + " " + dataTypeText;
+
+            if (prm.DefaultValue != null)
+            {
+                str += $" DEFAULT({prm.DefaultValue as string})";
+            }
+
+            return str;
+        }
+
 
         private string GetTypeString(DbDataType type)
         {

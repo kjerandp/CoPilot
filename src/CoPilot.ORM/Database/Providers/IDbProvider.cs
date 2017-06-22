@@ -30,7 +30,9 @@ namespace CoPilot.ORM.Database.Providers
         object ExecuteScalar(DbRequest cmd);
 
         string GetDataTypeAsString(DbDataType dataType, int size = 0);
-        
+        string GetSystemDatabaseName();
+        string GetParameterAsString(DbParameter prm);
+
         IDbConnection CreateConnection(string connectionString);
         //IDbCommand CreateCommand(IDbConnection connection = null, int timeout=0);
 

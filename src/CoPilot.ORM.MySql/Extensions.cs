@@ -25,48 +25,10 @@ namespace CoPilot.ORM.MySql
             return model.CreateDb(connectionString, new MySqlProvider());
         }
 
-        public static ScriptBlock UseDatabase(this ScriptBuilder sb, string databaseName)
-        {
-            var block = new ScriptBlock();
-
-            block.Add($"USE {databaseName.ToLower()};");
-
-            return block;
-        }
-
-        public static ScriptBlock DropCreateDatabase(this ScriptBuilder sb, string databaseName)
-        {
-            var block = sb.UseDatabase("sys");
-            
-            block.Append(sb.DropDatabase(databaseName));
-            block.Append(sb.CreateDatabase(databaseName));
-
-            return block;
-        }
-
-        public static ScriptBlock CreateDatabase(this ScriptBuilder sb, string databaseName)
-        {
-            var block = new ScriptBlock();
-
-            block.Add($"CREATE DATABASE IF NOT EXISTS {databaseName.ToLower()};");
-
-            return block;
-        }
-
-        public static ScriptBlock DropDatabase(this ScriptBuilder sb, string databaseName, bool autoCloseConnections = true)
-        {
-            var block = new ScriptBlock();
-            
-            block.Add($"DROP DATABASE IF EXISTS {databaseName.ToLower()};");
-
-            return block;
-        }
-
         public static ScriptBlock DropStoredProcedure(this ScriptBuilder sb, string name)
         {
             return new ScriptBlock($"DROP PROCEDURE IF EXISTS {name};");
         }
-
         
         public static ScriptBlock CreateTablesIfNotExists(this ScriptBuilder sb, CreateOptions options = null)
         {
@@ -173,7 +135,7 @@ namespace CoPilot.ORM.MySql
             if (string.IsNullOrEmpty(name)) throw new CoPilotUnsupportedException("You need to provide a name for the stored procedure");
 
             var paramsString = string.Join(", ",
-                parameters.Select(sb.GetParameterAsString));
+                parameters.Select(sb.DbProvider.GetParameterAsString));
 
             if (!string.IsNullOrEmpty(paramsString))
             {
@@ -185,24 +147,6 @@ namespace CoPilot.ORM.MySql
             script.AddMultiLineText("END;", false);
             return script;
         }
-
-        private static string GetParameterAsString(this ScriptBuilder sb, DbParameter prm)
-        {
-            var dataTypeText = sb.DbProvider.GetDataTypeAsString(prm.DataType, prm.Size);
-            if (prm.NumberPrecision != null && dataTypeText.EndsWith("<precision>"))
-            {
-                dataTypeText = dataTypeText.Replace("<precision>",$"({prm.NumberPrecision.Scale},{prm.NumberPrecision.Precision})");
-            }
-            var str = prm.Name + " " + dataTypeText;
-            
-            if (prm.DefaultValue != null)
-            {
-                str += $" DEFAULT({prm.DefaultValue as string})"; 
-            }
-
-            return str;
-        }
-        
 
         private static void CreateTableAndDependantTables(this ScriptBuilder sb, ScriptBlock block, DbTable table, List<DbTable> created, CreateOptions options)
         {

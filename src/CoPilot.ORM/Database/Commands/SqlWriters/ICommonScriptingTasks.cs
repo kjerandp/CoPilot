@@ -1,4 +1,5 @@
-﻿using CoPilot.ORM.Model;
+﻿using CoPilot.ORM.Database.Commands.Options;
+using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
 
 namespace CoPilot.ORM.Database.Commands.SqlWriters
@@ -9,5 +10,22 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
         ScriptBlock SetForeignKeyValueToNullScript(DbTable table, string fkCol, string keyCol);
         ScriptBlock WrapInsideIdentityInsertScript(DbTable table, ScriptBlock sourceScript);
         ScriptBlock GetModelValidationScript(DbTable dbTable);
+        ScriptBlock UseDatabase(string databaseName);
+        ScriptBlock CreateDatabase(string databaseName);
+        ScriptBlock DropDatabase(string databaseName, bool autoCloseConnections = true);
+        ScriptBlock DropCreateDatabase(string databaseName);
+    }
+
+    public interface IExtendedScripting
+    {
+        
+        
+        
+        
+        ScriptBlock CreateStoredProcedure(string name, DbParameter[] parameters, ScriptBlock body);
+        ScriptBlock DropStoredProcedure(string name);
+        ScriptBlock CreateTableIfNotExists(DbTable table, CreateOptions options = null);
+
+        
     }
 }

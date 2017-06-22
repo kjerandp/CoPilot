@@ -34,9 +34,9 @@ namespace CoPilot.ORM.SqlServer
             CreateStatementWriter = new SqlCreateStatementWriter(this);
             InsertStatementWriter = new SqlInsertStatementWriter(this);
             UpdateStatementWriter = new SqlUpdateStatementWriter(this);
-            DeleteStatementWriter = new SqlDeleteStatementWriter(this);
+            DeleteStatementWriter = new SqlDeleteStatementWriter(this);           
+            CommonScriptingTasks = new SqlCommonScriptingTasks(this);
             SelectStatementWriter = new SqlSelectStatementWriter();
-            CommonScriptingTasks = new SqlCommonScriptingTasks();
             SelectStatementBuilder = new SqlSelectStatementBuilder();
             SingleStatementQueryWriter = new TempTableJoinWriter(SelectStatementBuilder, SelectStatementWriter);
 
@@ -257,7 +257,27 @@ namespace CoPilot.ORM.SqlServer
             }
             return str;
         }
-        
+
+        public string GetSystemDatabaseName()
+        {
+            return "MASTER";
+        }
+
+        public string GetParameterAsString(DbParameter prm)
+        {
+            var str = prm.Name + " " + GetDataTypeAsString(prm.DataType, prm.Size);
+            if (prm.NumberPrecision != null)
+            {
+                str += $"({prm.NumberPrecision.Scale},{prm.NumberPrecision.Precision})";
+            }
+            if (prm.DefaultValue != null)
+            {
+                str += $" DEFAULT({prm.DefaultValue as string})";
+            }
+
+            return str;
+        }
+
         public string GetValueAsString(DbDataType dataType, object value)
         {
             if (value == null) return "NULL";

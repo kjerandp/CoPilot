@@ -77,55 +77,7 @@ namespace CoPilot.ORM.SqlServer
             var block = sb.If().NotExists().TableData(tableDefinition.TableName).Then(insertBlock).End();
             return block;
         }
-
-        public static ScriptBlock UseDatabase(this ScriptBuilder sb, string databaseName)
-        {
-            var block = new ScriptBlock();
-
-            block.Add($"USE {databaseName}");
-
-            return block;
-        }
-
-        public static ScriptBlock DropCreateDatabase(this ScriptBuilder sb, string databaseName)
-        {
-            var block = sb.UseDatabase("master");
-
-            block.Append(sb.Go());
-
-            block.Append(sb.If().Exists().Database(databaseName).Then(r => r.DropDatabase(databaseName)).End());
-
-            block.Add();
-            block.Append(sb.CreateDatabase(databaseName));
-
-            return block;
-        }
-
-        public static ScriptBlock CreateDatabase(this ScriptBuilder sb, string databaseName)
-        {
-            var block = new ScriptBlock();
-
-            block.Add($"CREATE DATABASE {databaseName}");
-
-            return block;
-        }
-
-        public static ScriptBlock DropDatabase(this ScriptBuilder sb, string databaseName, bool autoCloseConnections = true)
-        {
-            var block = new ScriptBlock();
-            if (autoCloseConnections)
-            {
-                block.Add("DECLARE @SQL varchar(max)");
-                block.Add("SELECT @SQL = COALESCE(@SQL,'') + 'Kill ' + Convert(varchar, SPId) + ';'");
-                block.Add("FROM MASTER..SysProcesses");
-                block.Add($"WHERE DBId = DB_ID({(sb.DbProvider.UseNationalCharacterSet?"N":"")}'{databaseName}') AND SPId <> @@SPId");
-                block.Add("EXEC(@SQL)");
-            }
-            block.Add($"DROP DATABASE {databaseName}");
-
-            return block;
-        }
-
+        
         public static ScriptBlock DropStoredProcedure(this ScriptBuilder sb, string name)
         {
             return new ScriptBlock($"DROP PROCEDURE {name}");
@@ -137,8 +89,6 @@ namespace CoPilot.ORM.SqlServer
             block.Add("GO" + (times > 0 ? " " + times : ""), "");
             return block;
         }
-
-        
 
         public static ScriptBlock CreateTablesIfNotExists(this ScriptBuilder sb, CreateOptions options = null)
         {
@@ -157,15 +107,12 @@ namespace CoPilot.ORM.SqlServer
             }
             return block;
         }
-
-
+        
         public static ScriptBlock CreateTableIfNotExists<T>(this ScriptBuilder sb, CreateOptions options = null) where T : class
         {
             var table = sb.Model.GetTableMap<T>().Table;
 
-            var createScript = sb.CreateTable<T>(options);
-            var block = sb.If().NotExists().Table(table.TableName).Then(createScript).End();
-            return block;
+            return CreateTableIfNotExists(sb, table, options);
         }
 
         public static ScriptBlock CreateOrReplaceStoredProcedure(this ScriptBuilder sb, string name, DbParameter[] parameters, ScriptBlock body)
@@ -251,7 +198,7 @@ namespace CoPilot.ORM.SqlServer
             if (string.IsNullOrEmpty(name)) throw new CoPilotUnsupportedException("You need to provide a name for the stored procedure");
 
             var paramsString = string.Join(", ",
-                parameters.Select(sb.GetParameterAsString));
+                parameters.Select(sb.DbProvider.GetParameterAsString));
 
             if (!string.IsNullOrEmpty(paramsString))
             {
@@ -264,25 +211,8 @@ namespace CoPilot.ORM.SqlServer
             return script;
         }
 
-        private static string GetParameterAsString(this ScriptBuilder sb, DbParameter prm)
-        {
-            var str = prm.Name + " " + sb.DbProvider.GetDataTypeAsString(prm.DataType, prm.Size);
-            if (prm.NumberPrecision != null)
-            {
-                str += $"({prm.NumberPrecision.Scale},{prm.NumberPrecision.Precision})";
-            }
-            if (prm.DefaultValue != null)
-            {
-                str += $" DEFAULT({prm.DefaultValue as string})"; 
-            }
-
-            return str;
-        }
-        
-
         private static void CreateTableAndDependantTables(this ScriptBuilder sb, ScriptBlock block, DbTable table, List<DbTable> created, CreateOptions options)
         {
-
             var dependantTables = table.Columns.Where(r => r.IsForeignKey).Select(r => r.ForeignkeyRelationship.PrimaryKeyColumn.Table).Distinct();
             foreach (var dependantTable in dependantTables.Where(r => !created.Contains(r)))
             {

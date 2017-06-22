@@ -2,12 +2,19 @@
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
 using System.Linq;
+using CoPilot.ORM.Database.Commands;
 
 namespace CoPilot.ORM.MySql.Writers
 {
 
     public class MySqlCommonScriptingTasks : ICommonScriptingTasks
     {
+        private readonly MySqlProvider _provider;
+
+        public MySqlCommonScriptingTasks(MySqlProvider provider)
+        {
+            _provider = provider;
+        }
         public ScriptBlock GetSelectKeysFromChildTableScript(DbTable table, string pkCol, string keyCol)
         {
             return new ScriptBlock($"SELECT `{pkCol}` FROM `{table.TableName}` WHERE `{keyCol}` = @key");
@@ -29,6 +36,43 @@ namespace CoPilot.ORM.MySql.Writers
                 $"select {string.Join(",", dbTable.Columns.Select(r => "`" + r.ColumnName + "`"))} from `{dbTable.TableName}` limit 1;",
                 $"select * from `{dbTable.TableName}` limit 1"
             );
+        }
+
+        public ScriptBlock UseDatabase(string databaseName)
+        {
+            var block = new ScriptBlock();
+
+            block.Add($"USE {databaseName.ToLower()};");
+
+            return block;
+        }
+
+        public ScriptBlock CreateDatabase(string databaseName)
+        {
+            var block = new ScriptBlock();
+
+            block.Add($"CREATE DATABASE IF NOT EXISTS {databaseName.ToLower()};");
+
+            return block;
+        }
+
+        public ScriptBlock DropDatabase(string databaseName, bool autoCloseConnections = true)
+        {
+            var block = new ScriptBlock();
+
+            block.Add($"DROP DATABASE IF EXISTS {databaseName.ToLower()};");
+
+            return block;
+        }
+
+        public ScriptBlock DropCreateDatabase(string databaseName)
+        {
+            var block = UseDatabase(_provider.GetSystemDatabaseName());
+
+            block.Append(DropDatabase(databaseName));
+            block.Append(CreateDatabase(databaseName));
+
+            return block;
         }
     }
 }

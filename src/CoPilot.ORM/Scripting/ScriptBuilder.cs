@@ -12,7 +12,7 @@ namespace CoPilot.ORM.Scripting
     /// <summary>
     /// Used to generate SQL scripts
     /// </summary>
-    public class ScriptBuilder
+    public class ScriptBuilder 
     {
         public DbModel Model { get; }
         public IDbProvider DbProvider { get; }
@@ -90,6 +90,25 @@ namespace CoPilot.ORM.Scripting
             return DbProvider.CreateStatementWriter.GetStatement(table, options);
         }
 
-    
+
+        public ScriptBlock UseDatabase(string databaseName)
+        {
+            return DbProvider.CommonScriptingTasks.UseDatabase(databaseName);
+        }
+
+        public ScriptBlock CreateDatabase(string databaseName)
+        {
+            return DbProvider.CommonScriptingTasks.CreateDatabase(databaseName);
+        }
+
+        public ScriptBlock DropDatabase(string databaseName, bool autoCloseConnections = true)
+        {
+            return DbProvider.CommonScriptingTasks.DropDatabase(databaseName, autoCloseConnections);
+        }
+
+        public ScriptBlock DropCreateDatabase(string databaseName)
+        {
+            return DbProvider.CommonScriptingTasks.DropCreateDatabase(databaseName);
+        }
     }
 }
