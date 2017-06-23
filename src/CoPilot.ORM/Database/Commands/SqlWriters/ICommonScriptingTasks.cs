@@ -14,18 +14,12 @@ namespace CoPilot.ORM.Database.Commands.SqlWriters
         ScriptBlock CreateDatabase(string databaseName);
         ScriptBlock DropDatabase(string databaseName, bool autoCloseConnections = true);
         ScriptBlock DropCreateDatabase(string databaseName);
-    }
-
-    public interface IExtendedScripting
-    {
-        
-        
-        
-        
-        ScriptBlock CreateStoredProcedure(string name, DbParameter[] parameters, ScriptBlock body);
-        ScriptBlock DropStoredProcedure(string name);
+        ScriptBlock CreateTable(DbTable table, CreateOptions options);
         ScriptBlock CreateTableIfNotExists(DbTable table, CreateOptions options = null);
+        ScriptBlock CreateStoredProcedure(string name, DbParameter[] parameters, ScriptBlock body);
+        ScriptBlock CreateOrReplaceStoredProcedure(string name, DbParameter[] parameters, ScriptBlock body);
+        ScriptBlock DropStoredProcedure(string name);
 
-        
     }
+
 }

@@ -332,6 +332,10 @@ namespace CoPilot.ORM.SqlServer
             throw new CoPilotUnsupportedException($"Unable to convert {dataType} to a string.");
         }
 
+        public string GetStoredProcedureParameterName(string name)
+        {
+            return "@" + name;
+        }
 
         private SqlDbType ToDbType(DbDataType type)
         {

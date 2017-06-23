@@ -27,11 +27,11 @@ namespace CoPilot.ORM.IntegrationTests
         [ClassInitialize]
         public static void BandSampleTestsInitialize(TestContext testContext)
         {
-            var logginLevel = LoggingLevel.Verbose;
+            var logginLevel = LoggingLevel.None;
             var model = BandSampleConfig.CreateModel();
             //var databaseSetup = new MySqlBandSampleSetup(model, logginLevel);
             var databaseSetup = new SqlServerBandSampleSetup(model, logginLevel);
-            //databaseSetup.DropCreateDatabase();
+            databaseSetup.DropCreateDatabase();
             _db = databaseSetup.GetDb();        
         }
 
@@ -404,11 +404,11 @@ namespace CoPilot.ORM.IntegrationTests
             {
                 var reader = writer.GetReader();
                 var rowsUpdated = writer.Command("UPDATE BAND SET BAND_NAME=@name WHERE BAND_ID=@band_id", new { band_id = 1, name = "Muse" });
-
+                Assert.AreEqual(1, rowsUpdated);
                 var updatedBand = reader.Query<Band>("SELECT * FROM BAND WHERE BAND_ID=@id", new { id = 1 }).Single();
-
+                Assert.IsNotNull(updatedBand);
                 var count = reader.Scalar<int>("SELECT COUNT(*) FROM BAND");
-
+                Assert.IsTrue(count > 1);
                 writer.Commit();
             }
 
@@ -422,29 +422,20 @@ namespace CoPilot.ORM.IntegrationTests
                 var band = reader.FindByKey<Band>(1);
 
                 var updatedBand = reader.Query<Band>("SELECT * FROM BAND WHERE BAND_ID=@Id", band).Single();
-
+                Assert.IsNotNull(updatedBand);
                 var count = reader.Scalar<int>("SELECT COUNT(*) FROM BAND");
-
+                Assert.IsTrue(count > 1);
                 var songs = reader.From<Recording>()
                     .Where(r => r.Band.Id == band.Id)
                     .Select(r => r.SongTitle)
                     .Distinct()
                     .ToArray();
+                Assert.IsTrue(songs.Any());
             }
 
         }
 
-        [TestMethod]
-        public void CanQueryManyToManyRelationshipsWithProjection()
-        {
-            var albums = _db.From<Band>()
-                .Where(r => r.Id == 7)
-                .Select(r => r.Recordings.SelectMany(a => a.AlbumTracks.Select(t => t.Album.Title)))
-                .ToArray();
-
-            
-        }
-
+        
         [TestMethod]
         public void CanInsertWithIdentityInsertEnabled()
         {

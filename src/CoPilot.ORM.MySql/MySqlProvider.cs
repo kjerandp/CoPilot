@@ -240,6 +240,11 @@ namespace CoPilot.ORM.MySql
 
         public ISingleStatementQueryWriter SingleStatementQueryWriter { get; }
 
+        public string GetStoredProcedureParameterName(string name)
+        {
+            return name;
+        }
+
         public IDbConnection CreateConnection(string connectionString)
         {
             return new MySqlConnection(connectionString);

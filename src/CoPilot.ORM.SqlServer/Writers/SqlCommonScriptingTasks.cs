@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Linq;
+using CoPilot.ORM.Database.Commands;
+using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.Database.Commands.SqlWriters;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
 
@@ -89,6 +92,50 @@ namespace CoPilot.ORM.SqlServer.Writers
             block.Append(CreateDatabase(databaseName));
 
             return block;
+        }
+
+        public ScriptBlock CreateTable(DbTable table, CreateOptions options)
+        {
+            options = options ?? CreateOptions.Default();
+            return _provider.CreateStatementWriter.GetStatement(table, options).Script;
+        }
+
+        public ScriptBlock CreateTableIfNotExists(DbTable table, CreateOptions options = null)
+        {
+            var createScript = CreateTable(table, options);
+            var block = If().NotExists().Table(table.TableName).Then(createScript).End();
+            return block;
+        }
+
+        public ScriptBlock CreateStoredProcedure(string name, DbParameter[] parameters, ScriptBlock body)
+        {
+            if (string.IsNullOrEmpty(name)) throw new CoPilotUnsupportedException("You need to provide a name for the stored procedure");
+
+            var paramsString = string.Join(", ",
+                parameters.Select(_provider.GetParameterAsString));
+
+            if (!string.IsNullOrEmpty(paramsString))
+            {
+                paramsString = $"({paramsString})";
+            }
+
+            var script = new ScriptBlock($"CREATE PROCEDURE {name} {paramsString}", "AS", "BEGIN");
+            script.AddMultiLineText(body.ToString());
+            script.AddMultiLineText("END", false);
+            return script;
+        }
+
+        public ScriptBlock CreateOrReplaceStoredProcedure(string name, DbParameter[] parameters, ScriptBlock body)
+        {
+            var script = If().Exists().StoredProcedure(name).Then(DropStoredProcedure(name)).End();
+            script.Append(Go());
+            script.Append(CreateStoredProcedure(name, parameters, body));
+            return script;
+        }
+
+        public ScriptBlock DropStoredProcedure(string name)
+        {
+            return new ScriptBlock($"DROP PROCEDURE {name}");
         }
 
         private static ScriptBlock Go(int times = 0)
