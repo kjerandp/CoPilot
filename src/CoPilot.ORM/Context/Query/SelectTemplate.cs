@@ -145,7 +145,7 @@ namespace CoPilot.ORM.Context.Query
 
         public Dictionary<string, ContextColumn> GetDictionaryFromSet(string setName)
         {
-            return _sets[setName].Entries.ToDictionary(r => r.LocalId, r => r.SelectColumn);
+            return _sets[setName].Entries.ToDictionary(r => r.LocalId.ToLower(), r => r.SelectColumn);
         }
 
         public ITableContextNode GetBaseNode(string setName)
@@ -264,7 +264,7 @@ namespace CoPilot.ORM.Context.Query
                     return keyCol.MappedMember.GetValue(instance);
                 };
             }
-            return m => m.UnmappedData[string.IsNullOrEmpty(keyCol.ColumnAlias) ? keyCol.Column.ColumnName : keyCol.ColumnAlias];
+            return m => m.UnmappedData[(string.IsNullOrEmpty(keyCol.ColumnAlias) ? keyCol.Column.ColumnName : keyCol.ColumnAlias).ToLower()];
         }
 
 

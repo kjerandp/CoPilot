@@ -35,8 +35,7 @@ namespace CoPilot.ORM.Database.Providers
 
         string GetStoredProcedureParameterName(string name);
         IDbConnection CreateConnection(string connectionString);
-        //IDbCommand CreateCommand(IDbConnection connection = null, int timeout=0);
-
+        
         void RegisterMethodCallConverters(MethodCallConverters converters);
     }
 }

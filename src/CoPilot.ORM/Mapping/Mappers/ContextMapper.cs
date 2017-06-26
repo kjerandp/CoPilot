@@ -60,7 +60,7 @@ namespace CoPilot.ORM.Mapping.Mappers
 
             for (var i = 0; i < fields.Length; i++)
             {
-                var field = fields[i];
+                var field = fields[i].ToLower();
                 var value = values[i];
 
                 if (value is DBNull) continue;

@@ -42,6 +42,9 @@
     <Reference Include="CoPilot.ORM.MySql">
       <HintPath>..\..\src\CoPilot.ORM.MySql\bin\Debug\net46\CoPilot.ORM.MySql.dll</HintPath>
     </Reference>
+    <Reference Include="CoPilot.ORM.PostgreSql">
+      <HintPath>..\..\src\CoPilot.ORM.PostgreSql\bin\Debug\net46\CoPilot.ORM.PostgreSql.dll</HintPath>
+    </Reference>
     <Reference Include="CoPilot.ORM.SqlServer">
       <HintPath>..\..\src\CoPilot.ORM.SqlServer\bin\Debug\net46\CoPilot.ORM.SqlServer.dll</HintPath>
     </Reference>
@@ -63,6 +66,7 @@
   <ItemGroup>
     <Compile Include="BandSampleTests.cs" />
     <Compile Include="Config\BandSampleConfig.cs" />
+    <Compile Include="Config\PostgreSqlBandSampleSetup.cs" />
     <Compile Include="Config\MySqlBandSampleSetup.cs" />
     <Compile Include="Config\NorthwndConfig.cs" />
     <Compile Include="Config\SqlServerBandSampleSetup.cs" />

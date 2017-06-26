@@ -1,33 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.Database.Commands.SqlWriters;
+using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Scripting;
-using System.Linq;
-using CoPilot.ORM.Exceptions;
 
-namespace CoPilot.ORM.MySql.Writers
+namespace CoPilot.ORM.PostgreSql.Writers
 {
-    public class MySqlCreateStatementWriter : ICreateStatementWriter
+    public class PostgreSqlCreateStatementWriter : ICreateStatementWriter
     {
-        private readonly MySqlProvider _provider;
+        private readonly PostgreSqlProvider _provider;
 
-        public MySqlCreateStatementWriter(MySqlProvider provider)
+        public PostgreSqlCreateStatementWriter(PostgreSqlProvider provider)
         {
             _provider = provider;
         }
 
         public SqlStatement GetStatement(DbTable table, CreateOptions options)
-        {
-
-            var pk = new List<string>();
-             
+        {             
             var stm = new SqlStatement();
-            stm.Script.Add($"CREATE TABLE IF NOT EXISTS `{table.TableName}` (");
+            stm.Script.Add($"CREATE TABLE IF NOT EXISTS {Util.SanitizeName(table.TableName)} (");
 
             var createColumns = new ScriptBlock();
             var constraints = new ScriptBlock();
@@ -35,37 +32,37 @@ namespace CoPilot.ORM.MySql.Writers
             foreach (var dbColumn in table.Columns)
             {
                 var extendedInfo = "";
-                
+
                 if (dbColumn.IsPrimaryKey)
                 {
                     extendedInfo = " " + GetPrimaryKeyString(dbColumn);
-                    pk.Add($"`{dbColumn.ColumnName}`");
-                   
+                  
+                }
+                else
+                {
+                    extendedInfo = " " + GetDataTypeString(dbColumn);
                 }
                 if (dbColumn.IsForeignKey)
                 {
                     constraints.Add(GetForeignKeyString(dbColumn));
                 }
-                createColumns.Add($"{(createColumns.ItemCount > 0 ? "," : "")}{dbColumn.ColumnName}{GetDataTypeString(dbColumn)}{extendedInfo}");
+                createColumns.Add($"{(createColumns.ItemCount > 0 ? "," : "")}{Util.SanitizeName(dbColumn.ColumnName)}{extendedInfo}");
             }
            
             var uniqueColumns = table.Columns.Where(r => r.Unique);
 
             foreach (var uniqueColumn in uniqueColumns)
             {
-                constraints.Add($",CONSTRAINT UQ_{uniqueColumn.ColumnName.Replace(" ","_")} UNIQUE(`{uniqueColumn.ColumnName}`)");
+                constraints.Add($",CONSTRAINT UQ_{uniqueColumn.ColumnName.Replace(" ","_")} UNIQUE({Util.SanitizeName(uniqueColumn.ColumnName)})");
             }
 
             stm.Script.Add(createColumns);
-            if (pk.Any())
-            {
-                stm.Script.Add($"\t,PRIMARY KEY ({string.Join(", ", pk)})");
-            }
+            
             if (constraints.ItemCount > 0)
             {
                 stm.Script.Append(constraints);
             }
-            stm.Script.Add(string.IsNullOrEmpty(_provider.Collation) ? ");" : $")\nCOLLATE {_provider.Collation};");
+            stm.Script.Add(");");
 
 
             return stm;
@@ -76,17 +73,17 @@ namespace CoPilot.ORM.MySql.Writers
             var str = string.Empty;
             if (column.DefaultValue?.Expression == DbExpressionType.PrimaryKeySequence && !column.Table.HasCompositeKey)
             {
-                str += "AUTO_INCREMENT ";
+                str += column.DataType == DbDataType.Int64 ? "BIGSERIAL " : "SERIAL ";
                 
             }
             
-            return str;
+            return str + "PRIMARY KEY";
         }
 
         private static string GetForeignKeyString(DbColumn column)
         {
 
-            var str = $"\t,FOREIGN KEY (`{column.ColumnName}`) REFERENCES {column.ForeignkeyRelationship.PrimaryKeyColumn.Table.TableName}({column.ForeignkeyRelationship.PrimaryKeyColumn.ColumnName})";
+            var str = $"\t,FOREIGN KEY ({Util.SanitizeName(column.ColumnName)}) REFERENCES {Util.SanitizeName(column.ForeignkeyRelationship.PrimaryKeyColumn.Table.TableName)} ({Util.SanitizeName(column.ForeignkeyRelationship.PrimaryKeyColumn.ColumnName)})";
             return str;
         }
 
@@ -100,7 +97,10 @@ namespace CoPilot.ORM.MySql.Writers
             var str = " " + dataTypeText;
             
             str += $" {(!column.IsNullable ? "NOT " : "")}NULL";
-
+            if (!string.IsNullOrEmpty(_provider.Collation))
+            {
+                str += $" COLLATE {Util.SanitizeName(_provider.Collation)}";
+            }
             if (column.DefaultValue != null && column.DefaultValue.Expression != DbExpressionType.PrimaryKeySequence)
             {
                 var defaultValue = string.Empty;
