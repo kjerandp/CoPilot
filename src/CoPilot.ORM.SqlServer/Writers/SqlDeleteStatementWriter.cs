@@ -40,10 +40,10 @@ namespace CoPilot.ORM.SqlServer.Writers
                     valueString = part.Replace("{value}", _provider.GetValueAsString(col.DataType, value));
                 }
                    
-                qualifications.Add($"[{col.ColumnName}] = {valueString}"); 
+                qualifications.Add($"{col.ColumnName.QuoteIfNeeded()} = {valueString}"); 
             }
             
-            statement.Script.Add($"delete from [{ctx.Node.Table.Schema}].[{ctx.Node.Table.TableName}] where {string.Join(" AND ", qualifications)}");
+            statement.Script.Add($"delete from {ctx.Node.Table.GetAsString()} where {string.Join(" AND ", qualifications)}");
             
             return statement;
         }

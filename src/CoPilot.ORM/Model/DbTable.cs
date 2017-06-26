@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Exceptions;
 
@@ -12,12 +13,22 @@ namespace CoPilot.ORM.Model
         private readonly HashSet<DbColumn> _columns = new HashSet<DbColumn>();
         private readonly HashSet<DbRelationship> _inverseRelationships = new HashSet<DbRelationship>();
         
-        internal static Tuple<string, string> SanitizeTableName(string tableName)
+        public static string UnquoteName(string name)
+        {
+            if (name == null) return null;
+            const string pattern = "[^a-zA-Z0-9_.\\s]";
+
+            var rgx = new Regex(pattern);
+            name = rgx.Replace(name,"");
+            
+            return name;
+        }
+
+        public static Tuple<string, string> Decompose(string name)
         {
             string schema = null;
-            
-            tableName = tableName.Replace("[", "").Replace("]", "");
-            var s = tableName.Split('.');
+            string tableName;
+            var s = name.Split('.');
 
             if (s.Length == 1)
             {
@@ -30,15 +41,16 @@ namespace CoPilot.ORM.Model
             }
             else
             {
-                throw new CoPilotConfigurationException($"'{tableName}' is an invalid table name.");
+                throw new CoPilotConfigurationException($"'{name}' is an invalid table name.");
             }
-            return new Tuple<string, string>(schema, tableName);
-        } 
+
+            return new Tuple<string, string>(UnquoteName(schema), UnquoteName(tableName));
+        }
 
         public DbTable(string tableName, string schemaName)
         {
-            TableName = tableName.Replace("[", "").Replace("]", ""); 
-            Schema = schemaName.Replace("[", "").Replace("]", ""); 
+            TableName = UnquoteName(tableName); 
+            Schema = UnquoteName(schemaName); 
         }
 
         public string TableName { get; }

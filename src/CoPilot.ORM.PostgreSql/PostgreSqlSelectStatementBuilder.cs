@@ -5,7 +5,6 @@ using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Filtering.Interfaces;
 using CoPilot.ORM.Filtering.Operands;
-using CoPilot.ORM.PostgreSql.Writers;
 
 namespace CoPilot.ORM.PostgreSql
 {
@@ -18,7 +17,7 @@ namespace CoPilot.ORM.PostgreSql
 
             qs.AddToSegment(QuerySegment.Select, queryContext.SelectColumns.Select(GetColumnAsText).ToArray());
 
-            qs.AddToSegment(QuerySegment.BaseTable, $"{Util.SanitizeName(queryContext.BaseNode.Table.TableName)} T{queryContext.BaseNode.Index}");
+            qs.AddToSegment(QuerySegment.BaseTable, $"{queryContext.BaseNode.Table.GetAsString()} T{queryContext.BaseNode.Index}");
 
             qs.AddToSegment(QuerySegment.Joins, queryContext.JoinedNodes.Select(GetFromItemText).ToArray());
             
@@ -32,7 +31,7 @@ namespace CoPilot.ORM.PostgreSql
                 if (queryContext.OrderByClause != null && queryContext.OrderByClause.Any())
                 {
                     qs.AddToSegment(QuerySegment.Ordering, queryContext.OrderByClause.Select(r =>
-                                $"T{r.Key.Node.Index}.{Util.SanitizeName(r.Key.Column.ColumnName)} {(r.Value == Ordering.Ascending ? "asc" : "desc")}"
+                                $"T{r.Key.Node.Index}.{r.Key.Column.ColumnName.QuoteIfNeeded()} {(r.Value == Ordering.Ascending ? "asc" : "desc")}"
                     ).ToArray());
                 }
 
@@ -64,19 +63,19 @@ namespace CoPilot.ORM.PostgreSql
         }
         private static string GetColumnAsText(ContextColumn col)
         {
-            var colName = $"{Util.SanitizeName(col.Column.ColumnName)}";
+            var colName = $"{col.Column.ColumnName.QuoteIfNeeded()}";
 
             var str = $"T{col.Node.Index}.{colName}";
             if (!string.IsNullOrEmpty(col.ColumnAlias))
             {
-                str += $" as \"{Util.SanitizeName(col.ColumnAlias)}\"";
+                str += $" as \"{col.ColumnAlias}\"";
             }
             return str;
         }
 
         private static string GetFromItemText(TableJoinDescription join)
         {
-            return $"{(join.JoinType == TableJoinType.InnerJoin ? "INNER" : "LEFT")} JOIN {Util.SanitizeName(join.TargetKey.Table.TableName)} T{join.TargetTableIndex} ON T{join.TargetTableIndex}.{Util.SanitizeName(join.TargetKey.ColumnName)}=T{join.SourceTableIndex}.{Util.SanitizeName(join.SourceKey.ColumnName)}";
+            return $"{(join.JoinType == TableJoinType.InnerJoin ? "INNER" : "LEFT")} JOIN {join.TargetKey.Table.GetAsString()} T{join.TargetTableIndex} ON T{join.TargetTableIndex}.{join.TargetKey.ColumnName.QuoteIfNeeded()}=T{join.SourceTableIndex}.{join.SourceKey.ColumnName.QuoteIfNeeded()}";
         }
 
         private static string GetFilterOperandAsText(IExpressionOperand operand)
@@ -95,7 +94,7 @@ namespace CoPilot.ORM.PostgreSql
             var cmo = operand as MemberExpressionOperand;
             if (cmo != null)
             {
-                var str = $"T{cmo.ColumnReference.Node.Index}.{Util.SanitizeName(cmo.ColumnReference.Column.ColumnName)}";
+                var str = $"T{cmo.ColumnReference.Node.Index}.{cmo.ColumnReference.Column.ColumnName.QuoteIfNeeded()}";
 
                 if (!string.IsNullOrEmpty(cmo.Custom))
                 {

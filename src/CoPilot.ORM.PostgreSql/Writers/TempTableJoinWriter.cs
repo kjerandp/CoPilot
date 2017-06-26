@@ -40,7 +40,7 @@ namespace CoPilot.ORM.PostgreSql.Writers
 
             foreach (var tempTable in tempTables)
             {
-                stm.Script.Append(new ScriptBlock($"\nDROP TABLE IF EXISTS {Util.SanitizeName(tempTable)};"));
+                stm.Script.Append(new ScriptBlock($"\nDROP TABLE IF EXISTS {tempTable};"));
             }
 
             return stm;
@@ -53,7 +53,7 @@ namespace CoPilot.ORM.PostgreSql.Writers
 
             if (q.BaseNode.Nodes.Any(r => r.Value.IsInverted))
             {
-                segments.AddToSegment(QuerySegment.PreStatement, $"CREATE TEMPORARY TABLE IF NOT EXISTS {Util.SanitizeName(tempName)} AS (");
+                segments.AddToSegment(QuerySegment.PreStatement, $"CREATE TEMPORARY TABLE IF NOT EXISTS {tempName} AS (");
                 segments.AddToSegment(QuerySegment.PostStatement,")");
                 tempTables.Add(tempName);
             }
@@ -62,7 +62,7 @@ namespace CoPilot.ORM.PostgreSql.Writers
                 var tn = q.BaseNode as TableContextNode;
                 if (tn != null)
                 {
-                    var join = $"INNER JOIN {Util.SanitizeName("tmp_"+ parantNode.Path.Replace(".", "_"))} T{parantNode.Index} ON T{q.BaseNode.Index}.{Util.SanitizeName(tn.GetTargetKey.ColumnName)} = T{parantNode.Index}.{Util.SanitizeName(tn.GetSourceKey.ColumnName)}";
+                    var join = $"INNER JOIN {"tmp_"+ parantNode.Path.Replace(".", "_")} T{parantNode.Index} ON T{q.BaseNode.Index}.{tn.GetTargetKey.ColumnName.QuoteIfNeeded()} = T{parantNode.Index}.{tn.GetSourceKey.ColumnName.QuoteIfNeeded()}";
                     segments.AddToSegment(QuerySegment.PostBaseTable, join);
                 }
                 
@@ -71,7 +71,7 @@ namespace CoPilot.ORM.PostgreSql.Writers
 
             if (segments.Exist(QuerySegment.PreStatement))
             {
-                script.Add($"\nSELECT * FROM {Util.SanitizeName(tempName)};\n");
+                script.Add($"\nSELECT * FROM {tempName};\n");
             }
             return script;
         }

@@ -19,12 +19,12 @@ namespace CoPilot.ORM.PostgreSql.Writers
         }
         public ScriptBlock GetSelectKeysFromChildTableScript(DbTable table, string pkCol, string keyCol)
         {
-            return new ScriptBlock($"SELECT {Util.SanitizeName(pkCol)} FROM {Util.SanitizeName(table.TableName)} WHERE {Util.SanitizeName(keyCol)} = @key");
+            return new ScriptBlock($"SELECT {pkCol.QuoteIfNeeded()} FROM {table.GetAsString()} WHERE {keyCol.QuoteIfNeeded()} = @key");
         }
 
         public ScriptBlock SetForeignKeyValueToNullScript(DbTable table, string fkCol, string keyCol)
         {
-            return new ScriptBlock($"UPDATE {Util.SanitizeName(table.TableName)} SET {Util.SanitizeName(fkCol)}=NULL WHERE {Util.SanitizeName(keyCol)} = @key");
+            return new ScriptBlock($"UPDATE {table.GetAsString()} SET {fkCol.QuoteIfNeeded()}=NULL WHERE {keyCol.QuoteIfNeeded()} = @key");
         }
 
         public ScriptBlock WrapInsideIdentityInsertScript(DbTable table, ScriptBlock sourceScript)
@@ -35,8 +35,8 @@ namespace CoPilot.ORM.PostgreSql.Writers
         public ScriptBlock GetModelValidationScript(DbTable dbTable)
         {
             return new ScriptBlock(
-                $"select {string.Join(",", dbTable.Columns.Select(r => Util.SanitizeName(r.ColumnName)))} from {Util.SanitizeName(dbTable.TableName)} limit 1;",
-                $"select * from {Util.SanitizeName(dbTable.TableName)} limit 1"
+                $"select {string.Join(",", dbTable.Columns.Select(r => r.ColumnName.QuoteIfNeeded()))} from {dbTable.GetAsString()} limit 1;",
+                $"select * from {dbTable.GetAsString()} limit 1"
             );
         }
 

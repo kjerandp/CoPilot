@@ -19,12 +19,12 @@ namespace CoPilot.ORM.MySql.Writers
         }
         public ScriptBlock GetSelectKeysFromChildTableScript(DbTable table, string pkCol, string keyCol)
         {
-            return new ScriptBlock($"SELECT `{pkCol}` FROM `{table.TableName}` WHERE `{keyCol}` = @key");
+            return new ScriptBlock($"SELECT {pkCol.QuoteIfNeeded()} FROM {table.GetAsString()} WHERE {keyCol.QuoteIfNeeded()} = @key");
         }
 
         public ScriptBlock SetForeignKeyValueToNullScript(DbTable table, string fkCol, string keyCol)
         {
-            return new ScriptBlock($"UPDATE `{table.TableName}` SET `{fkCol}`=NULL WHERE `{keyCol}` = @key");
+            return new ScriptBlock($"UPDATE {table.GetAsString()} SET {fkCol.QuoteIfNeeded()}=NULL WHERE {keyCol.QuoteIfNeeded()} = @key");
         }
 
         public ScriptBlock WrapInsideIdentityInsertScript(DbTable table, ScriptBlock sourceScript)
@@ -35,8 +35,8 @@ namespace CoPilot.ORM.MySql.Writers
         public ScriptBlock GetModelValidationScript(DbTable dbTable)
         {
             return new ScriptBlock(
-                $"select {string.Join(",", dbTable.Columns.Select(r => "`" + r.ColumnName + "`"))} from `{dbTable.TableName}` limit 1;",
-                $"select * from `{dbTable.TableName}` limit 1"
+                $"select {string.Join(",", dbTable.Columns.Select(r => r.ColumnName.QuoteIfNeeded()))} from {dbTable.GetAsString()} limit 1;",
+                $"select * from {dbTable.TableName.QuoteIfNeeded()} limit 1"
             );
         }
 
@@ -89,7 +89,7 @@ namespace CoPilot.ORM.MySql.Writers
                 paramsString = $"({paramsString})";
             }
 
-            var script = new ScriptBlock($"CREATE PROCEDURE {name} {paramsString}", "BEGIN");
+            var script = new ScriptBlock($"CREATE PROCEDURE {name.QuoteIfNeeded()} {paramsString}", "BEGIN");
             script.AddMultiLineText(body.ToString());
             script.AddMultiLineText("END;", false);
             return script;
@@ -104,7 +104,7 @@ namespace CoPilot.ORM.MySql.Writers
 
         public ScriptBlock DropStoredProcedure(string name)
         {
-            return new ScriptBlock($"DROP PROCEDURE IF EXISTS {name};");
+            return new ScriptBlock($"DROP PROCEDURE IF EXISTS {name.QuoteIfNeeded()};");
         }
 
         public ScriptBlock CreateTableIfNotExists(DbTable table, CreateOptions options = null)

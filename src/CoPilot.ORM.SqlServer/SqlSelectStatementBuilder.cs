@@ -50,13 +50,13 @@ namespace CoPilot.ORM.SqlServer
                 if (queryContext.OrderByClause != null && queryContext.OrderByClause.Any())
                 {
                     qs.AddToSegment(QuerySegment.Ordering, queryContext.OrderByClause.Select(r =>
-                                $"T{r.Key.Node.Index}.{SanitizeName(r.Key.Column.ColumnName)} {(r.Value == Ordering.Ascending ? "asc" : "desc")}"
+                                $"T{r.Key.Node.Index}.{r.Key.Column.ColumnName.QuoteIfNeeded()} {(r.Value == Ordering.Ascending ? "asc" : "desc")}"
                     ).ToArray());
                 }
             }
             qs.AddToSegment(QuerySegment.Select, queryContext.SelectColumns.Select(GetColumnAsText).ToArray());
 
-            qs.AddToSegment(QuerySegment.BaseTable, $"{SanitizeName(queryContext.BaseNode.Table.TableName)} T{queryContext.BaseNode.Index}");
+            qs.AddToSegment(QuerySegment.BaseTable, $"{queryContext.BaseNode.Table.GetAsString()} T{queryContext.BaseNode.Index}");
 
             qs.AddToSegment(QuerySegment.Joins, queryContext.JoinedNodes.Select(GetFromItemText).ToArray());
             
@@ -84,7 +84,7 @@ namespace CoPilot.ORM.SqlServer
             var cmo = operand as MemberExpressionOperand;
             if (cmo != null)
             {
-                var str = $"T{cmo.ColumnReference.Node.Index}.{SanitizeName(cmo.ColumnReference.Column.ColumnName)}";
+                var str = $"T{cmo.ColumnReference.Node.Index}.{cmo.ColumnReference.Column.ColumnName.QuoteIfNeeded()}";
 
                 if (!string.IsNullOrEmpty(cmo.Custom))
                 {
@@ -104,7 +104,7 @@ namespace CoPilot.ORM.SqlServer
 
         private static string GetColumnAsText(ContextColumn col)
         {
-            var colName = SanitizeName(col.Column.ColumnName);
+            var colName = col.Column.ColumnName.QuoteIfNeeded();
             
             var str = $"T{col.Node.Index}.{colName}";
             if (!string.IsNullOrEmpty(col.ColumnAlias))
@@ -116,13 +116,10 @@ namespace CoPilot.ORM.SqlServer
         
         private static string GetFromItemText(TableJoinDescription join)
         {
-            return $"{(join.JoinType == TableJoinType.InnerJoin ? "INNER" : "LEFT")} JOIN {SanitizeName(join.TargetKey.Table.TableName)} T{join.TargetTableIndex} ON T{join.TargetTableIndex}.{SanitizeName(join.TargetKey.ColumnName)}=T{join.SourceTableIndex}.{SanitizeName(join.SourceKey.ColumnName)}";
+            return $"{(join.JoinType == TableJoinType.InnerJoin ? "INNER" : "LEFT")} JOIN {join.TargetKey.Table.GetAsString()} T{join.TargetTableIndex} ON T{join.TargetTableIndex}.{join.TargetKey.ColumnName.QuoteIfNeeded()}=T{join.SourceTableIndex}.{join.SourceKey.ColumnName.QuoteIfNeeded()}";
         }
 
-        private static string SanitizeName(string name)
-        {
-            return name.Contains(" ") ? "[" + name + "]" : name;
-        }
+   
 
     }
 }

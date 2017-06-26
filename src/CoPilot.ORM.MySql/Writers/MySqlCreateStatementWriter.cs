@@ -27,7 +27,7 @@ namespace CoPilot.ORM.MySql.Writers
             var pk = new List<string>();
              
             var stm = new SqlStatement();
-            stm.Script.Add($"CREATE TABLE IF NOT EXISTS `{table.TableName}` (");
+            stm.Script.Add($"CREATE TABLE IF NOT EXISTS {table.GetAsString()} (");
 
             var createColumns = new ScriptBlock();
             var constraints = new ScriptBlock();
@@ -39,21 +39,21 @@ namespace CoPilot.ORM.MySql.Writers
                 if (dbColumn.IsPrimaryKey)
                 {
                     extendedInfo = " " + GetPrimaryKeyString(dbColumn);
-                    pk.Add($"`{dbColumn.ColumnName}`");
+                    pk.Add($"{dbColumn.ColumnName.QuoteIfNeeded()}");
                    
                 }
                 if (dbColumn.IsForeignKey)
                 {
                     constraints.Add(GetForeignKeyString(dbColumn));
                 }
-                createColumns.Add($"{(createColumns.ItemCount > 0 ? "," : "")}{dbColumn.ColumnName}{GetDataTypeString(dbColumn)}{extendedInfo}");
+                createColumns.Add($"{(createColumns.ItemCount > 0 ? "," : "")}{dbColumn.ColumnName.QuoteIfNeeded()}{GetDataTypeString(dbColumn)}{extendedInfo}");
             }
            
             var uniqueColumns = table.Columns.Where(r => r.Unique);
 
             foreach (var uniqueColumn in uniqueColumns)
             {
-                constraints.Add($",CONSTRAINT UQ_{uniqueColumn.ColumnName.Replace(" ","_")} UNIQUE(`{uniqueColumn.ColumnName}`)");
+                constraints.Add($",CONSTRAINT UQ_{uniqueColumn.ColumnName.Replace(" ","_")} UNIQUE({uniqueColumn.ColumnName.QuoteIfNeeded()})");
             }
 
             stm.Script.Add(createColumns);
@@ -86,7 +86,7 @@ namespace CoPilot.ORM.MySql.Writers
         private static string GetForeignKeyString(DbColumn column)
         {
 
-            var str = $"\t,FOREIGN KEY (`{column.ColumnName}`) REFERENCES {column.ForeignkeyRelationship.PrimaryKeyColumn.Table.TableName}({column.ForeignkeyRelationship.PrimaryKeyColumn.ColumnName})";
+            var str = $"\t,FOREIGN KEY ({column.ColumnName.QuoteIfNeeded()}) REFERENCES {column.ForeignkeyRelationship.PrimaryKeyColumn.Table.GetAsString()}({column.ForeignkeyRelationship.PrimaryKeyColumn.ColumnName.QuoteIfNeeded()})";
             return str;
         }
 

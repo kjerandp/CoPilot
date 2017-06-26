@@ -92,7 +92,7 @@ namespace CoPilot.ORM.MySql.Writers
         {
             var filter = new FilterGraph();
             var left = new MemberExpressionOperand(ContextColumn.Create(node, node.GetTargetKey));
-            var right = new CustomOperand($"(Select `{node.GetSourceKey.ColumnName}` from {tempTableName})");
+            var right = new CustomOperand($"(Select {node.GetSourceKey.ColumnName.QuoteIfNeeded()} from {tempTableName})");
             filter.Root = new BinaryOperand(left, right, SqlOperator.In);
 
             return filter;

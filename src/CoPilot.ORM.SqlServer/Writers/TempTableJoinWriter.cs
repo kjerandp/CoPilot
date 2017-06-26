@@ -55,7 +55,7 @@ namespace CoPilot.ORM.SqlServer.Writers
                 var tn = q.BaseNode as TableContextNode;
                 if (tn != null)
                 {
-                    var join = $"INNER JOIN #{parantNode.Path.Replace(".", "_")} T{parantNode.Index} ON T{q.BaseNode.Index}.{tn.GetTargetKey.ColumnName} = T{parantNode.Index}.{tn.GetSourceKey.ColumnName}";
+                    var join = $"INNER JOIN #{parantNode.Path.Replace(".", "_")} T{parantNode.Index} ON T{q.BaseNode.Index}.{tn.GetTargetKey.ColumnName.QuoteIfNeeded()} = T{parantNode.Index}.{tn.GetSourceKey.ColumnName.QuoteIfNeeded()}";
                     segments.AddToSegment(QuerySegment.PostBaseTable, join);
                 }
                 

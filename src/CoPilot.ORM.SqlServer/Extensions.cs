@@ -32,7 +32,7 @@ namespace CoPilot.ORM.SqlServer
             }
             
 
-            var block = commonScripting.If().NotExists().TableData(table.TableName).Then(insertBlock).End();
+            var block = commonScripting.If().NotExists().TableData(table.GetAsString()).Then(insertBlock).End();
             return block;
         }
 
@@ -50,7 +50,7 @@ namespace CoPilot.ORM.SqlServer
             {
                 sb.DbProvider.CommonScriptingTasks.WrapInsideIdentityInsertScript(table, insertBlock);
             }
-            var block = commonScripting.If().NotExists().TableData(table.TableName).Then(insertBlock).End();
+            var block = commonScripting.If().NotExists().TableData(table.GetAsString()).Then(insertBlock).End();
             return block;
         }
 
@@ -69,10 +69,23 @@ namespace CoPilot.ORM.SqlServer
             {
                 sb.DbProvider.CommonScriptingTasks.WrapInsideIdentityInsertScript(tableDefinition, insertBlock);
             }
-            var block = commonScripting.If().NotExists().TableData(tableDefinition.TableName).Then(insertBlock).End();
+            var block = commonScripting.If().NotExists().TableData(tableDefinition.GetAsString()).Then(insertBlock).End();
             return block;
         }
-        
-        
+
+        public static string QuoteIfNeeded(this string text)
+        {
+            if (text == null) return null;
+            return text.Contains(" ") ? "[" + text + "]" : text;
+        }
+
+        public static string GetAsString(this DbTable table)
+        {
+            if (string.IsNullOrEmpty(table.Schema))
+            {
+                return table.TableName.QuoteIfNeeded();
+            }
+            return $"{table.Schema.QuoteIfNeeded()}.{table.TableName.QuoteIfNeeded()}";
+        }
     }
 }

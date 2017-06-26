@@ -16,7 +16,7 @@ namespace CoPilot.ORM.IntegrationTests.Config
                 App=CoPilotIntegrationTest;";
         public static IDb Create(string connectionString = null)
         {
-            return DbMapper.Create(connectionString ?? DefaultConnectionString, new SqlServerProvider());
+            return DbMapper.Create(connectionString ?? DefaultConnectionString, new SqlServerProvider(loggingLevel:LoggingLevel.Verbose));
         }
 
         public static IDb CreateFromConfig(string connectionString = null)
@@ -85,7 +85,7 @@ namespace CoPilot.ORM.IntegrationTests.Config
             detailsMap.HasOne<Product>(r => r.ProductId, "ProductID").KeyForMember(r => r.Product);
 
             // Creates the IDb reference with the configurations applied
-            return mapper.CreateDb(connectionString ?? DefaultConnectionString, new SqlServerProvider());
+            return mapper.CreateDb(connectionString ?? DefaultConnectionString, new SqlServerProvider(loggingLevel: LoggingLevel.Verbose));
         }
     }
 }

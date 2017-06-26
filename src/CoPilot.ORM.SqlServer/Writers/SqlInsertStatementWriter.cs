@@ -73,11 +73,11 @@ namespace CoPilot.ORM.SqlServer.Writers
                 {
                     valueString = part.Replace("{value}", _provider.GetValueAsString(col.DataType, value));
                 }
-                colBlock.Add($"{(colBlock.ItemCount > 0 ? "," : "")}{col.ColumnName}");
+                colBlock.Add($"{(colBlock.ItemCount > 0 ? "," : "")}{col.ColumnName.QuoteIfNeeded()}");
                 valBlock.Add($"{(valBlock.ItemCount > 0 ? "," : "")}{valueString}");
             }
 
-            statement.Script.Add($"insert into [{ctx.Node.Table.Schema}].[{ctx.Node.Table.TableName}] (");
+            statement.Script.Add($"insert into {ctx.Node.Table.GetAsString()} (");
             statement.Script.Add(colBlock);
             statement.Script.Add(") values (");
             statement.Script.Add(valBlock);
@@ -92,7 +92,7 @@ namespace CoPilot.ORM.SqlServer.Writers
         private string GetLookupSubQuery(DbRelationship lookupRel)
         {
             
-            var q = $"(SELECT {lookupRel.PrimaryKeyColumn.ColumnName} FROM [{lookupRel.PrimaryKeyColumn.Table.Schema}].[{lookupRel.PrimaryKeyColumn.Table.TableName}] WHERE [{lookupRel.LookupColumn.ColumnName}] = {{value}})";
+            var q = $"(SELECT {lookupRel.PrimaryKeyColumn.ColumnName.QuoteIfNeeded()} FROM {lookupRel.PrimaryKeyColumn.Table.GetAsString()} WHERE {lookupRel.LookupColumn.ColumnName.QuoteIfNeeded()} = {{value}})";
 
             return q;
         }

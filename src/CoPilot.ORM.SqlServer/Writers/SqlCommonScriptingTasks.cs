@@ -21,19 +21,19 @@ namespace CoPilot.ORM.SqlServer.Writers
 
         public ScriptBlock GetSelectKeysFromChildTableScript(DbTable table, string pkCol, string keyCol)
         {
-            return new ScriptBlock($"SELECT {pkCol} FROM [{table.Schema}].[{table.TableName}] WHERE {keyCol} = @key");
+            return new ScriptBlock($"SELECT {pkCol} FROM {table.GetAsString()} WHERE {keyCol} = @key");
         }
 
         public ScriptBlock SetForeignKeyValueToNullScript(DbTable table, string fkCol, string keyCol)
         {
-            return new ScriptBlock($"UPDATE [{table.Schema}].[{table.TableName}] SET [{fkCol}]=NULL WHERE [{keyCol}] = @key");
+            return new ScriptBlock($"UPDATE {table.GetAsString()} SET [{fkCol}]=NULL WHERE [{keyCol}] = @key");
         }
 
         public ScriptBlock WrapInsideIdentityInsertScript(DbTable table, ScriptBlock sourceScript)
         {
             sourceScript.WrapInside(
-                    $"SET IDENTITY_INSERT [{table.Schema}].[{table.TableName}] ON",
-                    $"SET IDENTITY_INSERT [{table.Schema}].[{table.TableName}] OFF",
+                    $"SET IDENTITY_INSERT {table.GetAsString()} ON",
+                    $"SET IDENTITY_INSERT {table.GetAsString()} OFF",
                     false);
 
             return sourceScript;
@@ -42,8 +42,8 @@ namespace CoPilot.ORM.SqlServer.Writers
         public ScriptBlock GetModelValidationScript(DbTable dbTable)
         {
             return new ScriptBlock(
-                $"select top 1 {string.Join(",", dbTable.Columns.Select(r => "[" + r.ColumnName + "]"))} from [{dbTable.Schema}].[{dbTable.TableName}]",
-                $"select top 1 * from [{dbTable.Schema}].[{dbTable.TableName}]");
+                $"select top 1 {string.Join(",", dbTable.Columns.Select(r => "[" + r.ColumnName + "]"))} from {dbTable.GetAsString()}",
+                $"select top 1 * from {dbTable.GetAsString()}");
         }
 
         public ScriptBlock UseDatabase(string databaseName)
@@ -119,7 +119,7 @@ namespace CoPilot.ORM.SqlServer.Writers
                 paramsString = $"({paramsString})";
             }
 
-            var script = new ScriptBlock($"CREATE PROCEDURE {name} {paramsString}", "AS", "BEGIN");
+            var script = new ScriptBlock($"CREATE PROCEDURE {name.QuoteIfNeeded()} {paramsString}", "AS", "BEGIN");
             script.AddMultiLineText(body.ToString());
             script.AddMultiLineText("END", false);
             return script;
@@ -135,7 +135,7 @@ namespace CoPilot.ORM.SqlServer.Writers
 
         public ScriptBlock DropStoredProcedure(string name)
         {
-            return new ScriptBlock($"DROP PROCEDURE {name}");
+            return new ScriptBlock($"DROP PROCEDURE {name.QuoteIfNeeded()}");
         }
 
         private static ScriptBlock Go(int times = 0)

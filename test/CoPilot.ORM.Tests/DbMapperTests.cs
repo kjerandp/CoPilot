@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using CoPilot.ORM.Config;
 using CoPilot.ORM.Context.Query;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Mapping.Mappers;
@@ -193,6 +195,40 @@ namespace CoPilot.ORM.Tests
 
         }
 
+        [TestMethod]
+        public void CanSanitizeTableNamesWithVariousQuotes()
+        {
+            var mapper = new DbMapper();
+            var tm = mapper.Map<TestTable>("[dbo].\"tablename\"");
+            var t = tm.Table;
+            Assert.AreEqual("dbo.tablename", $"{t.Schema}.{t.TableName}");
+
+            mapper = new DbMapper();
+            tm = mapper.Map<TestTable>("tablename");
+            t = tm.Table;
+            Assert.AreEqual("tablename", $"{t.TableName}");
+            Assert.IsNull(t.Schema);
+
+            mapper = new DbMapper();
+            mapper.SetDefaultSchema("public");
+            tm = mapper.Map<TestTable>("`tablename`");
+            t = tm.Table;
+            Assert.AreEqual("public.tablename", $"{t.Schema}.{t.TableName}");
+
+
+            Assert.AreEqual(new Tuple<string, string>(null, "tablename"), DbTable.Decompose("tablename"));
+            Assert.AreEqual(new Tuple<string, string>("dbo", "tablename"), DbTable.Decompose("dbo.tablename"));
+            Assert.AreEqual(new Tuple<string, string>("dbo", "tablename"), DbTable.Decompose("[dbo].[tablename]"));
+
+
+
+        }
+
+        public class TestTable
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+        }
         
     }
 }

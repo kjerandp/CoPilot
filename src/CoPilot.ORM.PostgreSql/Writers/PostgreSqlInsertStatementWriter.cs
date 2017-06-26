@@ -72,11 +72,11 @@ namespace CoPilot.ORM.PostgreSql.Writers
                 {
                     valueString = part.Replace("{value}", _provider.GetValueAsString(col.DataType, value));
                 }
-                colBlock.Add($"{(colBlock.ItemCount > 0 ? "," : "")}{Util.SanitizeName(col.ColumnName)}");
+                colBlock.Add($"{(colBlock.ItemCount > 0 ? "," : "")}{col.ColumnName.QuoteIfNeeded()}");
                 valBlock.Add($"{(valBlock.ItemCount > 0 ? "," : "")}{valueString}");
             }
 
-            statement.Script.Add($"insert into {Util.SanitizeName(ctx.Node.Table.TableName)} (");
+            statement.Script.Add($"insert into {ctx.Node.Table.GetAsString()} (");
             statement.Script.Add(colBlock);
             statement.Script.Add(") values (");
             statement.Script.Add(valBlock);
@@ -84,7 +84,7 @@ namespace CoPilot.ORM.PostgreSql.Writers
             if (identityInsertUsed && !options.EnableIdentityInsert && options.SelectScopeIdentity)
             {
                 var pkCol = ctx.Node.Table.GetSingularKey();
-                statement.Script.Add($") RETURNING {Util.SanitizeName(pkCol.ColumnName)};");
+                statement.Script.Add($") RETURNING {pkCol.ColumnName.QuoteIfNeeded()};");
             }
             else
             {
@@ -95,7 +95,7 @@ namespace CoPilot.ORM.PostgreSql.Writers
 
         private string GetLookupSubQuery(DbRelationship lookupRel)
         {
-            var q = $"(SELECT {lookupRel.PrimaryKeyColumn.ColumnName} FROM {lookupRel.PrimaryKeyColumn.Table} WHERE {lookupRel.LookupColumn.ColumnName} = {{value}})";
+            var q = $"(SELECT {lookupRel.PrimaryKeyColumn.ColumnName.QuoteIfNeeded()} FROM {lookupRel.PrimaryKeyColumn.Table.GetAsString()} WHERE {lookupRel.LookupColumn.ColumnName.QuoteIfNeeded()} = {{value}})";
 
             return q;
         }

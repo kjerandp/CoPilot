@@ -68,14 +68,14 @@ namespace CoPilot.ORM.SqlServer.Writers
 
                 }
                 var pk = q.BaseNode.Table.GetSingularKey();
-                temp.AddToSegment(QuerySegment.Select, $"T{q.BaseNode.Index}.{pk.ColumnName}");
+                temp.AddToSegment(QuerySegment.Select, $"T{q.BaseNode.Index}.{pk.ColumnName.QuoteIfNeeded()}");
                 temp.AddToSegment(QuerySegment.PreSelect, segments.Get(QuerySegment.PreSelect));
                 temp.AddToSegment(QuerySegment.BaseTable, segments.Get(QuerySegment.BaseTable));
 
                 segments.Remove(QuerySegment.PreSelect);
                 segments.Remove(QuerySegment.Filter);
 
-                var join = $"INNER JOIN @{tempName} V{q.BaseNode.Index} ON T{q.BaseNode.Index}.{pk.ColumnName} = V{q.BaseNode.Index}.{pk.ColumnName}";
+                var join = $"INNER JOIN @{tempName} V{q.BaseNode.Index} ON T{q.BaseNode.Index}.{pk.ColumnName.QuoteIfNeeded()} = V{q.BaseNode.Index}.{pk.ColumnName.QuoteIfNeeded()}";
                 segments.AddToSegment(QuerySegment.PostBaseTable, join);
 
                 script.Add($"DECLARE @{tempName} TABLE({GetColumnAsString(pk)})");
@@ -88,7 +88,7 @@ namespace CoPilot.ORM.SqlServer.Writers
                 var tn = q.BaseNode as TableContextNode;
                 if (tn != null)
                 {
-                    var join = $"INNER JOIN @{parantNode.Path.Replace(".", "_")} V{parantNode.Index} ON T{q.BaseNode.Index}.{tn.GetTargetKey.ColumnName} = V{parantNode.Index}.{tn.GetSourceKey.ColumnName}";
+                    var join = $"INNER JOIN @{parantNode.Path.Replace(".", "_")} V{parantNode.Index} ON T{q.BaseNode.Index}.{tn.GetTargetKey.ColumnName.QuoteIfNeeded()} = V{parantNode.Index}.{tn.GetSourceKey.ColumnName.QuoteIfNeeded()}";
                     segments.AddToSegment(QuerySegment.PostBaseTable, join);
                 }
             }
@@ -100,7 +100,7 @@ namespace CoPilot.ORM.SqlServer.Writers
 
         private string GetColumnAsString(DbColumn col)
         {
-            var str = $"{col.ColumnName} {_provider.GetDataTypeAsString(col.DataType, col.MaxSize)}";
+            var str = $"{col.ColumnName.QuoteIfNeeded()} {_provider.GetDataTypeAsString(col.DataType, col.MaxSize)}";
 
             //if (col.MaxSize != null && _provider.HasSize(col.DataType))
             //{

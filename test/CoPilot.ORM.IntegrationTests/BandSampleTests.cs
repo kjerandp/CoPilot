@@ -27,11 +27,12 @@ namespace CoPilot.ORM.IntegrationTests
         [ClassInitialize]
         public static void BandSampleTestsInitialize(TestContext testContext)
         {
-            var logginLevel = LoggingLevel.None;
+            var logginLevel = LoggingLevel.Verbose;
             var model = BandSampleConfig.CreateModel();
+            //var databaseSetup = new PostgreSqlBandSampleSetup(model, logginLevel); //not fully implemented!
             //var databaseSetup = new MySqlBandSampleSetup(model, logginLevel);
             var databaseSetup = new SqlServerBandSampleSetup(model, logginLevel);
-            //databaseSetup.DropCreateDatabase();
+            databaseSetup.DropCreateDatabase();
             _db = databaseSetup.GetDb();        
         }
 

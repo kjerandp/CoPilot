@@ -27,7 +27,7 @@ namespace CoPilot.ORM.SqlServer.Writers
             if(hasCompositeKey) compositeKeys = new List<string>();
 
             var stm = new SqlStatement();
-            stm.Script.Add($"CREATE TABLE [{table.Schema}].[{table.TableName}] (");
+            stm.Script.Add($"CREATE TABLE {table.GetAsString()} (");
             var createColumns = new ScriptBlock();
             foreach (var dbColumn in table.Columns)
             {
@@ -37,7 +37,7 @@ namespace CoPilot.ORM.SqlServer.Writers
                 {
                     if (hasCompositeKey)
                     {
-                        compositeKeys.Add("["+dbColumn.ColumnName+"]");
+                        compositeKeys.Add(dbColumn.ColumnName.QuoteIfNeeded());
                     }
                     else
                     {
@@ -60,7 +60,7 @@ namespace CoPilot.ORM.SqlServer.Writers
 
             foreach (var uniqueColumn in uniqueColumns)
             {
-                createColumns.Add($",CONSTRAINT UQ_{uniqueColumn.ColumnName} UNIQUE({uniqueColumn.ColumnName})");
+                createColumns.Add($",CONSTRAINT UQ_{uniqueColumn.ColumnName.Replace(" ", "_")} UNIQUE({uniqueColumn.ColumnName.QuoteIfNeeded()})");
             }
             
 
@@ -89,7 +89,7 @@ namespace CoPilot.ORM.SqlServer.Writers
         private static string GetForeignKeyString(DbColumn column)
         {
 
-            var str = $"REFERENCES {column.ForeignkeyRelationship.PrimaryKeyColumn.Table.TableName}({column.ForeignkeyRelationship.PrimaryKeyColumn.ColumnName})";
+            var str = $"REFERENCES {column.ForeignkeyRelationship.PrimaryKeyColumn.Table.GetAsString()}({column.ForeignkeyRelationship.PrimaryKeyColumn.ColumnName.QuoteIfNeeded()})";
             return str;
         }
 

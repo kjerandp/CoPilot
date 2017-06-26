@@ -83,8 +83,7 @@ namespace CoPilot.ORM.Config
         /// <returns>Table builder to chain table specific configurations</returns>
         public TableBuilder<T> Map<T>(string tableName, string keyMemberName = "Id", string keyColumnName = null) where T : class
         {
-            var sanitized = DbTable.SanitizeTableName(tableName);
-            var tbl = _model.GetTable(tableName) ?? _model.AddTable(sanitized.Item2, sanitized.Item1);
+            var tbl = _model.GetTable(tableName) ?? _model.AddTable(tableName);
 
             var map = _model.AddTableMap(typeof(T), tbl, DefaultAllowedOperations);
 
@@ -213,12 +212,12 @@ namespace CoPilot.ORM.Config
         }
 
         /// <summary>
-        /// Set default schema name to use. Default is dbo
+        /// Set default schema name to use. 
         /// </summary>
         /// <param name="schemaName">Name of database schema</param>
         public void SetDefaultSchema(string schemaName)
         {
-            _model.DefaultSchemaName = string.IsNullOrEmpty(schemaName) ? "dbo" : schemaName;
+            _model.DefaultSchemaName = schemaName;
         }
 
         /// <summary>

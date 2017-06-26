@@ -21,23 +21,30 @@ namespace CoPilot.ORM.Model
         internal readonly HashSet<DbStoredProcedure> StoredProcedures = new HashSet<DbStoredProcedure>();
 
         internal DbColumnNamingConvention ColumnNamingConvention { get; set; }
-        internal string DefaultSchemaName { get; set; }
+        public string DefaultSchemaName { get; set; }
+
 
         public DbModel()
         {
-            DefaultSchemaName = "dbo";
             _tableMappings = new Dictionary<Type, TableMapEntry>();
 
         }
 
+        
         internal DbTable AddTable(string tableName, string schema = null)
         {
             if (schema == null)
             {
-                var sanitized = DbTable.SanitizeTableName(tableName);
-                schema = sanitized.Item1 ?? DefaultSchemaName;
-                tableName = sanitized.Item2;
-            } 
+                var decomposed = DbTable.Decompose(tableName);
+                schema = decomposed.Item1 ?? DefaultSchemaName;
+                tableName = decomposed.Item2;
+            }
+            else
+            {
+                schema = DbTable.UnquoteName(schema) ?? DefaultSchemaName;
+                tableName = DbTable.UnquoteName(tableName);
+            }
+
             var t = new DbTable(tableName, schema);
             if (Tables.Add(t)) return t;
 
@@ -46,7 +53,17 @@ namespace CoPilot.ORM.Model
 
         public DbTable GetTable(string tableName, string schemaName = null)
         {
-            return Tables.SingleOrDefault(r => r.Schema.Equals(schemaName ?? DefaultSchemaName, StringComparison.OrdinalIgnoreCase) && r.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase));
+            if (schemaName == null)
+            {
+                var decomposed = DbTable.Decompose(tableName);
+                schemaName = decomposed.Item1;
+                tableName = decomposed.Item2;
+            }
+
+            return Tables.SingleOrDefault(r => 
+                (string.IsNullOrEmpty(schemaName ?? DefaultSchemaName) && r.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(r.Schema)) ||
+                (r.Schema != null && r.Schema.Equals(schemaName ?? DefaultSchemaName, StringComparison.OrdinalIgnoreCase) && r.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase))
+            );
         }
         public DbStoredProcedure GetStoredProcedure(string procName)
         {

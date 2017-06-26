@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Database.Commands;
@@ -24,14 +23,14 @@ namespace CoPilot.ORM.PostgreSql.Writers
         public SqlStatement GetStatement(DbTable table, CreateOptions options)
         {             
             var stm = new SqlStatement();
-            stm.Script.Add($"CREATE TABLE IF NOT EXISTS {Util.SanitizeName(table.TableName)} (");
+            stm.Script.Add($"CREATE TABLE IF NOT EXISTS {table.GetAsString()} (");
 
             var createColumns = new ScriptBlock();
             var constraints = new ScriptBlock();
 
             foreach (var dbColumn in table.Columns)
             {
-                var extendedInfo = "";
+                string extendedInfo;
 
                 if (dbColumn.IsPrimaryKey)
                 {
@@ -46,14 +45,14 @@ namespace CoPilot.ORM.PostgreSql.Writers
                 {
                     constraints.Add(GetForeignKeyString(dbColumn));
                 }
-                createColumns.Add($"{(createColumns.ItemCount > 0 ? "," : "")}{Util.SanitizeName(dbColumn.ColumnName)}{extendedInfo}");
+                createColumns.Add($"{(createColumns.ItemCount > 0 ? "," : "")}{dbColumn.ColumnName.QuoteIfNeeded()}{extendedInfo}");
             }
            
             var uniqueColumns = table.Columns.Where(r => r.Unique);
 
             foreach (var uniqueColumn in uniqueColumns)
             {
-                constraints.Add($",CONSTRAINT UQ_{uniqueColumn.ColumnName.Replace(" ","_")} UNIQUE({Util.SanitizeName(uniqueColumn.ColumnName)})");
+                constraints.Add($",CONSTRAINT UQ_{uniqueColumn.ColumnName.Replace(" ","_")} UNIQUE({uniqueColumn.ColumnName.QuoteIfNeeded()})");
             }
 
             stm.Script.Add(createColumns);
@@ -83,7 +82,7 @@ namespace CoPilot.ORM.PostgreSql.Writers
         private static string GetForeignKeyString(DbColumn column)
         {
 
-            var str = $"\t,FOREIGN KEY ({Util.SanitizeName(column.ColumnName)}) REFERENCES {Util.SanitizeName(column.ForeignkeyRelationship.PrimaryKeyColumn.Table.TableName)} ({Util.SanitizeName(column.ForeignkeyRelationship.PrimaryKeyColumn.ColumnName)})";
+            var str = $"\t,FOREIGN KEY ({column.ColumnName.QuoteIfNeeded()}) REFERENCES {column.ForeignkeyRelationship.PrimaryKeyColumn.Table.GetAsString()} ({column.ForeignkeyRelationship.PrimaryKeyColumn.ColumnName.QuoteIfNeeded()})";
             return str;
         }
 
@@ -99,7 +98,7 @@ namespace CoPilot.ORM.PostgreSql.Writers
             str += $" {(!column.IsNullable ? "NOT " : "")}NULL";
             if (!string.IsNullOrEmpty(_provider.Collation))
             {
-                str += $" COLLATE {Util.SanitizeName(_provider.Collation)}";
+                str += $" COLLATE {_provider.Collation.QuoteIfNeeded()}";
             }
             if (column.DefaultValue != null && column.DefaultValue.Expression != DbExpressionType.PrimaryKeySequence)
             {
