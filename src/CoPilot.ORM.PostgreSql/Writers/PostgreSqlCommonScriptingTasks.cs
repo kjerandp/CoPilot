@@ -73,31 +73,55 @@ namespace CoPilot.ORM.PostgreSql.Writers
 
         public ScriptBlock CreateStoredProcedure(string name, DbParameter[] parameters, ScriptBlock body)
         {
+            return CreateStoredProcedure(name, parameters, null, body, null);
+        }
+
+        public ScriptBlock CreateStoredProcedure(string name, DbParameter[] parameters, ScriptBlock declarations, ScriptBlock body, string[] returnList)
+        {
             if (string.IsNullOrEmpty(name)) throw new CoPilotUnsupportedException("You need to provide a name for the stored procedure");
 
             var paramsString = string.Join(", ",
                 parameters.Select(_provider.GetParameterAsString));
+            var returnString = string.Empty;
+            if (returnList != null && returnList.Any())
+            {
+                returnString = " RETURNS " + string.Join(", ", returnList);
+            }
 
             if (!string.IsNullOrEmpty(paramsString))
             {
                 paramsString = $"({paramsString})";
             }
-            //TODO stored procedures that returns result sets needs to return refcursor or setof refcursor
-            var script = new ScriptBlock($"CREATE OR REPLACE FUNCTION {name} {paramsString}", "BEGIN");
+
+            var script = new ScriptBlock($"CREATE OR REPLACE FUNCTION {name.QuoteIfNeeded()} {paramsString}{returnString} $$");
+            
+            if (declarations != null)
+            {
+                script.Add(declarations);
+            }
+            script.Add("BEGIN");
             script.AddMultiLineText(body.ToString());
-            script.AddMultiLineText("END;", false);
+            script.AddMultiLineText("END;\n$$ LANGUAGE plpgsql;", false);
+            return script;
+        }
+
+
+
+        public ScriptBlock CreateOrReplaceStoredProcedure(string name, DbParameter[] parameters, ScriptBlock declarations, ScriptBlock body, string[] returnList)
+        {
+            var script = CreateStoredProcedure(name, parameters, declarations, body, returnList);
             return script;
         }
 
         public ScriptBlock CreateOrReplaceStoredProcedure(string name, DbParameter[] parameters, ScriptBlock body)
         {
-            var script = CreateStoredProcedure(name, parameters, body);
+            var script = CreateStoredProcedure(name, parameters, null, body, null);
             return script;
         }
 
         public ScriptBlock DropStoredProcedure(string name)
         {
-            return new ScriptBlock($"DROP FUNCTION IF EXISTS {name};");
+            return new ScriptBlock($"DROP FUNCTION IF EXISTS {name.QuoteIfNeeded()};");
         }
 
         public ScriptBlock CreateTableIfNotExists(DbTable table, CreateOptions options = null)

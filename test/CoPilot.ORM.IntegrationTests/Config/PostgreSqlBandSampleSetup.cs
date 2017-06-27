@@ -67,11 +67,59 @@ namespace CoPilot.ORM.IntegrationTests.Config
             );
 
             //create stored procedure
-            /*block.Append(
-                builder.CreateStoredProcedureFromQuery<Recording>("Get_Recordings_CTE", r => r.Recorded > DateTime.MinValue, null, "Genre", "Band", "AlbumTracks")
-            );*/
+            block.Append(
+                CreateTestFunction()
+            );
 
             return block.ToString();
+        }
+
+        private static ScriptBlock CreateTestFunction()
+        {
+            var script = new ScriptBlock(@"
+            CREATE OR REPLACE FUNCTION Get_Recordings_CTE (recorded Timestamp) RETURNS SETOF refcursor AS $$
+            DECLARE
+	            ref1 refcursor;
+                ref2 refcursor;
+            BEGIN
+		    /*
+			    Record sets should be named as follows when executed from CoPilot:
+			        - Base
+			        - Base.AlbumTracks
+		    */
+		    CREATE TEMPORARY TABLE IF NOT EXISTS tmp_Base AS (
+		    SELECT
+			    T1.RECORDING_ID
+			    ,T1.RECORDING_SONG_TITLE
+			    ,T1.RECORDING_DURATION
+			    ,T1.RECORDING_RECORDED
+			    ,T2.MUSIC_GENRE_ID as ""Genre.MUSIC_GENRE_ID""
+                ,T2.MUSIC_GENRE_NAME as ""Genre.MUSIC_GENRE_NAME""
+                , T3.BAND_ID as ""Band.BAND_ID""
+                , T3.BAND_NAME as ""Band.BAND_NAME""
+                , T3.BAND_FORMED as ""Band.BAND_FORMED""
+            FROM
+                RECORDING T1
+                INNER JOIN MUSIC_GENRE T2 ON T2.MUSIC_GENRE_ID = T1.RECORDING_GENRE_ID
+                INNER JOIN BAND T3 ON T3.BAND_ID = T1.RECORDING_BAND_ID
+            WHERE
+                T1.RECORDING_RECORDED > recorded
+            );
+
+            OPEN ref1 FOR SELECT *FROM tmp_Base;
+            RETURN NEXT ref1;
+
+            OPEN ref2 FOR SELECT
+                T4.ALBUM_TRACK_ID
+			    ,T4.ALBUM_TRACK_NUMBER
+			    ,T4.ALBUM_TRACK_RECORDING_ID
+            FROM
+                ALBUM_TRACK T4
+                INNER JOIN tmp_Base T1 ON T4.ALBUM_TRACK_RECORDING_ID = T1.RECORDING_ID;
+                RETURN NEXT ref2;
+            END;
+            $$ LANGUAGE plpgsql;");
+            return script;
         }
 
         private static void Seed(IDb db)
