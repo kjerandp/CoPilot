@@ -4,6 +4,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using CoPilot.ORM.Common;
 using CoPilot.ORM.Config.DataTypes;
@@ -52,9 +53,14 @@ namespace CoPilot.ORM.PostgreSql
 
         public DbResponse ExecuteQuery(DbRequest cmd, params string[] names)
         {
-            var resultSets = new List<DbRecordSet>();
+            if (cmd.CommandType == CommandType.StoredProcedure)
+            {
+                return ExecuteStoredProcedureQuery(cmd, names);
+            }
+
+            DbRecordSet[] resultSets;
             var timer = Stopwatch.StartNew();
-            
+
             var command = (NpgsqlCommand) cmd.Command;
             if (command.Connection == null) throw new CoPilotRuntimeException("No connection object in DbCommand");
             try
@@ -70,53 +76,7 @@ namespace CoPilot.ORM.PostgreSql
 
                     Logger?.LogVerbose("Executing Query", command.CommandText);
 
-                    var rsIdx = 0;
-                    using (var reader = command.ExecuteReader())
-                    {
-                        var hasResult = true;
-                        while (hasResult)
-                        {
-                            var set = new DbRecordSet
-                            {
-                                Name = names != null && rsIdx < names.Length ? names[rsIdx] : null
-                            };
-                            if (!reader.HasRows)
-                            {
-                                set.FieldNames = new string[0];
-                                set.FieldTypes = new Type[0];
-                                set.Records = new object[0][];
-                            }
-                            else
-                            {
-                                var fieldNames = new string[reader.FieldCount];
-                                var fieldTypes = new Type[reader.FieldCount];
-
-                                for (var i = 0; i < reader.FieldCount; i++)
-                                {
-                                    fieldNames[i] = reader.GetName(i);
-                                    fieldTypes[i] = reader.GetFieldType(i);
-                                }
-                                var valueset = new List<object[]>();
-                                while (reader.Read())
-                                {
-                                    var values = new object[fieldNames.Length];
-                                    for (var i = 0; i < fieldNames.Length; i++)
-                                    {
-                                        values[i] = reader.GetValue(i);
-                                    }
-                                    valueset.Add(values);
-                                }
-                                set.FieldNames = fieldNames;
-                                set.FieldTypes = fieldTypes;
-                                set.Records = valueset.ToArray();
-                            }
-                            resultSets.Add(set);
-                            hasResult = reader.NextResult();
-                            rsIdx++;
-                        }
-
-                        //reader.Close();
-                    }
+                    resultSets = FetchResults(command, names);
                 }
             }
             catch (Exception ex)
@@ -129,7 +89,113 @@ namespace CoPilot.ORM.PostgreSql
             return new DbResponse(resultSets.ToArray(), time);
 
         }
-        
+
+        private DbResponse ExecuteStoredProcedureQuery(DbRequest cmd, string[] names)
+        {
+            DbRecordSet[] recordSets;
+            var timer = Stopwatch.StartNew();
+            var command = (NpgsqlCommand)cmd.Command;
+            if (command.Connection == null) throw new CoPilotRuntimeException("No connection object in DbCommand");
+            try
+            {
+                lock (_lockObj)
+                {
+                    if (command.Connection.State != ConnectionState.Open)
+                        command.Connection.Open();
+
+                    command.CommandText = cmd.ToString();
+                    command.CommandType = cmd.CommandType;
+
+                    if (command.Transaction != null)
+                    {
+                        throw new CoPilotUnsupportedException("Cannot call stored procedure with the PostgreSql provider from within an existing transaction!");
+                    }
+                    var tran = command.Connection.BeginTransaction();
+                    
+                    AddArgsToCommand(command, cmd.Parameters, cmd.Args);
+
+                    Logger?.LogVerbose("Executing Query (stored procedure)", command.CommandText);
+                    
+                    var sql = new StringBuilder();
+                    using (var reader = command.ExecuteReader(CommandBehavior.SequentialAccess))
+                        while (reader.Read())
+                            sql.AppendLine($"FETCH ALL IN \"{ reader.GetString(0) }\";");
+
+                    using (var fetchCmd = new NpgsqlCommand())
+                    {
+                        fetchCmd.Connection = command.Connection;
+                        fetchCmd.Transaction = command.Transaction;
+                        fetchCmd.CommandTimeout = command.CommandTimeout;
+                        fetchCmd.CommandText = sql.ToString();
+                        fetchCmd.CommandType = CommandType.Text;
+
+                        recordSets = FetchResults(fetchCmd, names);
+                        tran.Commit();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new CoPilotDataException("Unable to execute command!", ex);
+            }
+
+            var time = timer.ElapsedMilliseconds;
+            Logger?.LogVerbose($"^ Executed in {time}ms (selected {recordSets.Sum(r => r.Records.Length)} rows)");
+            return new DbResponse(recordSets, time);
+        }
+
+        private DbRecordSet[] FetchResults(NpgsqlCommand fetchCmd, string[] names)
+        {
+            var rsIdx = 0;
+            var resultSets = new List<DbRecordSet>();
+            using (var reader = fetchCmd.ExecuteReader())
+            {
+                var hasResult = true;
+                while (hasResult)
+                {
+                    var set = new DbRecordSet
+                    {
+                        Name = names != null && rsIdx < names.Length ? names[rsIdx] : null
+                    };
+                    if (!reader.HasRows)
+                    {
+                        set.FieldNames = new string[0];
+                        set.FieldTypes = new Type[0];
+                        set.Records = new object[0][];
+                    }
+                    else
+                    {
+                        var fieldNames = new string[reader.FieldCount];
+                        var fieldTypes = new Type[reader.FieldCount];
+
+                        for (var i = 0; i < reader.FieldCount; i++)
+                        {
+                            fieldNames[i] = reader.GetName(i);
+                            fieldTypes[i] = reader.GetFieldType(i);
+                        }
+                        var valueset = new List<object[]>();
+                        while (reader.Read())
+                        {
+                            var values = new object[fieldNames.Length];
+                            for (var i = 0; i < fieldNames.Length; i++)
+                            {
+                                values[i] = reader.GetValue(i);
+                            }
+                            valueset.Add(values);
+                        }
+                        set.FieldNames = fieldNames;
+                        set.FieldTypes = fieldTypes;
+                        set.Records = valueset.ToArray();
+                    }
+                    resultSets.Add(set);
+                    hasResult = reader.NextResult();
+                    rsIdx++;
+                }
+            }
+
+            return resultSets.ToArray();
+        }
+
         public int ExecuteNonQuery(DbRequest cmd)
         {
             var result = 0;
