@@ -129,6 +129,7 @@ namespace CoPilot.ORM.Scripting
             return createScript;
         }
 
+        #region move to provider specific extension methods
         public ScriptBlock CreateStoredProcedure(string name, DbParameter[] parameters, ScriptBlock body)
         {
             return DbProvider.CommonScriptingTasks.CreateStoredProcedure(name, parameters, body);
@@ -208,6 +209,7 @@ namespace CoPilot.ORM.Scripting
             scriptBlock.AddMultiLineText(script, false);
             return DbProvider.CommonScriptingTasks.CreateOrReplaceStoredProcedure(name, parameters.ToArray(), scriptBlock);
         }
+        #endregion
 
         private void CreateTableAndDependantTables(ScriptBlock block, DbTable table, List<DbTable> created, CreateOptions options)
         {
@@ -260,5 +262,7 @@ namespace CoPilot.ORM.Scripting
                 }
             }
         }
+
+
     }
 }

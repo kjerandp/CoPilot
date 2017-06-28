@@ -26,6 +26,7 @@ namespace CoPilot.ORM.MySql
         private readonly object _lockObj = new object();
 
         public ILogger Logger { get; set; }
+        public LoggingLevel LoggingLevel { get; set; }
 
         public readonly string Collation;
         public bool UseNationalCharacterSet { get; }
@@ -44,7 +45,8 @@ namespace CoPilot.ORM.MySql
             SelectStatementBuilder = new MySqlSelectStatementBuilder();
             SingleStatementQueryWriter = new TempTableJoinWriter(SelectStatementBuilder, SelectStatementWriter);
 
-            Logger = new ConsoleLogger {LoggingLevel = loggingLevel};
+            LoggingLevel = loggingLevel;
+            Logger = new ConsoleLogger(this);
         }
         
 

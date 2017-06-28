@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using CoPilot.ORM.Common;
 using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
@@ -22,6 +23,7 @@ namespace CoPilot.ORM.Database.Providers
         
         bool UseNationalCharacterSet { get; }
         ILogger Logger { get; }
+        LoggingLevel LoggingLevel { get; set; }
 
         DbResponse ExecuteQuery(DbRequest cmd, params string[] names);
         int ExecuteNonQuery(DbRequest cmd);

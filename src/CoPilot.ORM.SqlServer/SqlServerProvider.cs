@@ -26,6 +26,7 @@ namespace CoPilot.ORM.SqlServer
         private readonly object _lockObj = new object();
    
         public ILogger Logger { get; set; }
+        public LoggingLevel LoggingLevel { get; set; }
 
         public SqlServerProvider(bool useNationalCharacterSet = false, LoggingLevel loggingLevel = LoggingLevel.None)
         {
@@ -40,7 +41,8 @@ namespace CoPilot.ORM.SqlServer
             SelectStatementBuilder = new SqlSelectStatementBuilder();
             SingleStatementQueryWriter = new TempTableJoinWriter(SelectStatementBuilder, SelectStatementWriter);
 
-            Logger = new ConsoleLogger {LoggingLevel = loggingLevel};
+            LoggingLevel = loggingLevel;
+            Logger = new ConsoleLogger(this);
         }
 
         public bool UseNationalCharacterSet { get; }

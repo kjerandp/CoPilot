@@ -1,20 +1,24 @@
 ﻿using System;
 using CoPilot.ORM.Common;
+using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Scripting;
 
 namespace CoPilot.ORM.Logging
 {
     public class CoPilotLogger : ILogger
     {
-        public LoggingLevel LoggingLevel { get; set; }
+        private readonly IDbProvider _provider;
 
-        public CoPilotLogger()
+        public CoPilotLogger(IDbProvider provider)
         {
+            _provider = provider;
             Output = new ConsoleLogWriter();
+            
         }
 
-        public CoPilotLogger(ILogOutputWriter outputWriter)
+        public CoPilotLogger(IDbProvider provider, ILogOutputWriter outputWriter)
         {
+            _provider = provider;
             Output = outputWriter;
         }
 
@@ -22,7 +26,7 @@ namespace CoPilot.ORM.Logging
 
         public void LogVerbose(string logText, string details = null)
         {
-            if ((int)LoggingLevel < (int)LoggingLevel.Verbose || SuppressLogging) return;
+            if ((int)_provider.LoggingLevel < (int)LoggingLevel.Verbose || SuppressLogging) return;
             var block = new ScriptBlock();
             
             block.Add("[VERBOSE]");
@@ -40,7 +44,7 @@ namespace CoPilot.ORM.Logging
 
         public void LogInfo(string logText, string details = null)
         {
-            if ((int)LoggingLevel < (int)LoggingLevel.Info || SuppressLogging) return;
+            if ((int)_provider.LoggingLevel < (int)LoggingLevel.Info || SuppressLogging) return;
             var block = new ScriptBlock();
             
             block.Add("[INFO]");
@@ -58,7 +62,7 @@ namespace CoPilot.ORM.Logging
 
         public void LogWarning(string logText, string details = null)
         {
-            if ((int)LoggingLevel < (int)LoggingLevel.Warning || SuppressLogging) return;
+            if ((int)_provider.LoggingLevel < (int)LoggingLevel.Warning || SuppressLogging) return;
             var block = new ScriptBlock();
             
             block.Add("[WARNNG]");
@@ -76,7 +80,7 @@ namespace CoPilot.ORM.Logging
 
         public void LogError(string logText, string details = null)
         {
-            if ((int) LoggingLevel < (int) LoggingLevel.Error || SuppressLogging) return;
+            if ((int) _provider.LoggingLevel < (int) LoggingLevel.Error || SuppressLogging) return;
 
             var block = new ScriptBlock();
             block.Add("[ERROR]");
@@ -101,6 +105,6 @@ namespace CoPilot.ORM.Logging
 
     public class ConsoleLogger : CoPilotLogger
     {
-        public ConsoleLogger():base(new ConsoleLogWriter()) { }
+        public ConsoleLogger(IDbProvider provider):base(provider, new ConsoleLogWriter()) { }
     }
 }
