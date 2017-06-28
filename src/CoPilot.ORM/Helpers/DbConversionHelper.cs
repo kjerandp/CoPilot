@@ -90,10 +90,11 @@ namespace CoPilot.ORM.Helpers
             );
         }
 
-        public static bool DataTypeHasSize(DbDataType dataType)
+        public static bool DataTypeHasSize(DbDataType dataType) //should probably be provider specific
         {
             return (
-                IsText(dataType) ||
+                dataType == DbDataType.Char ||
+                dataType == DbDataType.String || 
                 dataType == DbDataType.Varbinary ||
                 dataType == DbDataType.Binary
             );

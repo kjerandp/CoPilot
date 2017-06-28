@@ -353,7 +353,7 @@ namespace CoPilot.ORM.SqlServer
                 case DbDataType.Double: return SqlDbType.Float;
                 case DbDataType.Int32: return SqlDbType.Int;
                 case DbDataType.Currency: return SqlDbType.Money;
-                case DbDataType.Text: return UseNationalCharacterSet ? SqlDbType.NText : SqlDbType.Text;
+                case DbDataType.Text: return UseNationalCharacterSet ? SqlDbType.NVarChar : SqlDbType.VarChar;
                 case DbDataType.String: return UseNationalCharacterSet ? SqlDbType.NVarChar : SqlDbType.VarChar;
                 case DbDataType.Float: return SqlDbType.Real;
                 case DbDataType.Int16: return SqlDbType.SmallInt;
