@@ -1,4 +1,6 @@
-# CoPilot
+# CoPilot.ORM
+
+[![GitHub release](https://img.shields.io/github/release/kjerandp/CoPilot.svg)](https://github.com/kjerandp/CoPilot) [![NuGet](https://img.shields.io/nuget/v/CoPilot.ORM.svg)](https://www.nuget.org/packages/CoPilot.ORM)
 
 CoPilot is an object relational mapper (ORM). In its core it works like a micro ORM, but it has some neat and powerful features added on top of it, which makes it more of a "middle ground" ORM.  CoPilot is built with performance and flexibillity in mind, and was specifically designed to avoid any leakage into other (non-data access) layers. 
 
