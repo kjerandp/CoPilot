@@ -2,19 +2,19 @@
   "title": "CoPilot.ORM.MySql",
   "authors": [ "Kjerand Pedersen" ],
   "description": "MySql provider for CoPilot.ORM",
-  "version": "2.0.2-alpha",
+  "version": "2.0.3",
   "copyright": "Copyright 2017",
   "packOptions": {
     "owners": [ "Kjerand Pedersen" ],
     "summary": "MySql provider for CoPilot.ORM",
-    "releaseNotes": "MySql provider for CoPilot.ORM v2 (alpha)",
+    "releaseNotes": "MySql provider for CoPilot.ORM v2",
     "requireLicenseAcceptance": true,
     "licenseUrl": "https://raw.githubusercontent.com/kjerandp/CoPilot/master/LICENSE",
     "projectUrl": "https://github.com/kjerandp/CoPilot",
     "tags": [ "MySql", "CoPilot", "micro", "ORM", "O/RM", "core", "netstandard", "mapper", "sql", "data", "DAL", "ado.net" ]
   },
   "dependencies": {
-    "CoPilot.ORM": "2.0.2-alpha",
+    "CoPilot.ORM": "2.0.3",
     "MySql.Data": "7.0.7-m61"
   },
   "frameworks": {

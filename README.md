@@ -21,12 +21,12 @@ CoPilot is an object relational mapper (ORM). In its core it works like a micro 
 Install the database provider you want to use:
 
 ```
-Install-Package CoPilot.ORM.SqlServer -Pre
+Install-Package CoPilot.ORM.SqlServer
 ```
 or
 
 ```
-Install-Package CoPilot.ORM.MySql -Pre
+Install-Package CoPilot.ORM.MySql
 ```
 or
 

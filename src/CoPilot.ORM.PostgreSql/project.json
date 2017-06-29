@@ -2,7 +2,7 @@
   "title": "CoPilot.ORM.PostgreSql",
   "authors": [ "Kjerand Pedersen" ],
   "description": "PostgreSql provider for CoPilot.ORM",
-  "version": "2.0.0-alpha",
+  "version": "2.0.1-alpha",
   "copyright": "Copyright 2017",
   "packOptions": {
     "owners": [ "Kjerand Pedersen" ],
@@ -14,7 +14,7 @@
     "tags": [ "PostgreSql", "CoPilot", "micro", "ORM", "O/RM", "core", "netstandard", "mapper", "sql", "data", "DAL", "ado.net" ]
   },
   "dependencies": {
-    "CoPilot.ORM": "2.0.2-alpha",
+    "CoPilot.ORM": "2.0.3",
     "Npgsql": "3.2.4.1"
   },
   "frameworks": {
