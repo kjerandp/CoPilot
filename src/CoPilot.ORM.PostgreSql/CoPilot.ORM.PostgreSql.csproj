@@ -9,7 +9,7 @@
     <TargetFrameworks>netstandard1.6;net46</TargetFrameworks>
     <AssemblyName>CoPilot.ORM.PostgreSql</AssemblyName>
     <PackageId>CoPilot.ORM.PostgreSql</PackageId>
-    <PackageTags>PostgreSql;CoPilot;micro;ORM;O/RM;core;netstandard;mapper;sql;data;DAL;ado.net</PackageTags>
+    <PackageTags>PostgreSql;CoPilot;micro-orm;ORM;O/RM;core;netstandard;mapper;sql;data;DAL;ado.net</PackageTags>
     <PackageReleaseNotes>PostgreSql provider for CoPilot.ORM v2. (experimental)</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/kjerandp/CoPilot</PackageProjectUrl>
     <PackageLicenseUrl>https://raw.githubusercontent.com/kjerandp/CoPilot/master/LICENSE</PackageLicenseUrl>

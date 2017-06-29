@@ -9,7 +9,7 @@
     <TargetFrameworks>netstandard1.6;net46</TargetFrameworks>
     <AssemblyName>CoPilot.ORM.SqlServer</AssemblyName>
     <PackageId>CoPilot.ORM.SqlServer</PackageId>
-    <PackageTags>Sql Server;CoPilot;micro;ORM;O/RM;core;netstandard;mapper;sql;data;DAL;ado.net</PackageTags>
+    <PackageTags>Sql Server;CoPilot;micro-orm;ORM;O/RM;core;netstandard;mapper;sql;data;DAL;ado.net</PackageTags>
     <PackageReleaseNotes>MS Sql Server provider for CoPilot.ORM v2</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/kjerandp/CoPilot</PackageProjectUrl>
     <PackageLicenseUrl>https://raw.githubusercontent.com/kjerandp/CoPilot/master/LICENSE</PackageLicenseUrl>
