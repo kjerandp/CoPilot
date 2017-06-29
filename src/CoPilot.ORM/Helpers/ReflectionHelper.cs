@@ -57,7 +57,22 @@ namespace CoPilot.ORM.Helpers
                 }
                 else
                 {
-                    output = targetType == input.GetType() ? input : Convert.ChangeType(input, targetType);
+                    if (targetType == input.GetType())
+                    {
+                        output = input;
+                    }
+                    else
+                    {
+                        if (targetType.GetTypeInfo().IsEnum && IsIntegerType(input))
+                        {
+                            output = Enum.ToObject(targetType, input);
+                        }
+                        else
+                        {
+                            output = Convert.ChangeType(input, targetType);
+                        }
+                    }
+
                 }
                 return true;
             }
@@ -67,6 +82,39 @@ namespace CoPilot.ORM.Helpers
                 
                 output = null;
                 return false;
+            }
+        }
+
+        internal static bool IsIntegerType(object o)
+        {
+            switch (Type.GetTypeCode(o.GetType()))
+            {
+                case TypeCode.Byte:
+                case TypeCode.SByte:
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                case TypeCode.UInt64:
+                case TypeCode.Int16:
+                case TypeCode.Int32:
+                case TypeCode.Int64:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        internal static bool IsNumericType(object o)
+        {
+            if (IsIntegerType(o)) return true;
+
+            switch (Type.GetTypeCode(o.GetType()))
+            {
+                case TypeCode.Decimal:
+                case TypeCode.Double:
+                case TypeCode.Single:
+                    return true;
+                default:
+                    return false;
             }
         }
 
