@@ -47,8 +47,8 @@ namespace CoPilot.ORM.Context.Query
                     var tcn = filterNode as TableContextNode;
                     if (tcn != null && tcn.IsInverted && tcn != baseNode)
                         throw new CoPilotUnsupportedException("Invalid filter expression");
-
-                    referencedNodes.Add(new FromListItem(filterNode, tcn == null || !(memberExpression.Operator == SqlOperator.Is && memberExpression.PairedOperand is NullOperand)));
+                    if (!referencedNodes.Any(r => r.Node.Equals(filterNode)))
+                        referencedNodes.Add(new FromListItem(filterNode, tcn == null || !(memberExpression.Operator == SqlOperator.Is && memberExpression.PairedOperand is NullOperand)));
                 }
             }
 
