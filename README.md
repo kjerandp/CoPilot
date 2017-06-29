@@ -14,7 +14,7 @@ CoPilot is an object relational mapper (ORM). In its core it works like a micro 
 * Transform values from and to the database by associating a `ValueAdapter` to relevant POCO properties. Examples of use cases is to serialize/deserialize to and from json, joining/splitting collections of primitive values, converting from/to enums etc.
 * Use lookup tables - meaning that the value of a property can be used to lookup a key value in another table, and then pass that value to the mapped table and then do the same in reverse. Can be handy if you for instance want to use enums in your POCOs, but you want to enforce a foreign key constraint to another table for the mapped column.
 * Generate scripts to build database from model configurations
-* Support for multiple Ado.Net providers (currently implementations for Ms Sql Server and MySql exists)
+* Support for multiple Ado.Net providers (currently implementations for Ms Sql Server, MySql and PostgreSQL exists)
 * Validate configuration against database schema
 
 ## Install
@@ -27,6 +27,11 @@ or
 
 ```
 Install-Package CoPilot.ORM.MySql -Pre
+```
+or
+
+```
+Install-Package CoPilot.ORM.PostgreSql -Pre
 ```
 ## How to use
 CoPilot aims to be as simple and intuitive as possible to use and most features are available from a single interface called `IDb`. Please look for examples in the test projects, especially the [BandSampleTests.cs](/test/CoPilot.ORM.IntegrationTests/BandSampleTests.cs).

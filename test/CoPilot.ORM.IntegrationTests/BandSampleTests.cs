@@ -32,7 +32,7 @@ namespace CoPilot.ORM.IntegrationTests
             //var databaseSetup = new PostgreSqlBandSampleSetup(model, logginLevel); //not fully implemented!
             //var databaseSetup = new MySqlBandSampleSetup(model, logginLevel);
             var databaseSetup = new SqlServerBandSampleSetup(model, logginLevel);
-            databaseSetup.DropCreateDatabase();
+            //databaseSetup.DropCreateDatabase();
             _db = databaseSetup.GetDb();        
         }
 
