@@ -35,13 +35,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="CoPilot.ORM, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\src\CoPilot.ORM.MySql\bin\Debug\net46\CoPilot.ORM.dll</HintPath>
-    </Reference>
-    <Reference Include="CoPilot.ORM.MySql">
-      <HintPath>..\..\src\CoPilot.ORM.MySql\bin\Debug\net46\CoPilot.ORM.MySql.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
   </ItemGroup>
   <Choose>
@@ -62,6 +55,16 @@
     <Compile Include="WorldModels\CountryLanguage.cs" />
     <Compile Include="WorldTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CoPilot.ORM.MySql\CoPilot.ORM.MySql.csproj">
+      <Project>{a4de94fa-38e6-4556-ab6b-4d6ed654d701}</Project>
+      <Name>CoPilot.ORM.MySql</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\src\CoPilot.ORM\CoPilot.ORM.csproj">
+      <Project>{518e8021-d79e-4119-a5f5-5173eb0913f1}</Project>
+      <Name>CoPilot.ORM</Name>
+    </ProjectReference>
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

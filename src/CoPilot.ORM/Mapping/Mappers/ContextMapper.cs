@@ -6,10 +6,10 @@ using CoPilot.ORM.Config.DataTypes;
 using CoPilot.ORM.Context;
 using CoPilot.ORM.Context.Interfaces;
 using CoPilot.ORM.Context.Query;
-using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Helpers;
+using CoPilot.ORM.Database;
 
 namespace CoPilot.ORM.Mapping.Mappers
 {

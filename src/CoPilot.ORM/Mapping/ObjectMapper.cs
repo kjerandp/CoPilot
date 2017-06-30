@@ -1,4 +1,4 @@
-﻿using CoPilot.ORM.Database.Commands;
+﻿using CoPilot.ORM.Database;
 
 namespace CoPilot.ORM.Mapping
 {

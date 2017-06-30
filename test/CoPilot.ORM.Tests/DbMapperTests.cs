@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using CoPilot.ORM.Config;
 using CoPilot.ORM.Context.Query;
-using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Mapping.Mappers;
 using CoPilot.ORM.Model;
 using CoPilot.ORM.Tests.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using CoPilot.ORM.Database;
 
 namespace CoPilot.ORM.Tests
 {

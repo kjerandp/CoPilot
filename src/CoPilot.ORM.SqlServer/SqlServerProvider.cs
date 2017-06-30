@@ -18,6 +18,7 @@ using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Logging;
 using CoPilot.ORM.SqlServer.Writers;
+using CoPilot.ORM.Database;
 
 namespace CoPilot.ORM.SqlServer
 {

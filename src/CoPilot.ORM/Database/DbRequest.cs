@@ -1,8 +1,9 @@
 using System.Collections.Generic;
 using System.Data;
 using CoPilot.ORM.Model;
+using CoPilot.ORM.Database.Commands;
 
-namespace CoPilot.ORM.Database.Commands
+namespace CoPilot.ORM.Database
 {
     public abstract class DbRequest
     {

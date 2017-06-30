@@ -18,6 +18,7 @@ using CoPilot.ORM.MySql.Writers;
 using MySql.Data.MySqlClient;
 using System.Linq;
 using CoPilot.ORM.Extensions;
+using CoPilot.ORM.Database;
 
 namespace CoPilot.ORM.MySql
 {

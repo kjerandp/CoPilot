@@ -20,6 +20,7 @@ using CoPilot.ORM.Logging;
 using CoPilot.ORM.PostgreSql.Writers;
 using Npgsql;
 using NpgsqlTypes;
+using CoPilot.ORM.Database;
 
 namespace CoPilot.ORM.PostgreSql
 {

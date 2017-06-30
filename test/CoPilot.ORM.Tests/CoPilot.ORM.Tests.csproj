@@ -35,13 +35,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="CoPilot.ORM, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\src\CoPilot.ORM.SqlServer\bin\Debug\net46\CoPilot.ORM.dll</HintPath>
-    </Reference>
-    <Reference Include="CoPilot.ORM.SqlServer">
-      <HintPath>..\..\src\CoPilot.ORM.SqlServer\bin\Debug\net46\CoPilot.ORM.SqlServer.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
   </ItemGroup>
   <Choose>
@@ -68,6 +61,16 @@
     <Compile Include="QueryWriterTests.cs" />
     <Compile Include="TableContextTest.cs" />
     <Compile Include="TestModel.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CoPilot.ORM.SqlServer\CoPilot.ORM.SqlServer.csproj">
+      <Project>{7f002509-1583-4d92-bc74-59c3c2ec2437}</Project>
+      <Name>CoPilot.ORM.SqlServer</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\src\CoPilot.ORM\CoPilot.ORM.csproj">
+      <Project>{518e8021-d79e-4119-a5f5-5173eb0913f1}</Project>
+      <Name>CoPilot.ORM</Name>
+    </ProjectReference>
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

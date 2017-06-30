@@ -5,7 +5,7 @@ using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Mapping.Mappers;
 
-namespace CoPilot.ORM.Database.Commands
+namespace CoPilot.ORM.Database
 {
     public struct DbResponse
     {

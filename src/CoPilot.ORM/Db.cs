@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using CoPilot.ORM.Common;
-using CoPilot.ORM.Database.Commands;
+using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Providers;
@@ -11,7 +11,6 @@ using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
-using CoPilot.ORM.Database;
 
 namespace CoPilot.ORM
 {

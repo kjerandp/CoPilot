@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using CoPilot.ORM.Common;
-using CoPilot.ORM.Database.Commands;
+using CoPilot.ORM.Database;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Mapping;

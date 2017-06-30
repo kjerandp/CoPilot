@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace CoPilot.ORM.Database.Commands
+namespace CoPilot.ORM.Database
 {
     public struct DbRecordSet
     {
