@@ -11,6 +11,7 @@ using CoPilot.ORM.Exceptions;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
+using CoPilot.ORM.Database;
 
 namespace CoPilot.ORM
 {
@@ -66,15 +67,7 @@ namespace CoPilot.ORM
                 return rdr.Query(filter, include);
             }
         }
-
-        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
-        {
-            using (var rdr = new DbReader(this))
-            {
-                return rdr.Query<TEntity, TDto>(selector, filter);
-            }
-        }
-        
+                       
         public T FindByKey<T>(object key, params string[] include) where T : class
         {
             using (var reader = new DbReader(this))
@@ -119,8 +112,7 @@ namespace CoPilot.ORM
 
         public T Scalar<T>(string commandText, object args = null)
         {
-            object convertedValue;
-            ReflectionHelper.ConvertValueToType(typeof(T), Scalar(commandText, args), out convertedValue);
+            ReflectionHelper.ConvertValueToType(typeof(T), Scalar(commandText, args), out object convertedValue);
 
             return (T)convertedValue;
         }

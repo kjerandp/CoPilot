@@ -14,8 +14,9 @@ using CoPilot.ORM.Database.Commands.Query;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Providers;
 using CoPilot.ORM.Helpers;
+using CoPilot.ORM.Database.Commands;
 
-namespace CoPilot.ORM.Database.Commands
+namespace CoPilot.ORM.Database
 {
     public class DbReader : IDisposable, IQueryBuilder
     {
@@ -111,17 +112,6 @@ namespace CoPilot.ORM.Database.Commands
             return QueryStrategySelector(ctx).Execute(ctx, rootFilter, this).OfType<T>();
         }
 
-        public IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, Expression<Func<TEntity, bool>> filter = null) where TEntity : class
-        {
-            var ctx = CreateContext(filter);
-
-            ctx.ApplySelector(selector);
-
-            var queryResult = Query(ctx);
-            
-            return queryResult.Map<TDto>();
-        }
-
         public DbResponse Query(TableContext ctx)
         {
             var filter = ctx.GetFilter();
@@ -135,11 +125,6 @@ namespace CoPilot.ORM.Database.Commands
         public T Single<T>(Expression<Func<T, bool>> filter, params string[] include) where T : class
         {
             return Query(filter, include).SingleOrDefault();
-        }
-
-        public TDto Single<TEntity, TDto>(Expression<Func<TEntity, object>> selector, Expression<Func<TEntity, bool>> filter) where TEntity : class
-        {
-            return Query<TEntity, TDto>(selector, filter).SingleOrDefault();
         }
 
         /// <summary>
@@ -163,8 +148,7 @@ namespace CoPilot.ORM.Database.Commands
         /// <returns>Scalar value converted to type of T</returns>
         public T Scalar<T>(string commandText, object args = null)
         {
-            object convertedValue;
-            ReflectionHelper.ConvertValueToType(typeof(T), Scalar(commandText, args), out convertedValue);
+            ReflectionHelper.ConvertValueToType(typeof(T), Scalar(commandText, args), out object convertedValue);
 
             return (T)convertedValue;
         }

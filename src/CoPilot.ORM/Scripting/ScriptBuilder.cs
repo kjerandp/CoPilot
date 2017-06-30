@@ -168,8 +168,7 @@ namespace CoPilot.ORM.Scripting
             var paramToColumnMap = new Dictionary<string, ContextColumn>();
             var parameters = new List<DbParameter>();
 
-            string[] names;
-            var sqlStatement = scriptCreator.CreateStatement(ctx, rootFilter, out names);
+            var sqlStatement = scriptCreator.CreateStatement(ctx, rootFilter, out string[] names);
             if (rootFilter != null)
             {
                 MapParametersToColumns(rootFilter.Root, paramToColumnMap);
@@ -225,15 +224,12 @@ namespace CoPilot.ORM.Scripting
 
         private static void MapParametersToColumns(IExpressionOperand operand, Dictionary<string, ContextColumn> mappingDictionary)
         {
-            var bo = operand as BinaryOperand;
-            if (bo != null)
+            if (operand is BinaryOperand bo)
             {
-                var left = bo.Left as ValueOperand;
 
-                if (left != null)
+                if (bo.Left is ValueOperand left)
                 {
-                    var col = bo.Right as MemberExpressionOperand;
-                    if (col != null)
+                    if (bo.Right is MemberExpressionOperand col)
                     {
                         mappingDictionary.Add(left.ParamName,
                             col.ColumnReference);
@@ -244,12 +240,10 @@ namespace CoPilot.ORM.Scripting
                 {
                     MapParametersToColumns(bo.Left, mappingDictionary);
                 }
-                var right = bo.Right as ValueOperand;
 
-                if (right != null)
+                if (bo.Right is ValueOperand right)
                 {
-                    var col = bo.Left as MemberExpressionOperand;
-                    if (col != null)
+                    if (bo.Left is MemberExpressionOperand col)
                     {
                         mappingDictionary.Add(right.ParamName,
                             col.ColumnReference);

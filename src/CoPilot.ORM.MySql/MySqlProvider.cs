@@ -293,8 +293,7 @@ namespace CoPilot.ORM.MySql
             {
                 var str = value.ToString().Replace("'", "''");
 
-                double result;
-                if (double.TryParse(str, out result))
+                if (double.TryParse(str, out double result))
                 {
                     return "'" + str + "'";
                 }
@@ -442,8 +441,7 @@ namespace CoPilot.ORM.MySql
                 {
                     if (!args.ContainsKey(param.Name)) continue;
 
-                    var enumerable = args[param.Name] as ICollection<object>;
-                    if (enumerable != null)
+                    if (args[param.Name] is ICollection<object> enumerable)
                     {
                         AddArrayParameters(command, param.Name, enumerable);
                     }
@@ -467,8 +465,7 @@ namespace CoPilot.ORM.MySql
 
                 if (!args.ContainsKey(param.ParameterName)) param.Value = DBNull.Value;
 
-                var enumerable = args[param.ParameterName] as ICollection<object>;
-                if (enumerable != null)
+                if (args[param.ParameterName] is ICollection<object> enumerable)
                 {
                     throw new CoPilotUnsupportedException("Collections are not supported for this operation!");
                 }

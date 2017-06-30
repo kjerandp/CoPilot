@@ -79,8 +79,7 @@ namespace CoPilot.ORM.Mapping.Mappers
                 string objectPath;
                 Type entityType;
 
-                var relNode = col.Node as TableContextNode;
-                if (relNode != null && relNode.Relationship.IsLookupRelationship)
+                if (col.Node is TableContextNode relNode && relNode.Relationship.IsLookupRelationship)
                 {
                     member = relNode.Origin.MapEntry.GetMappedMember(relNode.Relationship.ForeignKeyColumn);
                     objectPath = PathHelper.RemoveFirstElementFromPathString(relNode.Origin.Path);
@@ -92,7 +91,7 @@ namespace CoPilot.ORM.Mapping.Mappers
                     objectPath = PathHelper.RemoveFirstElementFromPathString(col.Node.Path);
                     entityType = col.Node.MapEntry.EntityType;
                 }
-                
+
                 object instance;
 
                 if (objectPath.Equals(basePath, StringComparison.Ordinal))

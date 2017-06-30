@@ -16,8 +16,9 @@ using CoPilot.ORM.Extensions;
 using CoPilot.ORM.Helpers;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
+using CoPilot.ORM.Database.Commands;
 
-namespace CoPilot.ORM.Database.Commands
+namespace CoPilot.ORM.Database
 {
     /// <summary>
     /// Use this class to perform database write operations as a unit of work (using database transaction) 
@@ -143,8 +144,7 @@ namespace CoPilot.ORM.Database.Commands
         /// <returns>Scalar value converted to type of T</returns>
         public T Scalar<T>(string commandText, object args = null)
         {
-            object convertedValue;
-            ReflectionHelper.ConvertValueToType(typeof(T), Scalar(commandText, args), out convertedValue);
+            ReflectionHelper.ConvertValueToType(typeof(T), Scalar(commandText, args), out object convertedValue);
 
             return (T)convertedValue;
         }

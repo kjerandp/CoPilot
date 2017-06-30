@@ -6,7 +6,6 @@ using CoPilot.ORM.Common;
 using CoPilot.ORM.Database.Commands;
 using CoPilot.ORM.Database.Commands.Query.Interfaces;
 using CoPilot.ORM.Database.Providers;
-using CoPilot.ORM.Filtering;
 using CoPilot.ORM.Mapping;
 using CoPilot.ORM.Model;
 
@@ -77,21 +76,7 @@ namespace CoPilot.ORM
         /// <returns>Query result mapped to an IEnumerable of type T</returns>
         [Obsolete("Use new functional expressions instead to define contextual queries (_db.From<T>()...).")]
         IEnumerable<T> Query<T>(Expression<Func<T, bool>> filter = null, params string[] include) where T : class;
-
-
-        /// <summary>
-        /// Query database using a mapped POCO class to set the context. Sql statement and mapping will be fully handled by CoPilot 
-        /// <remarks>The selector can be used to select a subset of columns from the context entity or its related entities (many-to-one relationships).</remarks>
-        /// </summary>
-        /// <typeparam name="TEntity">Mapped POCO class to set the context. <remarks>POCO class must be mapped using the DbMapper class</remarks></typeparam>
-        /// <typeparam name="TDto">POCO class to map the query result to based on the selector</typeparam>
-        /// <param name="selector">Expression to select a single property to be returned or a new anonymous object containing the columns wanted. You can also select a related mapped POCO class.</param>
-        /// <param name="filter">Filterexpression that will be translated into a WHERE clause (can be null).
-        /// <remarks>Basic support for method calls on properties mapping to columns. <see cref="MemberMethodCallConverter"/></remarks></param>
-        /// <returns>Query result mapped to type of TDto</returns>
-        [Obsolete("Use new functional expressions instead to define contextual queries (_db.From<T>()...).")]
-        IEnumerable<TDto> Query<TEntity, TDto>(Expression<Func<TEntity, object>> selector, Expression<Func<TEntity, bool>> filter = null) where TEntity : class;
-
+        
         /// <summary>
         /// 
         /// </summary>

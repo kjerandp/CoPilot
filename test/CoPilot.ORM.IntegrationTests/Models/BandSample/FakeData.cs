@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using CoPilot.ORM.Database.Commands;
+using CoPilot.ORM.Database;
 
 namespace CoPilot.ORM.IntegrationTests.Models.BandSample
 {

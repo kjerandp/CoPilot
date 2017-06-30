@@ -9,7 +9,7 @@ using CoPilot.ORM.Database.Commands.Options;
 using CoPilot.ORM.IntegrationTests.Config;
 using CoPilot.ORM.IntegrationTests.Models.BandSample;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-
+using CoPilot.ORM.Database;
 
 namespace CoPilot.ORM.IntegrationTests
 {
